@@ -1,0 +1,17 @@
+# Disabled starting example for a DIRECT host HTTP listener on TCP 36101.
+# Select JSON server logs and a status token before considering activation.
+# For a reverse proxy/container, use the proxy's own jail and verified ingress
+# policy instead: this host INPUT action is not a forwarded-container rule.
+[re-psn-status]
+enabled = false
+filter = re-psn-status
+backend = systemd
+journalmatch = _SYSTEMD_UNIT=re-psn.service
+port = 36101
+protocol = tcp
+usedns = no
+maxretry = 10
+findtime = 10m
+bantime = 10m
+ignoreip = 127.0.0.1/8 ::1
+action = nftables[type=multiport, name="re-psn-status", port="%(port)s", protocol="%(protocol)s"]
