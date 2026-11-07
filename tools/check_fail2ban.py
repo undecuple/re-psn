@@ -71,8 +71,14 @@ def validate_dump(stream, enabled):
                    ["maxretry", 10], ["findtime", "10m"], ["bantime", "10m"],
                    ["addignoreip", "127.0.0.1/8", "::1"], ["datepattern", "{NONE}"]):
         require(["set", "re-psn-status", *suffix] in commands, "jail policy differs from the checked example")
-    actions = [row for row in commands if row[:4] == ["multi-set", "re-psn-status", "action", "nftables"]]
-    require(len(actions) == 1 and len(actions[0]) == 5, "missing or ambiguous native nftables action")
+    declarations = [row for row in commands if row[:3] == ["set", "re-psn-status", "addaction"]]
+    require(declarations == [["set", "re-psn-status", "addaction", "nftables"]],
+            "native dump must declare exactly one nftables action")
+    actions = [row for row in commands if len(row) >= 3 and row[0] in ("set", "multi-set")
+               and row[1:3] == ["re-psn-status", "action"]]
+    require(len(actions) == 1 and len(actions[0]) == 5 and
+            actions[0][:4] == ["multi-set", "re-psn-status", "action", "nftables"],
+            "missing, extra or ambiguous native action settings")
     action = dict(actions[0][4])
     require(all(action.get(key) == value for key, value in
                 {"type": "multiport", "port": "36101", "protocol": "tcp", "name": "re-psn-status",

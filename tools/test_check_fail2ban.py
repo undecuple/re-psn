@@ -30,6 +30,7 @@ class Fail2banCheckerTests(unittest.TestCase):
         values = {"type": "multiport", "port": "36101", "protocol": "tcp", "name": "re-psn-status",
                   "chain_hook": "input", "actionstart": "nft add rule tcp dport 36101"}
         values.update(action or {})
+        commands.append(["set", "re-psn-status", "addaction", "nftables"])
         commands.append(["multi-set", "re-psn-status", "action", "nftables", list(values.items())])
         return "\n".join(map(repr, commands))
 
@@ -53,6 +54,14 @@ class Fail2banCheckerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "failed"):
                 check.run_logged([sys.executable, "-c", "print('fixture'); raise SystemExit(2)"], "failure", out, 5)
             self.assertEqual((out / "failure.stdout").read_text(), "fixture\n")
+
+    def test_extra_actions_cannot_hide_behind_the_correct_status_action(self):
+        extra = ["multi-set", "re-psn-status", "action", "other",
+                 [("type", "allports"), ("protocol", "all")]]
+        declaration = ["set", "re-psn-status", "addaction", "other"]
+        for rows in ([declaration, extra], [extra], [declaration]):
+            with self.subTest(rows=rows), self.assertRaises(ValueError):
+                check.validate_dump(self.dump() + "\n" + "\n".join(map(repr, rows)), True)
 
     def test_output_directory_cannot_replace_or_pollute_source(self):
         with tempfile.TemporaryDirectory() as directory:
