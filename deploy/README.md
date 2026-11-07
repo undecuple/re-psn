@@ -21,6 +21,7 @@ nginx, HAProxy and Caddy configs. They are text files; nothing here runs by itse
 | `nginx/psnr.conf` | nginx `stream` with PROXY protocol v1. Not run. |
 | `haproxy/haproxy.cfg` | HAProxy with `send-proxy-v2`. Not run. |
 | [`caddy/`](caddy/README.md) | Stock Caddy 2 for the HTTP status page only, bound to loopback; game TCP and UDP stay direct. Not run or validated with Caddy. |
+| [`fail2ban/`](../docs/fail2ban.md) | Disabled journal/filter example for refused HTTP status tokens, with an offline checker. Host firewall/jail behavior is unverified; game TCP/UDP is outside its scope. |
 
 ## Which file to use
 

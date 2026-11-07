@@ -7,13 +7,13 @@ What re-psn does today and what is planned, one row per feature. Each status res
 | Status | Meaning | Features |
 |---|---|---|
 | available | merged, with a test or a recorded run | 29 |
-| not yet verified | merged, but nothing in the repository checks it | 2 |
+| not yet verified | merged, but nothing in the repository checks it | 3 |
 | partial | merged in part, or with known gaps | 7 |
 | in progress | an open pull request or branch | 0 |
 | planned | wanted and intended, not started | 12 |
 | later | after the planned items, or after a decision | 8 |
 | declined | will not be done | 1 |
-| all | | 59 |
+| all | | 60 |
 
 ## Rooms and matchmaking
 
@@ -76,6 +76,7 @@ What re-psn does today and what is planned, one row per feature. Each status res
 | `deploy-examples` | **Settings file, service unit and Traefik example**: `deploy/` holds `re-psn.env.example` (every setting, commented), a systemd unit and a Traefik config that sends PROXY v2. The release archives carry them as `examples/`. | available | 0.2.0 | [`deploy/re-psn.env.example`](../deploy/re-psn.env.example), [`deploy/re-psn.service`](../deploy/re-psn.service), [`deploy/traefik/dynamic.yml`](../deploy/traefik/dynamic.yml), [`scripts/check-deploy.sh`](../scripts/check-deploy.sh), [`docs/running.md`](running.md), [#10](https://github.com/undecuple/re-psn/pull/10) | `scripts/check-deploy.sh` checks the env file and the unit against the server's flags. The Traefik run (Traefik 3.1 under Podman) is recorded in docs/running.md; no run of the systemd unit is recorded. |
 | `deploy-nginx-haproxy` | **nginx and HAProxy examples**: An nginx `stream` block with `proxy_protocol on;` (PROXY v1) and an HAProxy config with `send-proxy-v2`. | not yet verified | 0.2.0 | [`deploy/nginx/psnr.conf`](../deploy/nginx/psnr.conf), [`deploy/haproxy/haproxy.cfg`](../deploy/haproxy/haproxy.cfg) | Not checked: neither config has been run against the server (docs/running.md says so). |
 | `deploy-caddy` | **Caddy status-page example**: A stock Caddy 2 HTTP reverse-proxy example in `deploy/caddy/`, copied into future release archives with the other deployment examples. Defaults to loopback and leaves game TCP/UDP direct. | not yet verified | main | [`deploy/caddy/Caddyfile`](../deploy/caddy/Caddyfile), [`deploy/caddy/README.md`](../deploy/caddy/README.md), [`scripts/check-deploy.sh`](../scripts/check-deploy.sh), [`docs/running.md`](running.md) | Written from the official Caddy documentation; not run or validated with Caddy. No layer-4 plugin is included. The existing HTTP token check is preserved and client-supplied CF-Connecting-IP is removed before forwarding. |
+| `deploy-fail2ban` | **Optional fail2ban status-token jail**: A disabled systemd-journal filter/jail example for repeated HTTP status-token refusals. Uses JSON logs and a host TCP status-port action, with setup, firewall placement, validation and recovery instructions. | not yet verified | main | [`deploy/fail2ban/re-psn-status.conf`](../deploy/fail2ban/re-psn-status.conf), [`deploy/fail2ban/re-psn-status.local`](../deploy/fail2ban/re-psn-status.local), [`docs/fail2ban.md`](fail2ban.md), [`tools/check_fail2ban.py`](../tools/check_fail2ban.py), [`TestHTTPStatusFail2banFixtures`](../server/fail2ban_test.go) | Offline synthetic HTTP/logger and native fail2ban-engine checks do not establish live journal/firewall enforcement. Game TCP/UDP, proxy/CDN and bridged-container enforcement are outside the sample's scope; install and verify fail2ban separately. |
 | `deploy-container` | **Docker and Podman**: A two-stage Dockerfile and a compose file in `docker/`, configured only by `RE_PSN_*` variables. The status page is off until `RE_PSN_HTTP` is set. | available | 0.2.0 | [`docker/Dockerfile`](../docker/Dockerfile), [`docker/docker-compose.yml`](../docker/docker-compose.yml), [`docker/docker-compose.host.yml`](../docker/docker-compose.host.yml), [`docker/docker-compose.test.yml`](../docker/docker-compose.test.yml), [`docker/README.md`](../docker/README.md), [`lab/run.sh`](../lab/run.sh), [#11](https://github.com/undecuple/re-psn/pull/11) | A Podman 6.1 run is recorded in docker/README.md, and the NAT lab builds the image with Docker in CI. The v0.2.0 image is pushed to ghcr.io (amd64 and arm64, unsigned; arm64 not run). The server runs as a non-root user and the bases are pinned by digest. Opt-in host-networking compose files, one hardened for a shared test host, are for Linux only. Compose under Podman is not tested. |
 
 ## Settings

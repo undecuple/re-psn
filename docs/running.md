@@ -197,6 +197,9 @@ is about them; it never holds the status page token, the UDP probe token, the `-
 
 Rotate the file with logrotate or your service manager (`copytruncate`, or restart after moving it); the server does not rotate it.
 
+For optional host bans after repeated HTTP status-token refusals, see [fail2ban.md](fail2ban.md). Its disabled example
+uses JSON journal logs and a separate firewall action; game/UDP bans and live host enforcement are not covered.
+
 ## Ports
 
 | Port | Proto | Open to |
