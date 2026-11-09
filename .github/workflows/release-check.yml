@@ -3,7 +3,8 @@
 # title equals the tag, the assets are exactly the seven (the three archives, the x86_64 AppImage, install.sh, install.ps1
 # and SHA256SUMS), that sha256sum -c passes on the downloaded files, and that install.sh and install.ps1 are byte for byte
 # the files at the tag (read through the contents API).
-# Historical v0.2.0 and v0.3.0 releases keep their five-asset list and have no install scripts to compare.
+# The historical releases keep their own lists and have no install scripts to compare: v0.2.0 has nine assets (each
+# download with its own .sha256 file, and SHA256SUMS), v0.3.0 has five.
 name: release-check
 on:
   release:
@@ -42,7 +43,10 @@ jobs:
           want="re-psn-$TAG-linux-amd64.tar.gz re-psn-$TAG-linux-arm64.tar.gz re-psn-$TAG-windows-amd64.zip re-psn-$TAG-x86_64.AppImage install.sh install.ps1 SHA256SUMS"
           INSTALLER_ASSETS=true
           case "$TAG" in
-            v0.2.0|v0.3.0) INSTALLER_ASSETS=false; want="${want/ install.sh install.ps1/}" ;;
+            v0.2.0)
+              INSTALLER_ASSETS=false
+              want="re-psn-$TAG-linux-amd64.tar.gz re-psn-$TAG-linux-amd64.tar.gz.sha256 re-psn-$TAG-linux-arm64.tar.gz re-psn-$TAG-linux-arm64.tar.gz.sha256 re-psn-$TAG-windows-amd64.zip re-psn-$TAG-windows-amd64.zip.sha256 re-psn-$TAG-x86_64.AppImage re-psn-$TAG-x86_64.AppImage.sha256 SHA256SUMS" ;;
+            v0.3.0) INSTALLER_ASSETS=false; want="${want/ install.sh install.ps1/}" ;;
           esac
           echo "INSTALLER_ASSETS=$INSTALLER_ASSETS" >> "$GITHUB_ENV"
           got="$(jq -r '.assets[].name' "$RUNNER_TEMP/release.json" | sort | tr '\n' ' ' | sed 's/ $//')"

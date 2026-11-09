@@ -610,10 +610,11 @@ func TestReleaseCheckWorkflow(t *testing.T) {
 	}
 	for _, c := range []struct {
 		name, tag, drop, tamper string
-		historical, extra       bool
+		historical, extra, five bool
 		wantMetadata, wantCmp   bool
 	}{
 		{name: "old v0.2.0", tag: "v0.2.0", historical: true, wantMetadata: true},
+		{name: "old v0.2.0 with the v0.3.0 list", tag: "v0.2.0", historical: true, five: true},
 		{name: "old v0.3.0", tag: "v0.3.0", historical: true, wantMetadata: true},
 		{name: "old unexpected installers", tag: "v0.3.0", wantMetadata: false},
 		{name: "new seven assets", tag: "v0.3.1", wantMetadata: true, wantCmp: true},
@@ -635,7 +636,16 @@ func TestReleaseCheckWorkflow(t *testing.T) {
 				}
 			}
 			var assets []map[string]string
-			for _, name := range releaseAssets(c.tag) {
+			names := releaseAssets(c.tag)
+			if c.tag == "v0.2.0" && !c.five {
+				// v0.2.0 shipped each download with its own .sha256 file.
+				names = []string{"SHA256SUMS"}
+				for _, base := range []string{"linux-amd64.tar.gz", "linux-arm64.tar.gz", "windows-amd64.zip", "x86_64.AppImage"} {
+					name := "re-psn-v0.2.0-" + base
+					names = append(names, name, name+".sha256")
+				}
+			}
+			for _, name := range names {
 				if name == c.drop || (c.historical && (name == "install.sh" || name == "install.ps1")) {
 					continue
 				}

@@ -8,8 +8,8 @@
   "unverified": 3,
   "partial": 7,
   "in-progress": 0,
-  "planned": 12,
-  "later": 8,
+  "planned": 15,
+  "later": 9,
   "declined": 1
  },
  "features": [
@@ -434,6 +434,54 @@
    "status_class": "dim"
   },
   {
+   "id": "medius-transport",
+   "area": "Medius profiles",
+   "feature": "Profile-specific transport and discovery",
+   "detail": "An opt-in, disabled-by-default Medius-compatible frontend for a named title/build profile, starting with synthetic local transport and discovery. Unknown or unsupported profiles, versions, application IDs and messages fail explicitly.",
+   "status": "planned",
+   "since": "",
+   "evidence": "docs/medius-scope.md, docs/architecture.md",
+   "note": "Not implemented. Candidate Killzone 3 BCUS98234 update 1.14, app ID 23044: compatibility not tested; not supported.",
+   "status_label": "planned",
+   "status_class": "plan"
+  },
+  {
+   "id": "medius-lobby",
+   "area": "Medius profiles",
+   "feature": "Profile-specific sessions and lobby",
+   "detail": "Logical sessions across service sockets and profile-specific lobby operations, with only an explicitly unauthenticated synthetic local TicketLogin envelope.",
+   "status": "planned",
+   "since": "",
+   "evidence": "docs/medius-scope.md, docs/architecture.md",
+   "note": "Not implemented; no PSN authentication or real tickets.",
+   "status_label": "planned",
+   "status_class": "plan"
+  },
+  {
+   "id": "medius-data",
+   "area": "Medius profiles",
+   "feature": "Profile-specific data path",
+   "detail": "A data path considered only after the selected profile's transport, membership and authorization requirements are evidenced.",
+   "status": "planned",
+   "since": "",
+   "evidence": "docs/medius-scope.md, docs/architecture.md",
+   "note": "Not implemented. The data plane, NAT and DME requirements are unknown; no psnr reuse is promised.",
+   "status_label": "planned",
+   "status_class": "plan"
+  },
+  {
+   "id": "medius-multititle",
+   "area": "Medius profiles",
+   "feature": "Further title/build profiles",
+   "detail": "Consider additional explicitly selected title/build profiles, each with its own evidence and failure rules.",
+   "status": "later",
+   "since": "",
+   "evidence": "docs/medius-scope.md, ROADMAP.md",
+   "note": "Not started; no general Medius or multi-title compatibility is claimed.",
+   "status_label": "later",
+   "status_class": "dim"
+  },
+  {
    "id": "client-c",
    "area": "Client",
    "feature": "C client",
@@ -784,6 +832,9 @@
    "store-backup",
    "ha-failover",
    "net-checks",
+   "medius-transport",
+   "medius-lobby",
+   "medius-data",
    "client-desktop",
    "client-gui",
    "app-themes",
@@ -799,6 +850,7 @@
    "store-mariadb",
    "ha-multi",
    "net-upnp",
+   "medius-multititle",
    "release-signing"
   ],
   "Not planned": [

@@ -2,14 +2,69 @@
 
 ![re-psn: matchmaking rooms and leaderboards for recompiled PS3 games; self-hosted, with NAT traversal and an optional relay](docs/img/banner.png)
 
-A reimplementation of PSN's matchmaking rooms and leaderboards for statically recompiled PS3 games, with NAT traversal and an
-optional relay.
+**Run your own matchmaking and leaderboard server for statically recompiled PS3 games: one small binary, no accounts, no cloud.**
 
 [![CI](https://github.com/undecuple/re-psn/actions/workflows/ci.yml/badge.svg)](https://github.com/undecuple/re-psn/actions/workflows/ci.yml) <!-- version -->![version v0.3.0](https://img.shields.io/badge/pre--release-v0.3.0-d8a657?labelColor=45403d&style=flat-square)<!-- /version --> ![status: alpha](https://img.shields.io/badge/status-alpha-e78a4e?labelColor=45403d&style=flat-square)
-![Go server](https://img.shields.io/badge/server-Go-7daea3?labelColor=45403d&style=flat-square) ![C client](https://img.shields.io/badge/client-C-89b482?labelColor=45403d&style=flat-square) ![licence: MIT](https://img.shields.io/badge/licence-MIT-a9b665?labelColor=45403d&style=flat-square) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/undecuple/re-psn)
+![licence: MIT](https://img.shields.io/badge/licence-MIT-a9b665?labelColor=45403d&style=flat-square) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/undecuple/re-psn)
+
+> [!IMPORTANT]
+> **Bring your own game.** This repository has no game code, assets, keys, firmware or BIOS, and you need none from it. Play
+> only games you own. re-psn is not affiliated with or endorsed by Sony Interactive Entertainment.
+
+| | |
+|---|---|
+| **1** static server binary | Go standard library only, no third-party modules |
+| **1** port | TCP and UDP 36100 for players ([ports](docs/running.md#ports)) |
+| **1** C file | the client, no dependencies, no threads ([client/psnr.c](client/psnr.c)) |
+| **Linux and Windows** | amd64 and arm64 on Linux, amd64 on Windows ([releases](https://github.com/undecuple/re-psn/releases)) |
+
+## Quick start: host a server
+
+The steps for hosting a server. A game still has to be recompiled to use the [client](client/psnr.c); no shipped game is
+claimed to work yet; see the [features list](docs/features.md) for what is tested.
+
+**Linux**
+
+1. Download the archive for your CPU from the [releases page](https://github.com/undecuple/re-psn/releases) and check it:
+   `sha256sum -c SHA256SUMS --ignore-missing`.
+2. Unpack it and run `./re-psn`. It listens on TCP and UDP 36100.
+3. Give your players your address and port 36100 (they must not use `127.0.0.1`).
+
+*Caveat: the newest release is a pre-release; behind a router you must forward TCP and UDP 36100 ([ways to connect](docs/connecting.md)).*
+
+**Windows**
+
+1. Download the `.zip` from the releases page and compare `Get-FileHash` with the line in `SHA256SUMS`.
+2. Unzip it and run `re-psn.exe`.
+3. Allow TCP and UDP 36100 in the firewall, then give your players your address and port.
+
+*Caveat: the release's Windows binary is cross-built and has not been run by us; the server's tests do run on Windows in CI.*
+
+More ways to install (container, install script, from source) are under [Install](#install); the [wiki](https://github.com/undecuple/re-psn/wiki)
+has short guides for players and hosts.
+
+## What makes it different
+
+| Claim | Proof |
+|---|---|
+| Nothing to sign up for: no accounts or passwords, and nothing is stored on disk | [Security and privacy](#security-and-privacy) |
+| The server uses only Go's standard library | [go.mod](go.mod) has no `require` line, and CI enforces it ([ci.yml](.github/workflows/ci.yml)) |
+| Players behind routers get connected, with an optional relay | tested in Docker by the [NAT lab](lab/README.md) |
+| The client is one C file | [client/psnr.c](client/psnr.c), tested against the server by `client/test_psnr.c` |
+| Hardened and checked | fuzz tests, race detector, vulnerability and secret scans in [CI](.github/workflows/ci.yml) |
+| Every feature says how far it got | [features list](docs/features.md) with status and evidence |
+
+## Coming soon
+
+Not built yet; each is in the [features list](docs/features.md) and the [roadmap](ROADMAP.md) with its status: friends,
+presence and invites, private rooms, an opt-in SQLite store, connection checks, a graphical desktop
+client, a metrics endpoint, signed releases.
 
 ## Contents
 
+- [Quick start: host a server](#quick-start-host-a-server)
+- [What makes it different](#what-makes-it-different)
+- [Coming soon](#coming-soon)
 - [About this fork](#about-this-fork)
 - [Overview](#overview)
 - [Example](#example)
@@ -29,10 +84,6 @@ re-psn is a fork of [psnr](https://github.com/sp00nznet/psnr) by sp00nz, who wro
 protocol; [LICENSE](LICENSE) keeps upstream's MIT licence and copyright line, and [NOTICE.md](NOTICE.md) credits the upstream work.
 This fork adds hardened CI and fuzz tests, invite-only rooms, limits, logging, reverse proxy support, a UDP source check, container
 files and release tooling; the [features list](docs/features.md) and [CHANGELOG.md](CHANGELOG.md) have the details.
-
-> [!NOTE]
-> re-psn is not affiliated with or endorsed by Sony Interactive Entertainment. It is not for piracy: this repository contains no game
-> files, keys or firmware, and you need none from it. Play only games you own.
 
 ## Overview
 

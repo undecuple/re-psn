@@ -6,9 +6,9 @@ What re-psn has, what is being worked on, and what comes next. Each item starts 
 ## Scope
 
 > [!NOTE]
-> This section is upstream's, written by sp00nz for [psnr](https://github.com/sp00nznet/psnr), and re-psn keeps it.
-> Upstream's own roadmap, including the work on the ps3recomp side (player names, more titles, per-player storage,
-> voice), is in [psnr's ROADMAP.md](https://github.com/sp00nznet/psnr/blob/main/ROADMAP.md).
+> The private self-hosting goal comes from sp00nz's [psnr](https://github.com/sp00nznet/psnr); the narrow Medius
+> scope below is specific to re-psn. Upstream's own roadmap, including ps3recomp work, is in
+> [psnr's ROADMAP.md](https://github.com/sp00nznet/psnr/blob/main/ROADMAP.md).
 
 re-psn is for a group of players running their own server: a LAN, a tailnet, or
 friends connecting to one person's machine. The goal is for that group to have
@@ -17,9 +17,27 @@ leaderboards, per-player storage.
 
 It is **not** a public PSN replacement, and won't grow into one:
 - no public instance and no server directory;
-- no accounts or passwords, just a name each player sets;
-- no PSN protocol and no impersonation of Sony's servers. Titles talk to
-  psnr through ps3recomp's own NP modules and psnr's own protocol.
+- no accounts or passwords, just an unauthenticated name each player sets;
+- no live Sony infrastructure, impersonation of Sony's servers, real PSN authentication or real PSN tickets;
+- no DNAS, DRM, commerce, publisher services, or reliance on real keys, credentials or other secrets.
+
+The existing path uses ps3recomp's NP modules and psnr's own protocol. In addition, explicitly opt-in,
+disabled-by-default Medius-compatible endpoints for **named title/build profiles** are within scope for controlled
+self-hosted groups. This does not change the existing psnr path or make a general PSN service.
+
+The only TicketLogin envelope in scope is a **locally generated, explicitly unauthenticated synthetic** envelope
+for an explicitly selected, named profile. It is not PSN authentication, proof of identity, ownership or entitlement.
+Names can be impersonated, and a private network is not authentication. Real tickets and ticket files are not accepted.
+Unknown or unsupported profiles, versions, application IDs and messages must fail explicitly in any future
+implementation, not fall back to generic success.
+
+SVO is outside re-psn. If it proves necessary, a separate synthetic companion requires its own scope decision and
+review; it must not proxy live services. If a title requires an excluded service or secret, that path remains out of
+scope.
+
+The candidate is Killzone 3 US `BCUS98234`, update `1.14`, Medius application ID `23044`. **Compatibility is not
+tested and not supported.** See the [Medius scope and profile](docs/medius-scope.md) for what is observed, modelled
+and still unknown.
 
 ## Done
 
@@ -101,6 +119,11 @@ In about this order.
 - Finish relay budgets and remaining UDP guardrails; see [Network](docs/features.md#network).
 - [ci-more] More CI checks, such as the C client outside Linux.
 
+### Medius profiles
+- [medius-transport] Opt-in, profile-specific transport and discovery, beginning with synthetic local tests.
+- [medius-lobby] Profile-specific logical sessions and lobby work, including only the synthetic local login above.
+- [medius-data] A profile-specific data path, only after its requirements and authorization are evidenced.
+
 ### Apps
 - [client-desktop] A terminal app for players and hosts, with launch profiles and a host mode.
 - [client-gui] A graphical app and a local web UI with the same screens.
@@ -123,13 +146,16 @@ In about this order.
 - [players-accounts] Optional sign-in, which needs the scope above changed first.
 - [release-signing] Signed Windows binaries and signed checksums.
 - [net-upnp] Opening a player's P2P port on their router automatically.
+- [medius-multititle] Consider further Medius title/build profiles separately, with evidence for each.
 
 ## Not planned
 
 - [ha-handover] Live room handover: rooms that survive the loss of a server.
-- **A public service**, as in the scope above.
-- **Tickets and title servers.** Some titles check a PSN ticket with their
-  publisher's server; those servers are gone and re-psn won't stand in for them.
+- **A public PSN service or directory**, or access to live Sony infrastructure.
+- **Real PSN authentication and tickets**, including issuing, verifying or accepting real tickets. TicketLogin is in
+  scope only for the explicitly unauthenticated synthetic local envelope described above.
+- **SVO in re-psn.** A synthetic companion, if needed, is a separate decision and must not proxy live services.
 - **Third-party game servers:** Demonware (Guitar Hero III), GameSpy (MUA,
   Saints Row 2), EA, Quazal. Each would be its own project.
-- **Store, commerce, DRM.**
+- **DNAS, publisher services, store, commerce, DRM, or real secrets.** No emulation or fake success for DNAS, and no
+  dependence on real credentials, keys, tickets or other secrets.

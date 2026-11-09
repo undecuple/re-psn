@@ -10,10 +10,10 @@ What re-psn does today and what is planned, one row per feature. Each status res
 | not yet verified | merged, but nothing in the repository checks it | 3 |
 | partial | merged in part, or with known gaps | 7 |
 | in progress | an open pull request or branch | 0 |
-| planned | wanted and intended, not started | 12 |
-| later | after the planned items, or after a decision | 8 |
+| planned | wanted and intended, not started | 15 |
+| later | after the planned items, or after a decision | 9 |
 | declined | will not be done | 1 |
-| all | | 60 |
+| all | | 64 |
 
 ## Rooms and matchmaking
 
@@ -114,6 +114,15 @@ What re-psn does today and what is planned, one row per feature. Each status res
 | `net-guardrails` | **More UDP and relay guardrails**: Bounded per-source-IP UDP packet admission shared by probes, relay and invalid traffic, plus aggregate drop-reason counters in /api/stats. The token bucket tracks at most 4096 sources, expires idle entries and rejects new sources at capacity. | partial | main | [`server/udp_guard.go`](../server/udp_guard.go), [`server/udp.go`](../server/udp.go), [`server/relay.go`](../server/relay.go), [`TestUDPLimiter`](../server/udp_guard_test.go), [`TestUDPAdmissionRealPackets`](../server/udp_guard_test.go), [`TestUDPCountersStatsAuthenticationAndConcurrency`](../server/udp_guard_test.go), [`docs/udp-guardrails.md`](udp-guardrails.md) | Initial packet limiter only: default 1000 packets/second with the same burst, configurable with -max-udp-rate and 0 for off; players behind one NAT share it. Per-player relay byte/datagram budgets, payload and TCP stream limits, failed-token blocking and UDP fuzz coverage remain planned. A larger token needs a protocol version bump. |
 | `net-checks` | **Connection checks**: A check for players and hosts that says where a connection fails (server reachable, HELLO accepted, UDP probe answered, NAT behaviour, peer reachable, relay available) and shows round trip, loss and whether each peer is up. | planned |  |  | Not designed yet. |
 | `net-upnp` | **UPnP**: Open a player's P2P port on their router automatically. | later |  |  | Not started. |
+
+## Medius profiles
+
+| ID | Feature | Status | Since | Evidence | Note |
+|---|---|---|---|---|---|
+| `medius-transport` | **Profile-specific transport and discovery**: An opt-in, disabled-by-default Medius-compatible frontend for a named title/build profile, starting with synthetic local transport and discovery. Unknown or unsupported profiles, versions, application IDs and messages fail explicitly. | planned |  | [`docs/medius-scope.md`](medius-scope.md), [`docs/architecture.md`](architecture.md) | Not implemented. Candidate Killzone 3 BCUS98234 update 1.14, app ID 23044: compatibility not tested; not supported. |
+| `medius-lobby` | **Profile-specific sessions and lobby**: Logical sessions across service sockets and profile-specific lobby operations, with only an explicitly unauthenticated synthetic local TicketLogin envelope. | planned |  | [`docs/medius-scope.md`](medius-scope.md), [`docs/architecture.md`](architecture.md) | Not implemented; no PSN authentication or real tickets. |
+| `medius-data` | **Profile-specific data path**: A data path considered only after the selected profile's transport, membership and authorization requirements are evidenced. | planned |  | [`docs/medius-scope.md`](medius-scope.md), [`docs/architecture.md`](architecture.md) | Not implemented. The data plane, NAT and DME requirements are unknown; no psnr reuse is promised. |
+| `medius-multititle` | **Further title/build profiles**: Consider additional explicitly selected title/build profiles, each with its own evidence and failure rules. | later |  | [`docs/medius-scope.md`](medius-scope.md), [`ROADMAP.md`](../ROADMAP.md) | Not started; no general Medius or multi-title compatibility is claimed. |
 
 ## Client
 
