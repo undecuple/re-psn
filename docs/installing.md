@@ -20,7 +20,7 @@ Download the script and `SHA256SUMS` from a release, check the script's hash, re
 shell.
 
 > [!NOTE]
-> The scripts are release assets, listed in `SHA256SUMS`, from the next release after v0.3.0; v0.3.0 and earlier do not
+> The scripts are release assets, listed in `SHA256SUMS`, from v0.4.0; v0.3.0 and earlier do not
 > carry them. Use the versioned link below (replace `vX.Y.Z` with a release from the
 > [releases page](https://github.com/undecuple/re-psn/releases)): every release so far is a pre-release, and GitHub's
 > `releases/latest/download/...` link does not point at pre-releases, so it gives a 404.
@@ -53,7 +53,7 @@ same file.
 
 ```sh
 sh install.sh                     # the newest release, pre-releases included, into ~/.local/bin
-sh install.sh --version v0.3.0    # a pinned release (or RE_PSN_VERSION=v0.3.0)
+sh install.sh --version v0.4.0    # a pinned release (or RE_PSN_VERSION=v0.4.0)
 sh install.sh --dir ~/bin         # another folder (or RE_PSN_INSTALL_DIR)
 sh install.sh --appimage          # re-psn.AppImage instead of the binary (x86_64 only)
 sh install.sh --dry-run           # print the steps; download and write nothing
@@ -81,7 +81,7 @@ Then `re-psn` starts the server; `re-psn -http 127.0.0.1:36101` also turns on th
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File install.ps1               # the newest release, into %LOCALAPPDATA%\re-psn\bin
-powershell -ExecutionPolicy Bypass -File install.ps1 -Version v0.3.0
+powershell -ExecutionPolicy Bypass -File install.ps1 -Version v0.4.0
 powershell -ExecutionPolicy Bypass -File install.ps1 -AddToPath    # also add that folder to the user PATH
 powershell -ExecutionPolicy Bypass -File install.ps1 -DryRun
 ```

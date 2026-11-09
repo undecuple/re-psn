@@ -1,8 +1,8 @@
 # Health checks and restarts
 
 re-psn runs as one server process. A supervisor can restart it after a failure; a planned restart disconnects players
-and starts a fresh server. This page covers the health endpoint and shutdown behavior on main; they are not released
-yet. It does not provide standby failover or live room handover.
+and starts a fresh server. This page covers the health endpoint and shutdown behavior in v0.4.0 and later; v0.3.0
+does not have them. It does not provide standby failover or live room handover.
 
 ## Health endpoint
 

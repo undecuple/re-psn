@@ -41,7 +41,7 @@ and still unknown.
 
 ## Done
 
-Merged into main. Items are in v0.2.0 or v0.3.0 unless a line says it is on main only.
+Merged into main. Items are in v0.2.0, v0.3.0 or v0.4.0 unless a line says it is on main only.
 
 [Rooms and matchmaking](docs/features.md#rooms-and-matchmaking)
 - [rooms-basic] Create, search, join and leave rooms, with room messages, owner kicks and owner handoff.
@@ -60,10 +60,10 @@ Merged into main. Items are in v0.2.0 or v0.3.0 unless a line says it is on main
 
 [Reverse proxy](docs/features.md#reverse-proxy), [deployment](docs/features.md#deployment) and [settings](docs/features.md#settings)
 - [proxy-support] PROXY protocol v1 and v2 and trusted proxies, so the real client address counts.
-- [ha-restart] A data-free health endpoint and bounded shutdown of client/relay sockets, with restart documentation; on main, not released. Rooms and scores remain in memory.
+- [ha-restart] A data-free health endpoint and bounded shutdown of client/relay sockets, with restart documentation; in v0.4.0. Rooms and scores remain in memory.
 - [deploy-examples] A settings file, a systemd unit and a Traefik example, shipped in the release archives.
 - [deploy-nginx-haproxy] nginx and HAProxy examples, not yet run against the server.
-- [deploy-caddy] A stock Caddy 2 status-page example on main, not released or run/validated with Caddy; game TCP and UDP stay direct.
+- [deploy-caddy] A stock Caddy 2 status-page example, in v0.4.0, not run or validated with Caddy; game TCP and UDP stay direct.
 - [deploy-fail2ban] Disabled fail2ban example for HTTP status-token failures, with offline filter checks; live journal/firewall enforcement remains unverified.
 - [deploy-container] A Dockerfile and compose file, run under Podman.
 - [settings-env] Every flag as a `RE_PSN_*` variable, with the old `PSNR_*` names as aliases.
@@ -72,7 +72,7 @@ Merged into main. Items are in v0.2.0 or v0.3.0 unless a line says it is on main
 - [net-punch] Address discovery and hole punching over UDP, reproduced in the NAT lab.
 - [net-relay] An optional relay for players who cannot reach each other directly.
 - [net-udp-guard] UDP packets accepted only from the address of the player's TCP connection.
-- [net-guardrails] Partial: bounded per-source UDP rate limits and aggregate drop counters on main, not released. Per-player relay byte/stream budgets, failed-token blocking and UDP fuzz coverage remain planned.
+- [net-guardrails] Partial: bounded per-source UDP rate limits and aggregate drop counters, in v0.4.0. Per-player relay byte/stream budgets, failed-token blocking and UDP fuzz coverage remain planned.
 - [client-c] A one-file C client with no dependencies.
 - [app-tui] The shared Windows/Linux terminal app: first-run choice, Rooms/Leaderboards, Settings, dark and light. Linux desktop starts can open a supported terminal; Windows uses its console. An optional HTTP status source adds native totals, public room members/age and board summaries, with game-protocol fallback. Partial: no Host screen or joining yet.
 
@@ -82,12 +82,12 @@ Merged into main. Items are in v0.2.0 or v0.3.0 unless a line says it is on main
 - [release-archives] Release archives with checksums, built by a workflow; partial: published in the v0.2.0 pre-release; the Windows and arm64 binaries are cross-built and not run.
 - [release-process] Written release steps and a dry run, then the first tag (v0.2.0, a pre-release); further pre-releases come with no fixed release day.
 - [release-appimage] A Linux x86_64 AppImage beside the archives; partial: published in the v0.2.0 pre-release, unsigned, and run on one machine.
-- [install-script] Install scripts for Linux and Windows that check SHA256SUMS; partial: on main and release assets from the next release (none has shipped them yet), PowerShell fake-release tests passed on Linux and Windows CI under PowerShell 7, and PowerShell 5.1 remains untested.
+- [install-script] Install scripts for Linux and Windows that check SHA256SUMS; partial: release assets since v0.4.0 (the published v0.4.0 `install.sh` ran on Linux amd64 into a temporary directory), PowerShell fake-release tests passed on Linux and Windows CI under PowerShell 7, and PowerShell 5.1 remains untested.
 - [docs-features] This features list, generated from one data file and checked in CI.
 - [docs-diagrams] Architecture and NAT lab diagrams in Mermaid.
 - [docs-markdown] Every doc in Markdown with one layout, and diagrams for deploy and Docker.
-- [docs-integration] A recomp developer guide covering ps3recomp and direct C integration, a required-tested minimal example, ownership/lifecycle and peer-transport checks; on main, not released.
-- [repo-check] An offline CI guard for tracked root/top-level layout, local Markdown links/anchors and static workflow/Dependabot input paths; available on main.
+- [docs-integration] A recomp developer guide covering ps3recomp and direct C integration, a required-tested minimal example, ownership/lifecycle and peer-transport checks; in v0.4.0.
+- [repo-check] An offline CI guard for tracked root/top-level layout, local Markdown links/anchors and static workflow/Dependabot input paths; available in v0.4.0.
 - [docs-connecting] A page on the ways players connect, with Tailscale and ZeroTier links; neither overlay has been run.
 - [docs-readme] A rewritten README with an example from real runs, the features, the settings and credit to upstream.
 - [docs-art] A generator for the README banner and terminal images from real runs, in one palette, checked in CI.
