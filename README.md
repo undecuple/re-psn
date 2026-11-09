@@ -248,7 +248,7 @@ are pinned; synthetic checks do not certify a title's gameplay or NAT behavior.
 **Recommended:** download an official [release archive or AppImage](#release-archives) from the
 [releases page](https://github.com/undecuple/re-psn/releases) and verify it against `SHA256SUMS`.
 
-Releases are pre-releases for now: the newest, [v0.3.0](https://github.com/undecuple/re-psn/releases/tag/v0.3.0), is on the [releases page](https://github.com/undecuple/re-psn/releases) (see [Release archives](#release-archives)). Its container image is `ghcr.io/undecuple/re-psn:0.3.0` (see [Container](#container)).
+Releases are pre-releases for now: the newest, [v0.4.0](https://github.com/undecuple/re-psn/releases/tag/v0.4.0), is on the [releases page](https://github.com/undecuple/re-psn/releases) (see [Release archives](#release-archives)). Its container image is `ghcr.io/undecuple/re-psn:0.4.0` (see [Container](#container)).
 
 ### Optional quick install (Linux)
 
@@ -260,11 +260,10 @@ curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 \
   -o install.sh https://raw.githubusercontent.com/undecuple/re-psn/dc0238c2407570837ab4e14b803fb260ff77742e/scripts/install.sh &&
 printf '%s  install.sh\n' 'fef1f7f9a424275e45cbca80398477b4440c82b87c106ce6aa7626f3bbce1772' | sha256sum -c - &&
 less install.sh &&
-sh install.sh --version v0.3.0
+sh install.sh --version v0.4.0
 ```
 
-This installs into `~/.local/bin` for the current user. The script comes from the pinned repository revision because
-v0.3.0 has no installer assets; future releases will include the scripts and their checksums. See
+This installs into `~/.local/bin` for the current user. The script comes from a pinned repository revision; the v0.4.0 release carries the same `install.sh` (identical SHA-256) as a release asset, listed in `SHA256SUMS`. See
 [docs/installing.md](docs/installing.md) for options and the Windows installer.
 
 ### From source
@@ -284,7 +283,7 @@ Run the tests with `go vet ./...` and `go test ./...` (on Linux with a C compile
 
 ### Container
 
-The 0.3.0 image is on GitHub's container registry for amd64 and arm64: `docker pull ghcr.io/undecuple/re-psn:0.3.0`; 0.2.0 is still there. It is unsigned, and
+The 0.4.0 image is on GitHub's container registry for amd64 and arm64: `docker pull ghcr.io/undecuple/re-psn:0.4.0`; 0.3.0 and 0.2.0 are still there. It is unsigned, and
 the arm64 image has been built but not run. You can also build it from this repository with Docker or Podman.
 [docker/README.md](docker/README.md) covers ports, the status page and Podman.
 
@@ -304,16 +303,16 @@ It is configured only by `RE_PSN_*` variables.
 ### Release archives
 
 > [!NOTE]
-> [v0.3.0](https://github.com/undecuple/re-psn/releases/tag/v0.3.0) is a pre-release (GitHub marks none as "latest" yet, so use the [releases page](https://github.com/undecuple/re-psn/releases)): archives for Linux (amd64, arm64) and Windows (amd64), and an x86_64 AppImage, all unsigned. The Windows and arm64 binaries are cross-built and have not been run on those systems.
+> [v0.4.0](https://github.com/undecuple/re-psn/releases/tag/v0.4.0) is a pre-release (GitHub marks none as "latest" yet, so use the [releases page](https://github.com/undecuple/re-psn/releases)): archives for Linux (amd64, arm64) and Windows (amd64), and an x86_64 AppImage, all unsigned. The Windows and arm64 binaries are cross-built and have not been run on those systems.
 
 <details>
 <summary>What each release carries, and how to check a download</summary>
 
 Each release carries `re-psn-vX.Y.Z-windows-amd64.zip`, `re-psn-vX.Y.Z-linux-amd64.tar.gz` and
 `re-psn-vX.Y.Z-linux-arm64.tar.gz` (built by [scripts/release-build.sh](scripts/release-build.sh)): a static `re-psn` binary
-(`re-psn.exe` on Windows), `LICENSE`, `NOTICE.md` and the deployment examples in `examples/`. From the next release after
-v0.3.0 it also carries the install scripts `install.sh` and `install.ps1` ([docs/installing.md](docs/installing.md)), seven
-assets in all. `SHA256SUMS` lists the archives and the AppImage, and from that release the scripts. Check a download with `sha256sum -c SHA256SUMS --ignore-missing` on Linux, or compare the output of
+(`re-psn.exe` on Windows), `LICENSE`, `NOTICE.md` and the deployment examples in `examples/`. From v0.4.0 it also carries the
+install scripts `install.sh` and `install.ps1` ([docs/installing.md](docs/installing.md)), seven assets in all (v0.3.0 has
+five, without the scripts). `SHA256SUMS` lists the archives and the AppImage, and from v0.4.0 the scripts. Check a download with `sha256sum -c SHA256SUMS --ignore-missing` on Linux, or compare the output of
 `Get-FileHash <archive>` with the line in `SHA256SUMS` on Windows.
 
 Linux x86_64 also gets `re-psn-vX.Y.Z-x86_64.AppImage`, the same binary as one runnable file (unsigned): check it with
@@ -349,7 +348,7 @@ Variables are upper case, with dashes as underscores. Defaults are those of `./r
 | `-max-player-rooms` | `RE_PSN_MAX_PLAYER_ROOMS` | `8` | Rooms one player may be in at once (0: no limit) |
 | `-max-conns-per-addr` | `RE_PSN_MAX_CONNS_PER_ADDR` | `32` | Open connections per remote address (0: no limit) |
 | `-max-req-rate` | `RE_PSN_MAX_REQ_RATE` | `200` | Requests per second per connection before it is closed (0: no limit) |
-| `-max-udp-rate` | `RE_PSN_MAX_UDP_RATE` | `1000` | UDP packets per second per source (IPv4 address or IPv6 /64), shared by probes and relay traffic; same-size burst (0: no limit); on main, not in v0.3.0 |
+| `-max-udp-rate` | `RE_PSN_MAX_UDP_RATE` | `1000` | UDP packets per second per source (IPv4 address or IPv6 /64), shared by probes and relay traffic; same-size burst (0: no limit); since v0.4.0 |
 | `-v` | `RE_PSN_V` | off | Same as `-log-level debug` |
 | `-log-level` | `RE_PSN_LOG_LEVEL` | `info` | `debug` (room events), `info`, `warn` or `error` |
 | `-log-format` | `RE_PSN_LOG_FORMAT` | `text` | `text` or `json` |

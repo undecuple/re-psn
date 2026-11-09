@@ -1,6 +1,6 @@
 # UDP rate limits and drop counters
 
-This page describes the server on `main`; v0.3.0 does not have the limiter or the counters.
+This page describes the server on `main` and in v0.4.0 and later; v0.3.0 does not have the limiter or the counters.
 
 The server applies one packet allowance per UDP source (an IPv4 address, or an IPv6 /64 network) before decoding a datagram or taking the room/client state
 lock. PROBE, RELAY and invalid datagrams share this allowance. The wire format, tokens, source-address check and

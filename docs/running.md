@@ -118,8 +118,8 @@ on the same network, who send UDP to it.
 
 The release archives carry an `examples/` folder (in this repository, [deploy/](../deploy/README.md)): `re-psn.env.example` (every setting, commented, with its
 default; copy it to `re-psn.env`), `re-psn.service` (a systemd unit, reading `/etc/psnr/psnr.env` then `/etc/re-psn/re-psn.env`) and configs for Traefik, nginx
-and HAProxy. A [Caddy status-page example](../deploy/caddy/README.md) is on main for inclusion in the next release;
-existing archives do not contain it. Only the Traefik one has been run (see below).
+and HAProxy. A [Caddy status-page example](../deploy/caddy/README.md) is in the v0.4.0 archives and later;
+v0.3.0 and earlier archives do not contain it. Only the Traefik one has been run (see below).
 
 Without a proxy nothing changes. With one, the server must learn the real player address, or every player looks like the proxy
 (`-max-conns-per-addr` trips for everyone, and the address other players receive is wrong).
