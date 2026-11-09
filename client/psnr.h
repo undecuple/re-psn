@@ -4,7 +4,7 @@
  *
  * No threads. psnr_send() transmits a request and returns its id; the reply and
  * any server pushes come back out of psnr_poll(). Its receive path does not
- * wait for new data, but automatic heartbeat writes may wait for writability.
+ * wait for new data, but automatic heartbeat writes may wait for writability, with no time limit.
  * An adapter owns transport calls serially and delivers completions through
  * the title's guest callback queue. Keep potentially blocking transport work
  * away from timing-sensitive guest execution. psnr_call() is the blocking
@@ -114,8 +114,9 @@ int64_t psnr_stream_accept(const psnr_client* c, uint32_t stream_id, int timeout
 int psnr_connect_error(void);
 void psnr_close(psnr_client* c);
 
-/* Transmit a request synchronously; may wait for socket writability. body
- * excludes the request id. Returns the id, or 0 on failure. */
+/* Transmit a request synchronously; may wait for socket writability, with no
+ * time limit. body excludes the request id. Returns the id, or 0 on failure;
+ * after a failed write the connection is unusable. */
 uint32_t psnr_send(psnr_client* c, uint8_t type, const void* body, uint32_t len);
 
 /* 1: *out holds the next reply or push. 0: nothing yet. -1: disconnected after

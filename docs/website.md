@@ -14,28 +14,8 @@ Type `help` for commands. While typing, Tab or Right accepts a suggestion, Up/Do
 With no suggestion open, Up/Down recalls command history. Commands and settings are read from the site's data; the site
 does not connect to a game server or change its configuration.
 
-## Pager trial
-
-Long output is shown one page at a time. The status bar shows the current line range, with buttons for moving and
-**show all**. Pages follow the actual wrapped line heights and adjust when the viewport or theme changes.
-
-Focus the Output region by opening a menu item or tabbing to it, then use:
-
-| Key | Action |
-|---|---|
-| Space, `f`, Page Down | Next page |
-| `b`, Page Up | Previous page |
-| `j` / `k`, Down / Up | Move one line |
-| `g` / `G`, Home / End | First / last page |
-| `q`, Esc | Leave the pager and show all output |
-| `/` | Focus the command line |
-
-Typing in the command line always enters text, including letters that act as pager shortcuts when Output has focus.
-Page Up/Down and Esc also control the pager from an empty command line. Use `pager off` to show complete output, or
-`pager on` to restore paging. This trial is enabled initially; the choice is stored in this browser when local storage
-is available. The only other saved choice is the theme. Storage failures leave the interface usable.
-
-The pager changes presentation only. It does not change available features, game compatibility or server behavior.
+The theme choice is stored in this browser when local storage is available; it is the only saved choice. Storage
+failures leave the interface usable.
 
 ## Contributor checks
 
@@ -67,8 +47,7 @@ chromium --headless --no-first-run --disable-background-networking --disable-com
 node tools/site_browser_check.mjs 9222 http://127.0.0.1:8000/ work/site-browser-check
 ```
 
-The check creates and closes its own browser tab. Stop the browser and HTTP server afterward. It exercises pager keys,
-command entry, autocomplete/history, theme and resize changes, text selection, narrow layouts, reduced motion,
+The check creates and closes its own browser tab. Stop the browser and HTTP server afterward. It exercises command entry, autocomplete/history, theme and resize changes, text selection, narrow layouts, reduced motion,
 forced-colors mode, data-load failure, and the no-JavaScript document. It checks for uncaught exceptions and external
 page requests. Emulation and programmatic key input do not replace testing on a physical phone, real keyboard, or screen
 reader. Browser checks are contributor tooling, not part of the deployed site.

@@ -11,7 +11,7 @@ import (
 func TestPaletteMatchesTheWebsite(t *testing.T) {
 	b, err := os.ReadFile(filepath.Join("..", "..", "..", "docs", "art", "palette.json"))
 	if err != nil {
-		t.Skip("docs/art/palette.json is not here:", err)
+		t.Fatal("docs/art/palette.json must be in the checkout:", err)
 	}
 	var doc struct {
 		Modes map[string]map[string]string `json:"modes"`

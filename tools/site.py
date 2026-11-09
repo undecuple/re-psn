@@ -81,7 +81,7 @@ LICENCE = ("MIT, see [LICENSE](LICENSE); upstream's copyright line is kept and a
            "trademarks of Sony Interactive Entertainment, used only to say what the server stands in for.")
 # (path, title, what is in it); each path must exist
 DOCS = (
-    ("docs/website.md", "Website controls", "Numbered terminal output, the pager trial, keyboard controls and contributor checks"),
+    ("docs/website.md", "Website controls", "Numbered terminal output, keyboard controls and contributor checks"),
     ("docs/architecture.md", "Architecture", "The parts, the threadless client, why game traffic is peer to peer, the relay"),
     ("docs/api.md", "Protocol", "Framing, session, rooms, leaderboards, UDP, relay, HTTP"),
     ("docs/running.md", "Running a server", "Flags, variables, UDP source check, reverse proxy, logging, ports, firewall, storage"),

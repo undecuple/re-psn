@@ -18,7 +18,7 @@ All notable changes to this project are documented here. The format follows
 - Linux desktop startup for the shared terminal app: open an installed terminal when no TTY is attached, with literal
   arguments and a recursion guard. A desktop entry and the site's favicon artwork are provided as installation inputs;
   no release assets are added, and the Windows build retains its normal console behavior.
-- Bounded per-source-IP UDP admission with `-max-udp-rate` / `RE_PSN_MAX_UDP_RATE` (default 1000 packets/second,
+- Bounded per-source UDP admission (per IPv4 address, per IPv6 /64) with `-max-udp-rate` / `RE_PSN_MAX_UDP_RATE` (default 1000 packets/second,
   same-size burst; 0 disables it), shared by probes and relay datagrams. Aggregate `udp_drops` counters in the
   opt-in `/api/stats` identify refusal reasons without per-packet logging or source labels. Relay byte/stream budgets
   remain planned; the packet format and token checks are unchanged.
@@ -30,7 +30,8 @@ All notable changes to this project are documented here. The format follows
 - The opt-in server status page now matches the website and terminal app's gruvbox-material palette and monospace
   framing, with Overview/Rooms/Leaderboards tabs, System/Light/Dark, text size, spacing and contrast-checked custom colours.
   Appearance is local to each browser. Live refresh can be paused and retains the last snapshot on failure; without
-  JavaScript both tables remain visible and reload as before. The status token and `/api/stats` fields are unchanged.
+  JavaScript both tables remain visible and reload as before. The status token is unchanged; the fields of `/api/stats`
+  are unchanged by this page (the `udp_drops` counters are a separate addition).
   Embedded assets normalize line endings before rendering and CSP hashing. Polling preserves full 64-bit score and
   identifier values without changing their JSON types on the server.
 - An offline repository check for tracked root/top-level layout, local Markdown links and anchors, and static
@@ -38,9 +39,7 @@ All notable changes to this project are documented here. The format follows
 - A focused loopback check: `python3 tools/loopback.py` runs the existing native C-client and Go app-client conformance
   tests against temporary loopback servers. Required skips and timeouts fail; `--race` is optional. See `docs/testing.md`.
 - Numbered file-style output in the website's terminal view: a header, frame, line-number gutter, syntax-style colours
-  and wrapped continuation rows with an empty gutter. Headers and numbers are excluded from text selection. A pager
-  trial shows long output by page, with a line-range status, keyboard shortcuts and buttons; `pager off` shows all lines.
-  Command typing stays independent of pager shortcuts, and pages remeasure after viewport and theme changes. See
+  and wrapped continuation rows with an empty gutter. Headers and numbers are excluded from text selection. See
   `docs/website.md` for controls and browser-test instructions.
 - Optional install scripts: `scripts/install.sh` (POSIX sh; Linux amd64 and arm64) and `scripts/install.ps1` (Windows amd64;
   written for PowerShell 5.1 and 7, tested on 7 only) install the server for the current user from a GitHub release, the newest one (pre-releases included)
@@ -48,8 +47,14 @@ All notable changes to this project are documented here. The format follows
   mismatch or a missing line, need no sudo or administrator rights, edit no shell profile, and change the user PATH only with
   `-AddToPath` on Windows. macOS is refused (there are no macOS builds). `--dry-run` / `-DryRun` downloads nothing. Tested
   with `scripts/test-install.sh` and `scripts/test-install.ps1` against a fake release. See `docs/installing.md`.
+- `.github/FUNDING.yml`, which gives the repository a sponsor link (Ko-fi).
+- Tests for room kick behavior, contributed by Tzeentchnet.
 
 ### Changed
+- The website's pager trial is removed: the `pager` command, its keys, buttons and status bar, and the saved pager
+  setting are gone, and long output is shown in full in the scrolling output pane. Numbered file output is unchanged.
+- The README install section recommends the release archives and shows an optional quick install: the installer is
+  fetched from a pinned revision of the repository, its hash is checked, and it is read before it is run.
 - The release carries seven assets: the three archives, the AppImage, `SHA256SUMS`, and the two install scripts as
   `install.sh` and `install.ps1`, byte for byte the tagged `scripts/` files, with their checksums in `SHA256SUMS`. Check one
   with `sha256sum -c SHA256SUMS --ignore-missing` before reading and running it. `scripts/check-release.sh --assets` checks a

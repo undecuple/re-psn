@@ -13,7 +13,7 @@ import (
 
 // TestCClient builds the C conformance client and minimal example and runs
 // them against a live server, so the client and server can't drift apart. Skips
-// when there's no C compiler (set CC to pick one).
+// when there's no `cc`, `gcc` or `clang` on PATH.
 func TestCClient(t *testing.T) {
 	cc := ""
 	for _, name := range []string{"cc", "gcc", "clang"} {

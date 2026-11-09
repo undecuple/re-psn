@@ -48,7 +48,7 @@ docker compose -f docker/docker-compose.yml up -d
 | `-trusted-proxies` | none | Reverse proxies allowed to name the real client: CIDRs or addresses, comma-separated. See [Behind a reverse proxy](#behind-a-reverse-proxy). |
 | `-proxy-protocol` | off | Require a PROXY protocol v1 or v2 header on the game TCP port from a trusted proxy. Needs `-trusted-proxies`. |
 | `-max-rooms` | `1000` | Room limit across all titles |
-| `-max-udp-rate` | `1000` | UDP packets per second per source IP, including invalid packets, with the same-size burst allowance. Probes and UDP relay traffic share it; 0 disables the limiter, negative values stop startup. Players behind one NAT share one allowance. See [UDP guardrails](udp-guardrails.md). |
+| `-max-udp-rate` | `1000` | UDP packets per second per source (IPv4 address or IPv6 /64), including invalid packets, with the same-size burst allowance. Probes and UDP relay traffic share it; 0 disables the limiter, negative values stop startup. Players behind one NAT share one allowance. See [UDP guardrails](udp-guardrails.md). |
 | `-udp-any-source` | off | Accept UDP probes and relay packets from an address other than the player's TCP address. By default they must match; turn this on only for players whose UDP leaves from another public address (some multi-WAN or carrier NAT setups). It weakens the check, and the server warns at start. See [UDP source address](#udp-source-address). |
 | `-relay` | off | Carry traffic between players who can't reach each other directly: streams into a player behind a router, and datagrams when a router won't let punched traffic through. Uses this server's bandwidth. |
 | `-db` | `off` | Score storage: `off` or `memory`, which both keep scores in memory. See [Storage](#storage). |

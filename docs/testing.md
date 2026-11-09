@@ -35,6 +35,9 @@ build may need more time. The command can be invoked by its absolute path from a
 | Native client | `TestCClient` | Builds/runs `client/test_psnr.c` and `client/examples/minimal.c` against the in-process TCP/UDP server, including example argument validation and empty/populated searches |
 | Go app client | `TestConformanceRoomsAndScores`, `TestConformanceRelayRoute`, `TestConformanceErrors` | Builds the server, starts it on free loopback ports, and exercises two-client room/score operations, route notifications and protocol errors |
 
+CI also requires `TestCheckReleaseAssets`, `TestReleaseAssetListsAgree` and `TestReleaseCheckWorkflow` to run on Linux, so a
+missing `sh`, `awk` or `diff` fails the job instead of skipping them.
+
 The runner uses `tools/check_conformance.py` to require the exact package/test names, disables Go's result cache with
 `-count=1`, and forwards test output. The app module uses `-mod=readonly`. There is no option for an external target.
 The route-notification test does not establish that relayed gameplay data works.

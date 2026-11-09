@@ -179,7 +179,7 @@ website's colours. The server's version, uptime and connection counts are not av
 An explicitly configured [HTTP status source](app/README.md#optional-native-http-status) adds uptime, connection totals,
 public-room members and board summaries natively, with the existing token rules and no browser. It falls back to the
 game protocol when HTTP is unavailable; the server version remains unshared.
-On Linux desktops, starting without a terminal can open a supported terminal; the Windows build uses its console.
+The app has no release binary: build it from source (see [app/README.md](app/README.md)). On Linux desktops, starting without a terminal can open a supported terminal; the Windows build uses its console.
 See the [desktop startup instructions](app/README.md#starting-from-the-desktop) and the limits of local testing.
 The terminal UI uses [Bubble Tea](https://github.com/charmbracelet/bubbletea) and [Lip Gloss](https://github.com/charmbracelet/lipgloss)
 (MIT); the server module stays standard-library only. The app module needs Go 1.26 or newer; the server and the C client keep
@@ -262,7 +262,7 @@ Each release carries `re-psn-vX.Y.Z-windows-amd64.zip`, `re-psn-vX.Y.Z-linux-amd
 `re-psn-vX.Y.Z-linux-arm64.tar.gz` (built by [scripts/release-build.sh](scripts/release-build.sh)): a static `re-psn` binary
 (`re-psn.exe` on Windows), `LICENSE`, `NOTICE.md` and the deployment examples in `examples/`. From the next release after
 v0.3.0 it also carries the install scripts `install.sh` and `install.ps1` ([docs/installing.md](docs/installing.md)), seven
-assets in all. `SHA256SUMS` lists the archives, the AppImage and the scripts. Check a download with `sha256sum -c SHA256SUMS --ignore-missing` on Linux, or compare the output of
+assets in all. `SHA256SUMS` lists the archives and the AppImage, and from that release the scripts. Check a download with `sha256sum -c SHA256SUMS --ignore-missing` on Linux, or compare the output of
 `Get-FileHash <archive>` with the line in `SHA256SUMS` on Windows.
 
 Linux x86_64 also gets `re-psn-vX.Y.Z-x86_64.AppImage`, the same binary as one runnable file (unsigned): check it with
@@ -298,7 +298,7 @@ Variables are upper case, with dashes as underscores. Defaults are those of `./r
 | `-max-player-rooms` | `RE_PSN_MAX_PLAYER_ROOMS` | `8` | Rooms one player may be in at once (0: no limit) |
 | `-max-conns-per-addr` | `RE_PSN_MAX_CONNS_PER_ADDR` | `32` | Open connections per remote address (0: no limit) |
 | `-max-req-rate` | `RE_PSN_MAX_REQ_RATE` | `200` | Requests per second per connection before it is closed (0: no limit) |
-| `-max-udp-rate` | `RE_PSN_MAX_UDP_RATE` | `1000` | UDP packets per second per source IP, shared by probes and relay traffic; same-size burst (0: no limit) |
+| `-max-udp-rate` | `RE_PSN_MAX_UDP_RATE` | `1000` | UDP packets per second per source (IPv4 address or IPv6 /64), shared by probes and relay traffic; same-size burst (0: no limit); on main, not in v0.3.0 |
 | `-v` | `RE_PSN_V` | off | Same as `-log-level debug` |
 | `-log-level` | `RE_PSN_LOG_LEVEL` | `info` | `debug` (room events), `info`, `warn` or `error` |
 | `-log-format` | `RE_PSN_LOG_FORMAT` | `text` | `text` or `json` |
@@ -404,8 +404,7 @@ welcome; [CONTRIBUTING.md](CONTRIBUTING.md) has the ground rules and the tests t
 The project page is built from `site/` by [tools/site.py](tools/site.py) out of the features list, `VERSION`, the settings table above and
 [CHANGELOG.md](CHANGELOG.md). It works without script; `site/terminal.js` (no dependencies) adds a terminal-style interface with commands such as `features`, `settings` and `install`, and the `plain view` link switches it off. Nothing is loaded from another site, and the only request is for `data.json` on the same site. It is published at <https://undecuple.github.io/re-psn/>.
 
-Command output has a file header, line-number gutter and syntax-style colours. A pager trial offers keys and buttons for
-long output; `pager off` shows it all. See [docs/website.md](docs/website.md) for controls and contributor browser checks.
+Command output has a file header, line-number gutter and syntax-style colours. See [docs/website.md](docs/website.md) for controls and contributor browser checks.
 
 ## Credits
 

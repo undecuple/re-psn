@@ -452,13 +452,6 @@ html.tui-on:not(.plain) body { padding-bottom: 16px; }
 .tui-out .env { color: var(--c-env); font-weight: var(--syn-w); }
 .tui-out .label { color: var(--c-label); font-weight: bold; }
 
-/* The pager (a trial): a status line in reverse colours under the output, then chips for its keys. */
-.tui-pager { border-top: 1px solid var(--line); }
-.tui-pager .pg-status { display: flex; flex-wrap: wrap; gap: 0 2ch; margin: 0; padding: 0 1ch; background: var(--strong); color: var(--page); }
-.tui-pager .pg-label { font-weight: bold; }
-.tui ul.tui-pgchips { display: flex; flex-wrap: wrap; gap: 4px 1ch; padding: 4px 1ch; }
-.tui .tui-pgchips .chip { min-height: 1.75em; padding: 0 1ch; }
-
 .tui-cmd { position: relative; border-top: 1px solid var(--line); padding: 0.25em 1ch; }
 .tui-hint { margin: 0; color: var(--muted); }
 .tui:not(.empty) .tui-hint { visibility: hidden; }
@@ -532,7 +525,5 @@ html.tui-on:not(.plain) body { padding-bottom: 16px; }
   .tui-out .file.gw2 { --gw: 3.5ch; }
   .tui-out .file.gw3 { --gw: 4.5ch; }
   .tui-out .file.gw4 { --gw: 5.5ch; }
-  .tui .tui-pgchips .chip { min-height: 44px; min-width: 44px; justify-content: center; padding: 0 1.5ch; }
-  .tui-pager .pg-keys { display: none; }
   nav.bar ul { gap: 0 1.5ch; }
 }

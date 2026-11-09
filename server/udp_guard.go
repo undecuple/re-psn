@@ -43,6 +43,11 @@ func (l *udpLimiter) allow(source netip.Addr, now time.Time) (rateLimited, capac
 		l.swept = now
 	}
 	source = source.Unmap()
+	if source.Is6() {
+		// One IPv6 network (/64) is one source: a single customer holds billions of addresses, and counting each
+		// would let one host fill the table or restart its allowance with every new address.
+		source = netip.PrefixFrom(source, 64).Masked().Addr()
+	}
 	b, found := l.sources[source]
 	if !found {
 		if len(l.sources) >= udpSourceLimit {

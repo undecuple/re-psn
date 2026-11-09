@@ -46,7 +46,7 @@ func main() {
 	playerRooms := num("max-player-rooms", 8, "rooms one player may be in at once (0 for no limit)")
 	perAddr := num("max-conns-per-addr", 32, "open connections per remote address (0 for no limit)")
 	reqRate := num("max-req-rate", 200, "requests per second per connection before it is closed (0 for no limit)")
-	udpRate := flag.String("max-udp-rate", "1000", "UDP datagrams per second per source IP, with the same burst allowance (0 for no limit)")
+	udpRate := flag.String("max-udp-rate", "1000", "UDP datagrams per second per source (IPv4 address or IPv6 /64), with the same burst allowance (0 for no limit)")
 	verbose := toggle("v", false, "same as -log-level debug")
 	logLevel := flag.String("log-level", envStr("log-level", "info"), "log level: debug (room events), info, warn or error")
 	logFormat := flag.String("log-format", envStr("log-format", "text"), "log format: text or json")

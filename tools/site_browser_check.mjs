@@ -37,7 +37,7 @@ async function typed(text) {
   for(const letter of text) await c.key(letter,'Key'+letter.toUpperCase(),{text:letter});
 }
 async function fits() {
-  return evaluate(`(()=>{const o=document.querySelector('.tui-out');return {fits:o.scrollHeight<=o.clientHeight+1, horizontal:document.documentElement.scrollWidth<=innerWidth+1,range:document.querySelector('.pg-range').textContent,height:o.clientHeight,scroll:o.scrollHeight}})()`);
+  return evaluate(`(()=>{const o=document.querySelector('.tui-out');return {horizontal:document.documentElement.scrollWidth<=innerWidth+1 && o.scrollWidth<=o.clientWidth+1}})()`);
 }
 try {
   await viewport(1200,900);
@@ -47,27 +47,13 @@ try {
   await navigate();
   await click('.tui-menu [data-cmd="features"]');
   eq(await evaluate("document.activeElement.className"),'tui-out','menu focuses output');
-  ok(!(await evaluate("document.querySelector('.tui-pager').hidden")),'long output is paged');
-  ok((await fits()).fits,'rendered first page fits output');
-  ok((await fits()).horizontal,'no horizontal viewport overflow');
-  ok(await evaluate(`(()=>{const e=new KeyboardEvent('keydown',{key:'ArrowDown',shiftKey:true,bubbles:true,cancelable:true});document.querySelector('.tui-out').dispatchEvent(e);return !e.defaultPrevented})()`),'pager leaves shifted selection keys to the browser');
-  const first=await evaluate("document.querySelector('.pg-range').textContent");
-  await c.key('PageDown');
-  ok((await evaluate("document.querySelector('.pg-range').textContent"))!==first,'page down advances');
-  await c.key('G','KeyG',{modifiers:8,text:'G'});
-  ok((await evaluate("document.querySelector('.pg-range').textContent")).includes('(END)'),'G reaches final page');
-  await c.key('g','KeyG',{text:'g'});
-  eq(await evaluate("document.querySelector('.pg-range').textContent"),first,'g returns to top');
-  await c.key('q','KeyQ',{text:'q'});
-  ok(await evaluate("document.querySelector('.tui-pager').hidden"),'q shows all and closes pager');
-  eq(await evaluate("document.querySelectorAll('.fl').length"),featureLineCount,'all lines restored');
-  await click('.tui-menu [data-cmd="features"]');
+  eq(await evaluate("document.querySelectorAll('.fl').length"),featureLineCount,'all lines are shown');
   await typed('features');
-  eq(await evaluate("document.querySelector('#tui-input').value"),'features','printable pager keys never eat a command');
+  eq(await evaluate("document.querySelector('#tui-input').value"),'features','typed letters reach the command line');
   await c.key('Enter');
   eq(await evaluate("document.querySelector('.file-name').textContent"),'features','typed command executes');
   await typed('features --status pl');
-  eq(await evaluate("document.querySelector('.tui-ghost-rest').textContent"),'anned','autocomplete survives pager');
+  eq(await evaluate("document.querySelector('.tui-ghost-rest').textContent"),'anned','autocomplete works after a numbered answer');
   await c.key('Tab');
   eq(await evaluate("document.querySelector('#tui-input').value"),'features --status planned ','Tab accepts suggestion');
   await c.key('Enter');
@@ -76,15 +62,14 @@ try {
   eq(await evaluate("document.querySelector('#tui-input').value"),'features --status planned','history works in command input');
   await c.command('features');
   await click('.tui-title [data-theme-set="light"]');
-  ok((await fits()).fits,'theme change remeasures row heights');
+  ok((await fits()).horizontal,'light theme stays inside the viewport');
   await c.screenshot(new URL('desktop-light.png',artifacts));
   await click('.tui-title [data-theme-set="dark"]');
-  ok((await fits()).fits,'dark page fits after theme change');
+  ok((await fits()).horizontal,'dark theme stays inside the viewport');
   await c.screenshot(new URL('desktop-dark.png',artifacts));
   await click('.tui-title [data-theme-set="system"]');
   await c.call('Emulation.setEmulatedMedia',{features:[{name:'prefers-color-scheme',value:'light'}]});
-  await c.waitFor("document.querySelector('.tui-out').scrollHeight <= document.querySelector('.tui-out').clientHeight+1");
-  ok((await fits()).fits,'system theme change remeasures pages');
+  ok((await fits()).horizontal,'system theme change stays inside the viewport');
   await click('.tui-title [data-theme-set="dark"]');
   const selected=await evaluate(`(()=>{const s=getSelection(),r=document.createRange();r.selectNodeContents(document.querySelector('.file'));s.removeAllRanges();s.addRange(r);return s.toString()})()`);
   ok(!selected.includes('File: features'),'selection omits file header');
@@ -97,29 +82,13 @@ try {
     const ax=await c.call('Accessibility.getPartialAXTree',{nodeId,fetchRelatives:false});
     ok(ax.nodes[0].ignored,selector+' is hidden from the accessibility tree');
   }
-  await evaluate("document.querySelector('#tui-input').focus()");
-  const beforeInputPage=await evaluate("document.querySelector('.pg-range').textContent");
-  await c.key('PageDown');
-  ok((await evaluate("document.querySelector('.pg-range').textContent"))!==beforeInputPage,'PageDown works from empty prompt');
-  await c.key('Escape');
-  ok(await evaluate("document.querySelector('.tui-pager').hidden"),'Escape from empty prompt shows all');
   await c.command('features');
   await viewport(900,600);
-  await c.waitFor("document.querySelector('.tui-out').scrollHeight <= document.querySelector('.tui-out').clientHeight+1");
-  ok((await fits()).fits,'resized page fits');
-  await c.command('pager off');
-  await navigate();
-  await c.command('features');
-  ok(await evaluate("document.querySelector('.tui-pager').hidden"),'pager off survives reload');
-  eq(await evaluate("document.querySelectorAll('.fl').length"),featureLineCount,'pager off shows complete output');
-  await c.command('pager on');
-  await navigate();
-  await c.command('features');
-  ok(!await evaluate("document.querySelector('.tui-pager').hidden"),'pager on survives reload');
+  ok((await fits()).horizontal,'resized page stays inside the viewport');
   for(const name of ['help','roadmap','install','settings','connect','changelog','docs','links','version','credits','licence']) {
     await c.command(name);
     ok(!!await evaluate("document.querySelector('.file-name')"),name+' renders a file');
-    if(!await evaluate("document.querySelector('.tui-pager').hidden")) ok((await fits()).fits,name+' page fits');
+    ok((await fits()).horizontal,name+' stays inside the viewport');
   }
   await viewport(390,844);
   await navigate();
@@ -127,10 +96,6 @@ try {
   await click('.plain-bar button');
   await click('.tui-menu [data-cmd="features"]');
   ok((await fits()).horizontal,'phone terminal has no horizontal page overflow');
-  const before=await evaluate("document.querySelector('.pg-range').textContent");
-  await click('[data-pager="next"]');
-  ok((await evaluate("document.querySelector('.pg-range').textContent"))!==before,'phone next-page chip advances');
-  await click('[data-pager="top"]');
   const wrap=await evaluate(`(()=>{const row=[...document.querySelectorAll('.fl')].find(r=>r.getBoundingClientRect().height>35);return !!row && row.querySelectorAll('.gut').length===1 && row.querySelector('.gut').textContent===''})()`);
   ok(wrap,'wrapped phone line has one text-free gutter');
   await evaluate('scrollTo(0,0)');
@@ -158,9 +123,8 @@ try {
   });
   await navigate();
   await click('.plain-bar button');
-  await c.command('pager off');
   await c.command('features');
-  ok(await evaluate("document.querySelector('.tui-pager').hidden"),'pager works when local storage is blocked');
+  ok(!!await evaluate("document.querySelector('.file-name')"),'commands work when local storage is blocked');
   await c.call('Page.removeScriptToEvaluateOnNewDocument',{identifier:deniedStorage.identifier});
   await c.call('Emulation.setScriptExecutionDisabled',{value:true});
   await navigate(false);

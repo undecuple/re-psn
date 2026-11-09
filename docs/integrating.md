@@ -56,7 +56,7 @@ cc -std=gnu11 -Wall -Wextra -Iclient client/psnr.c client/examples/minimal.c -o 
 Success prints `HELLO user=...` and `ROOM_LIST total=... count=...`, then closes the connection. The example uses the
 synthetic communication ID `RE-PSN-DEMO`, advertises peer port zero and has no peer socket. An empty list is expected
 on a fresh server. It demonstrates blocking setup and reply ownership, not an engine frame loop or multiplayer gameplay.
-It never reads game data or contacts a public service.
+It reads no game data and connects only to the HOST you give it.
 
 For an automated check that builds its own temporary loopback server and fails if native execution skips:
 

@@ -22,7 +22,7 @@ function links(res) {
 }
 
 const COMMANDS = ['help', '--help', 'features', 'roadmap', 'settings', 'install', 'connect', 'version', 'changelog', 'about',
-  'credits', 'licence', 'license', 'docs', 'links', 'theme', 'pager', 'clear', 'history'];
+  'credits', 'licence', 'license', 'docs', 'links', 'theme', 'clear', 'history'];
 
 test('every command answers and links stay on github.com or in the repository', () => {
   for (const c of COMMANDS) {
@@ -40,7 +40,7 @@ test('unknown input', () => {
 
 test('help lists every command', () => {
   const t = text(T.run('--help', data));
-  for (const c of ['features', 'roadmap', 'settings', 'install', 'connect', 'version', 'changelog', 'about', 'credits', 'licence', 'docs', 'links', 'theme', 'pager', 'clear', 'history']) {
+  for (const c of ['features', 'roadmap', 'settings', 'install', 'connect', 'version', 'changelog', 'about', 'credits', 'licence', 'docs', 'links', 'theme', 'clear', 'history']) {
     assert.ok(t.includes(c), c);
   }
 });
@@ -179,7 +179,7 @@ test('the autocomplete markup is built with DOM calls and carries the combobox a
   }
 });
 
-test('the script has no dynamic code or HTML strings, one network call and only theme/pager storage', () => {
+test('the script has no dynamic code or HTML strings, one network call and only theme storage', () => {
   for (const bad of ['eval(', 'new Function', 'innerHTML', 'outerHTML', 'insertAdjacentHTML', 'document.write', 'XMLHttpRequest',
     'WebSocket', 'sendBeacon', 'document.cookie', 'sessionStorage', 'indexedDB', 'import(', 'importScripts', "setAttribute('style'"]) {
     assert.ok(!source.includes(bad), bad);
@@ -207,7 +207,7 @@ test('the script keeps the theme in one place shared by the command and the swit
   assert.ok(source.includes('[data-theme-set]'));
 });
 
-// ---------------------------------------------------------------- the numbered file and the pager
+// ---------------------------------------------------------------- the numbered file
 
 test('each answer has a file name; errors and clear have none', () => {
   assert.strictEqual(T.run('features', data).file, 'features');
@@ -234,80 +234,6 @@ test('gutter width follows the digits of the line count', () => {
   assert.strictEqual(T.gutterWidth(12345), 4);
 });
 
-
-const ones = (n) => Array(n).fill(1);
-
-test('pager: page boundaries, the last page is full, wrapped lines count by rows', () => {
-  const p = T.pager(ones(57), 20, 0);
-  assert.deepStrictEqual([p.top, p.end, p.total, p.last], [0, 20, 57, 37]);
-  const n1 = T.pagerKey(p, ' ');
-  assert.deepStrictEqual([n1.top, n1.end], [20, 40]);
-  const n2 = T.pagerKey(n1, 'f');
-  assert.deepStrictEqual([n2.top, n2.end], [37, 57]);
-  assert.strictEqual(T.pagerKey(n2, 'PageDown').top, 37);
-  assert.strictEqual(T.pagerKey(n2, 'b').top, 17);
-  assert.strictEqual(T.pagerKey(T.pagerKey(n2, 'b'), 'PageUp').top, 0);
-  assert.strictEqual(T.pagerKey(p, 'b').top, 0);
-  assert.strictEqual(T.pagerKey(p, 'G').top, 37);
-  assert.strictEqual(T.pagerKey(n2, 'g').top, 0);
-  assert.strictEqual(T.pager(ones(57), 20, 99).top, 37);
-  // A line of three rows: a page of 5 rows holds it and one more on each side; the next page is the last full one.
-  const w = T.pager([1, 3, 1, 1, 1, 1], 5, 0);
-  assert.strictEqual(w.end, 3);
-  assert.deepStrictEqual([w.last, T.pagerKey(w, ' ').top, T.pagerKey(w, ' ').end], [2, 2, 6]);
-  // A line taller than the page is still shown, alone.
-  assert.strictEqual(T.pager([9, 1], 5, 0).end, 1);
-  assert.ok(T.needsPager(ones(21), 20));
-  assert.ok(!T.needsPager(ones(20), 20));
-  assert.ok(T.needsPager([10, 11], 20));
-});
-
-test('pager keys: one line, quit, and other keys pass through', () => {
-  const p = T.pager(ones(30), 12, 0);
-  assert.strictEqual(T.pagerKey(p, 'j').top, 1);
-  assert.strictEqual(T.pagerKey(p, 'ArrowDown').top, 1);
-  assert.strictEqual(T.pagerKey(p, 'k').top, 0);
-  assert.strictEqual(T.pagerKey(T.pagerKey(p, 'j'), 'ArrowUp').top, 0);
-  assert.strictEqual(T.pagerKey(T.pagerKey(p, 'G'), 'j').top, 18);
-  assert.strictEqual(T.pagerKey(p, 'End').top, 18);
-  assert.strictEqual(T.pagerKey(T.pagerKey(p, 'G'), 'Home').top, 0);
-  assert.deepStrictEqual(T.pagerKey(p, 'q'), { quit: true });
-  assert.deepStrictEqual(T.pagerKey(p, 'Escape'), { quit: true });
-  for (const a of ['next', 'back', 'down', 'up', 'top', 'bottom', 'quit']) assert.ok(T.pagerKey(p, a), a);
-  for (const k of ['a', 's', 'Enter', 'Tab', 'F1', 'toString', '__proto__']) assert.strictEqual(T.pagerKey(p, k), null, k);
-});
-
-test('pager preserves fractional rendered heights and includes at least one oversized line', () => {
-  const p = T.pager([25.5, 48.25, 24, 26.5], 73.5, 0);
-  assert.strictEqual(p.end, 1);
-  const next = T.pagerKey(p, 'next');
-  assert.deepStrictEqual([next.top, next.end], [1, 3]);
-  assert.ok(next.heights.slice(next.top, next.end).reduce((a, b) => a + b, 0) <= next.size);
-  assert.strictEqual(T.pager([125, 24], 50, 0).end, 1);
-});
-
-test('pager status text', () => {
-  const p = T.pager(ones(57), 20, 0);
-  assert.strictEqual(T.pagerRange(p), 'lines 1-20 of 57 (35%)');
-  assert.strictEqual(T.pagerRange(T.pagerKey(p, 'j')), 'lines 2-21 of 57 (37%)');
-  assert.strictEqual(T.pagerRange(T.pagerKey(p, 'G')), 'lines 38-57 of 57 (END)');
-  assert.strictEqual(T.PAGER_HELP, 'space/f next  b back  j/k line  g/G top/bottom  q quit');
-  assert.match(text(T.run('help', data)), /Pager \(trial\)/);
-  assert.match(text(T.run('help', data)), /pager \[on\|off\]/);
-});
-
-test('pager command', () => {
-  assert.strictEqual(text(T.run('pager', data, { pager: true })), 'pager (trial): on (on or off)');
-  assert.strictEqual(text(T.run('pager', data, { pager: false })), 'pager (trial): off (on or off)');
-  assert.strictEqual(T.run('pager off', data).pager, 'off');
-  assert.strictEqual(T.run('pager on', data).pager, 'on');
-  assert.match(text(T.run('pager maybe', data)), /unknown value maybe/);
-  assert.deepStrictEqual(texts(T.suggest('pager ', data)), ['on', 'off']);
-  assert.strictEqual(T.complete('pag', data).value, 'pager ');
-  assert.ok(source.includes("var PAGER_STORE = 're-psn-pager'"));
-  assert.match(source, /function storedPager\(\) \{\n\s+try \{/);
-  assert.match(source, /function savePager\(on\) \{\n\s+try \{/);
-});
 
 test('classify: options, variables, numbers and a leading label; the text is unchanged', () => {
   const t = (spans) => spans.map((s) => (typeof s === 'string' ? s : s.t)).join('');
@@ -366,13 +292,14 @@ test('copy: the gutter is not part of the text of the output, and has no text of
   assert.strictEqual(f.className, 'file gw1');
 });
 
-test('renderFile: a page shows its lines with their numbers in the whole output, and the gutter width of the whole', () => {
+test('renderFile: every line is numbered and the gutter width follows the line count', () => {
   const doc = fakeDoc();
   const lines = Array.from({ length: 120 }, (_, i) => 'line ' + String.fromCharCode(97 + (i % 26)));
-  const f = T.renderFile(doc, { name: 'long', lines, from: 100, to: 112 });
+  const f = T.renderFile(doc, { name: 'long', lines });
   const rows = f.all('fl');
-  assert.strictEqual(rows.length, 12);
-  assert.strictEqual(rows[0].children[0].getAttribute('data-n'), '101');
+  assert.strictEqual(rows.length, 120);
+  assert.strictEqual(rows[0].children[0].getAttribute('data-n'), '1');
+  assert.strictEqual(rows[119].children[0].getAttribute('data-n'), '120');
   assert.strictEqual(f.className, 'file gw3');
   assert.ok(!f.all('file-body')[0].textContent.includes('101'));
 });
@@ -389,11 +316,4 @@ test('renderFile colours the plain text and keeps span classes and safe links', 
   assert.strictEqual(spans[0].tagName, 'SPAN');
   assert.strictEqual(spans[1].tagName, 'A');
   assert.strictEqual(spans[1].getAttribute('rel'), 'noopener noreferrer');
-});
-
-test('the pager status line is a polite status region and the chips keep the focus in the command line', () => {
-  for (const needle of ["el('p', 'pg-status')", "pstat.setAttribute('role', 'status')", "pstat.setAttribute('aria-live', 'polite')",
-    "pchips.addEventListener('mousedown', function (e) { e.preventDefault(); })", "'pager (trial)'"]) {
-    assert.ok(source.includes(needle), needle);
-  }
 });

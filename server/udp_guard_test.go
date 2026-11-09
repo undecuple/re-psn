@@ -53,6 +53,39 @@ func TestUDPLimiter(t *testing.T) {
 	}
 }
 
+// TestUDPLimiterIPv6Prefix: every address in one /64 shares a bucket and a table slot; another /64 is a separate source.
+func TestUDPLimiterIPv6Prefix(t *testing.T) {
+	now := time.Unix(100, 0)
+	l := udpLimiter{rate: 2}
+	a, b := netip.MustParseAddr("2001:db8:1:2::1"), netip.MustParseAddr("2001:db8:1:2:ffff::9")
+	other := netip.MustParseAddr("2001:db8:1:3::1")
+	for _, ip := range []netip.Addr{a, b} {
+		if r, c := l.allow(ip, now); r || c {
+			t.Fatalf("allow(%v) = %v/%v; want an allowed first packet", ip, r, c)
+		}
+	}
+	if r, c := l.allow(netip.MustParseAddr("2001:db8:1:2:1:2:3:4"), now); !r || c {
+		t.Fatalf("a third address in the same /64 = %v/%v; want rate limited", r, c)
+	}
+	if r, c := l.allow(other, now); r || c {
+		t.Fatalf("a different /64 = %v/%v; want its own allowance", r, c)
+	}
+	if len(l.sources) != 2 {
+		t.Fatalf("%d table entries; want 2", len(l.sources))
+	}
+	// One /64 cannot fill the table.
+	full := udpLimiter{rate: 1}
+	for i := 0; i < udpSourceLimit+10; i++ {
+		var raw [16]byte
+		copy(raw[:8], []byte{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 1})
+		raw[14], raw[15] = byte(i>>8), byte(i)
+		full.allow(netip.AddrFrom16(raw), now)
+	}
+	if r, c := full.allow(netip.MustParseAddr("192.0.2.1"), now); r || c || len(full.sources) != 2 {
+		t.Fatalf("after a flood from one /64: %v/%v with %d entries; want a new source admitted", r, c, len(full.sources))
+	}
+}
+
 func TestUDPLimiterCapacityAndExpiry(t *testing.T) {
 	now := time.Unix(100, 0)
 	l := udpLimiter{rate: 1}

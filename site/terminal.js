@@ -2,19 +2,17 @@
 
    Without this file the page is an ordinary document. With it, the page is laid out as menu, content and a command line.
    The commands answer from data.json (the one request, to the same origin); nothing is sent anywhere, no cookies are set,
-   and the only things stored are the theme choice and the pager setting (localStorage, optional). Text is built with textContent and DOM nodes,
+   and the only thing stored is the theme choice (localStorage, optional). Text is built with textContent and DOM nodes,
    never HTML strings, and a link is made only for a github.com address or a path in this repository.
 
-   Each answer is shown as a numbered file: a name, a line-number gutter and a frame, with long output one page at a time
-   (the pager is a trial, switched with `pager on|off`).
+   Each answer is shown as a numbered file: a name, a line-number gutter and a frame.
 
-   The first half is pure (run, complete, suggest, the numbered file and the pager) and is tested with `node --test tools/terminal.test.js`. The second half touches the page. */
+   The first half is pure (run, complete, suggest and the numbered file) and is tested with `node --test tools/terminal.test.js`. The second half touches the page. */
 (function (root) {
   'use strict';
 
   var HINT = 'type --help for options';
   var THEMES = ['dark', 'light', 'system'];
-  var PAGER = ['on', 'off'];
   var HELP = [
     ['--help, help', 'this list'],
     ['features [--status S] [id]', 'features with their status; an id gives the detail and evidence'],
@@ -30,12 +28,11 @@
     ['docs', 'the documentation'],
     ['links', 'repository and related links'],
     ['theme [dark|light|system]', 'appearance'],
-    ['pager [on|off]', 'long output one page at a time (trial)'],
     ['clear', 'clear the screen'],
     ['history', 'commands typed in this tab']
   ];
   var COMMANDS = ['--help', 'help', 'features', 'roadmap', 'settings', 'install', 'connect', 'version', 'changelog',
-    'about', 'credits', 'licence', 'license', 'docs', 'links', 'theme', 'pager', 'clear', 'history'];
+    'about', 'credits', 'licence', 'license', 'docs', 'links', 'theme', 'clear', 'history'];
   var CANONICAL = { '--help': 'help', license: 'licence' };
 
   // ------------------------------------------------------------------ pure part
@@ -88,8 +85,7 @@
   function cmdHelp() {
     var lines = ['Commands', ''];
     HELP.forEach(function (h) { lines.push([{ t: h[0], c: 'cmd' }, '  ' + h[1]]); });
-    lines.push('', 'Keys: arrows move, Enter opens, Tab switches pane, / jumps to the command line, Esc goes back, F1 to F4 are shortcuts for help, features, install and settings (F5 still reloads the page). While you type, matches are listed above the prompt: Tab or Right accepts, Up and Down choose, Esc closes.',
-      '', 'Pager (trial): output longer than the pane opens one page at a time. Focus Output for Space, f or Page Down to show the next page, b or Page Up the one before, j and k or Down and Up to move one line, g and G to go to the top and the bottom, and q or Esc to show all. / jumps to the command line, where typing always enters a command. pager off switches paging off, pager on back on (remembered in this browser).');
+    lines.push('', 'Keys: arrows move, Enter opens, Tab switches pane, / jumps to the command line, Esc goes back, F1 to F4 are shortcuts for help, features, install and settings (F5 still reloads the page). While you type, matches are listed above the prompt: Tab or Right accepts, Up and Down choose, Esc closes.');
     return lines;
   }
 
@@ -260,15 +256,6 @@
           res = { lines: ['theme: ' + args[0]], theme: args[0] };
         }
         break;
-      case 'pager':
-        if (!args.length) {
-          res = { lines: ['pager (trial): ' + (ctx.pager === false ? 'off' : 'on') + ' (on or off)'] };
-        } else if (PAGER.indexOf(args[0]) < 0) {
-          res = { lines: [err('pager: unknown value ' + args[0].slice(0, 40) + ', use on or off')] };
-        } else {
-          res = { lines: ['pager (trial): ' + args[0]], pager: args[0] };
-        }
-        break;
       case 'clear': res = { lines: [], clear: true }; break;
       case 'history':
         res = { lines: (ctx.history && ctx.history.length) ? ctx.history.map(function (h, i) { return (i + 1) + '  ' + h; }) : ['No history yet.'] };
@@ -325,8 +312,6 @@
         pool = data.settings.map(function (s) { return s.flag; });
       } else if (word === 'theme') {
         pool = THEMES;
-      } else if (word === 'pager') {
-        pool = PAGER;
       } else {
         pool = [];
       }
@@ -348,7 +333,6 @@
   });
   CMD_DESC.license = CMD_DESC.licence;
   var THEME_DESC = { dark: 'dark colours', light: 'light colours', system: 'follow the system setting' };
-  var PAGER_DESC = { on: 'long output one page at a time', off: 'all output at once' };
 
   function plain(text) { return String(text).replace(/`/g, '').replace(/\[([^\]]+)\]\([^)\s]+\)/g, '$1').replace(/\s+/g, ' ').trim(); }
 
@@ -390,81 +374,21 @@
         pool = data.settings.map(function (s) { return { text: s.flag, desc: plain(s.description) }; });
       } else if (word === 'theme' && tokens.length === 1) {
         pool = THEMES.map(function (t) { return { text: t, desc: THEME_DESC[t] }; });
-      } else if (word === 'pager' && tokens.length === 1) {
-        pool = PAGER.map(function (t) { return { text: t, desc: PAGER_DESC[t] }; });
       }
     }
     return pick(pool, cur, head);
   }
 
-  // ------------------------------------------------------------------ the numbered file and the pager (pure)
+  // ------------------------------------------------------------------ the numbered file (pure)
 
   // The text of one output line (a string or a list of spans).
   function lineText(line) {
     return (Array.isArray(line) ? line : [line]).map(function (sp) { return typeof sp === 'string' ? sp : sp.t; }).join('');
   }
 
-  // Digits in the gutter: enough for the last line number of the whole output (so it does not change between pages), 1 to 4.
+  // Digits in the gutter: enough for the last line number of the output, 1 to 4.
   function gutterWidth(total) {
     return Math.min(4, String(Math.max(1, Math.floor(total) || 1)).length);
-  }
-
-  // Paging works on whole lines. heights and size use the same units: the browser supplies rendered pixel heights, including
-  // wrapping, inline tags and borders. At least one line is shown, even if that line alone needs scrolling.
-  function pageEnd(heights, top, size) {
-    var used = 0;
-    var i = top;
-    while (i < heights.length && (i === top || used + heights[i] <= size)) { used += heights[i]; i++; }
-    return i;
-  }
-
-  function pageStart(heights, end, size) {
-    var used = 0;
-    var i = end;
-    while (i > 0 && (i === end || used + heights[i - 1] <= size)) { used += heights[i - 1]; i--; }
-    return i;
-  }
-
-  // The pager state: {top, end, total, size, heights, last}; last is the top of the final page, which is always a full one.
-  function pager(heights, size, top) {
-    var last = pageStart(heights, heights.length, size);
-    top = Math.max(0, Math.min(top || 0, last));
-    return { top: top, end: pageEnd(heights, top, size), total: heights.length, size: size, heights: heights, last: last };
-  }
-
-  // The pager is used only when the rows of the whole output do not fit on one page.
-  function needsPager(heights, size) {
-    return heights.reduce(function (a, b) { return a + b; }, 0) > size;
-  }
-
-  // A key (KeyboardEvent.key) or a chip action -> the new pager state, {quit: true}, or null when it is not a pager key.
-  var PAGER_KEYS = {
-    ' ': 'next', f: 'next', PageDown: 'next', next: 'next',
-    b: 'back', PageUp: 'back', back: 'back',
-    j: 'down', ArrowDown: 'down', down: 'down',
-    k: 'up', ArrowUp: 'up', up: 'up',
-    g: 'top', Home: 'top', top: 'top',
-    G: 'bottom', End: 'bottom', bottom: 'bottom',
-    q: 'quit', Escape: 'quit', quit: 'quit'
-  };
-  function pagerKey(p, key) {
-    var a = Object.prototype.hasOwnProperty.call(PAGER_KEYS, key) ? PAGER_KEYS[key] : null;
-    if (!a) { return null; }
-    if (a === 'quit') { return { quit: true }; }
-    var top = p.top;
-    if (a === 'next') { top = Math.min(p.end, p.last); }
-    if (a === 'back') { top = pageStart(p.heights, p.top, p.size); }
-    if (a === 'down') { top = Math.min(p.top + 1, p.last); }
-    if (a === 'up') { top = Math.max(p.top - 1, 0); }
-    if (a === 'top') { top = 0; }
-    if (a === 'bottom') { top = p.last; }
-    return pager(p.heights, p.size, top);
-  }
-
-  var PAGER_HELP = 'space/f next  b back  j/k line  g/G top/bottom  q quit';
-  function pagerRange(p) {
-    return 'lines ' + (p.top + 1) + '-' + p.end + ' of ' + p.total +
-      (p.end >= p.total ? ' (END)' : ' (' + Math.round(p.end / p.total * 100) + '%)');
   }
 
   // Colouring of the plain text of a line, like a syntax theme: option names, RE_PSN_ variables, numbers and versions, and a label
@@ -531,11 +455,9 @@
   // The numbered file: a header with the name, then one row per line, a gutter cell and the text. A gutter cell holds no text: it
   // is hidden from assistive technology and not selectable, and the stylesheet draws the number from data-n, so the number is never
   // part of the text that is read or copied. A line that wraps keeps its one gutter cell, so the rows it wraps onto have an empty
-  // gutter. opts: {name, lines (the whole output), from, to (the lines shown; all by default)}.
+  // gutter. opts: {name, lines}.
   function renderFile(doc, opts) {
     var lines = opts.lines;
-    var from = opts.from || 0;
-    var to = opts.to === undefined ? lines.length : opts.to;
     var f = node(doc, 'div', 'file gw' + gutterWidth(lines.length));
     f.setAttribute('role', 'group');
     f.setAttribute('aria-label', opts.name + ', ' + lines.length + (lines.length === 1 ? ' line' : ' lines'));
@@ -548,7 +470,7 @@
     head.appendChild(hn);
     f.appendChild(head);
     var body = node(doc, 'div', 'file-body');
-    for (var i = from; i < to; i++) {
+    for (var i = 0; i < lines.length; i++) {
       var row = node(doc, 'div', 'fl');
       var g = node(doc, 'span', 'gut');
       g.setAttribute('aria-hidden', 'true');
@@ -563,7 +485,7 @@
 
   var api = { run: run, complete: complete, suggest: suggest, md: md, hrefFor: hrefFor, COMMANDS: COMMANDS, HINT: HINT,
     lineText: lineText, gutterWidth: gutterWidth,
-    pager: pager, needsPager: needsPager, pagerKey: pagerKey, pagerRange: pagerRange, PAGER_HELP: PAGER_HELP, classify: classify,
+    classify: classify,
     renderLine: renderLine, renderFile: renderFile };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; }
   root.rePsnTerminal = api;
@@ -639,15 +561,6 @@
   });
   syncControls();
 
-  // The pager setting: on unless 'off' is stored.
-  var PAGER_STORE = 're-psn-pager';
-  function storedPager() {
-    try { return root.localStorage.getItem(PAGER_STORE) !== 'off'; } catch (e) { return true; }
-  }
-  function savePager(on) {
-    try { root.localStorage.setItem(PAGER_STORE, on ? 'on' : 'off'); } catch (e) { /* storage is optional */ }
-  }
-
   function mount(data) {
     var history = [];
     var histPos = 0;
@@ -705,37 +618,6 @@
     out.tabIndex = 0;
     content.appendChild(out);
 
-    // The pager bar under the output: a status line (the range is announced, politely and only once the moves stop) and chips
-    // for the keys. Typing in the command line remains independent of the pager.
-    var pbar = el('div', 'tui-pager');
-    pbar.id = 'tui-pager';
-    pbar.hidden = true;
-    var pstat = el('p', 'pg-status');
-    pstat.setAttribute('role', 'status');
-    pstat.setAttribute('aria-live', 'polite');
-    pstat.appendChild(el('span', 'pg-label', 'pager (trial)'));
-    var prange = el('span', 'pg-range');
-    prange.setAttribute('aria-hidden', 'true');
-    pstat.appendChild(prange);
-    var psay = el('span', 'vh');
-    pstat.appendChild(psay);
-    var pkeys = el('span', 'pg-keys', PAGER_HELP + ' · / command');
-    pkeys.setAttribute('aria-hidden', 'true');
-    pstat.appendChild(pkeys);
-    pbar.appendChild(pstat);
-    var pchips = el('ul', 'tui-pgchips');
-    pchips.setAttribute('aria-label', 'Pager');
-    [['next', 'next page'], ['back', 'back'], ['down', 'line down'], ['up', 'line up'], ['top', 'top'], ['bottom', 'bottom'],
-      ['quit', 'show all']].forEach(function (c) {
-      var li = el('li');
-      var b = el('button', 'chip', c[1]);
-      b.type = 'button';
-      b.setAttribute('data-pager', c[0]);
-      li.appendChild(b);
-      pchips.appendChild(li);
-    });
-    pbar.appendChild(pchips);
-    content.appendChild(pbar);
     panes.appendChild(content);
     tui.appendChild(panes);
 
@@ -813,117 +695,22 @@
 
     function setView(v) { tui.setAttribute('data-view', v); }
 
-    // What is on screen: the answer drawn as a numbered file (view), and the pager state when it is paged (pg, else null).
-    var pagerOn = storedPager();
-    var view = null;
-    var pg = null;
-    var pgSay = 0;
-
-    // Fit desktop pages to the output pane after allowing for the echo, frame and padding. On phones the document scrolls,
-    // so use a bounded part of the viewport. Rendered row heights include actual wrapping, tags and borders.
-    function pageHeight(file) {
-      var box = out.getBoundingClientRect();
-      var body = file.querySelector('.file-body').getBoundingClientRect();
-      var pad = parseFloat(root.getComputedStyle(out).paddingBottom) || 0;
-      var scrolls = root.getComputedStyle(out).overflowY !== 'visible';
-      return Math.max(1, scrolls ? box.bottom - body.top - out.scrollTop - pad - 1 : root.innerHeight * 0.6);
-    }
-
-    function drawFile(from, to) {
-      var old = out.querySelector('.file');
-      var f = renderFile(document, { name: view.res.file, lines: view.res.lines, from: from, to: to });
-      if (old) { out.replaceChild(f, old); } else { out.appendChild(f); }
-      return f;
-    }
-
-    function drawPager(announce) {
-      prange.textContent = pagerRange(pg);
-      pbar.hidden = false;
-      out.setAttribute('aria-describedby', 'tui-pager');
-      if (announce) {
-        root.clearTimeout(pgSay);
-        pgSay = root.setTimeout(function () { psay.textContent = pagerRange(pg).replace(/ \(.*\)$/, ''); }, 600);
-      }
-    }
-
-    function closePager() {
-      pg = null;
-      pbar.hidden = true;
-      out.removeAttribute('aria-describedby');
-      psay.textContent = '';
-      root.clearTimeout(pgSay);
-    }
-
-    // Draws the current view: all of it, or the page at `top` when the pager is on and the output is longer than a page.
-    function layout(top) {
-      if (!view) { return; }
-      out.scrollTop = 0;
-      pbar.hidden = true;
-      var f = drawFile(0, view.res.lines.length);
-      if (!pagerOn || view.full) { closePager(); return; }
-      var heights = Array.prototype.map.call(f.querySelectorAll('.fl'), function (line) { return line.getBoundingClientRect().height; });
-      if (!needsPager(heights, pageHeight(f))) { closePager(); return; }
-      var first = !pg;
-      // Showing the controls shrinks the desktop output pane, so reserve them before selecting a page.
-      pbar.hidden = false;
-      prange.textContent = 'lines ' + ((top || 0) + 1) + '-' + heights.length + ' of ' + heights.length + ' (100%)';
-      pg = pager(heights, pageHeight(f), top);
-      f = drawFile(pg.top, pg.end);
-      drawPager(first);
-      var size = pageHeight(f);
-      if (Math.abs(size - pg.size) > 0.5) {
-        pg = pager(heights, size, top);
-        drawFile(pg.top, pg.end);
-        drawPager(false);
-      }
-    }
-
-    function pagerAct(key) {
-      if (!pg) { return false; }
-      var r = pagerKey(pg, key);
-      if (!r) { return false; }
-      out.setAttribute('aria-live', 'off');
-      if (r.quit) {
-        view.full = true;
-        closePager();
-        drawFile(0, view.res.lines.length);
-        say('all ' + view.res.lines.length + ' lines shown');
-        return true;
-      }
-      var moved = r.top !== pg.top;
-      pg = r;
-      drawFile(pg.top, pg.end);
-      drawPager(moved);
-      out.scrollTop = 0;
-      return true;
+    // The answer drawn as a numbered file.
+    function drawFile(res) {
+      out.appendChild(renderFile(document, { name: res.file, lines: res.lines }));
     }
 
     function paint(res, echo) {
-      closePager();
-      view = null;
       out.textContent = '';
       out.setAttribute('aria-live', 'polite');
       if (res.clear) { return; }
       if (echo) { out.appendChild(renderLine(document, [{ t: '$ ', c: 'ps' }, { t: echo, c: 'echo' }])); }
       if (res.file) {
-        view = { res: res, full: false };
-        layout(0);
+        drawFile(res);
       } else {
         res.lines.forEach(function (l) { out.appendChild(renderLine(document, l)); });
       }
       out.scrollTop = 0;
-    }
-
-    var resizing = 0;
-    root.addEventListener('resize', function () {
-      root.clearTimeout(resizing);
-      resizing = root.setTimeout(function () { if (view && !view.full) { layout(pg ? pg.top : 0); } }, 150);
-    });
-    function remeasure() { if (view && !view.full) { layout(pg ? pg.top : 0); } }
-    root.addEventListener('re-psn-theme-change', remeasure);
-    var scheme = root.matchMedia('(prefers-color-scheme: light)');
-    if (scheme.addEventListener) {
-      scheme.addEventListener('change', function () { if (theme === 'system') { remeasure(); } });
     }
 
     function mark(cmd) {
@@ -937,9 +724,8 @@
       if (!t) { return; }
       if (history[history.length - 1] !== t) { history.push(t); }
       histPos = history.length;
-      var res = run(t, data, { history: history, theme: theme, pager: pagerOn });
+      var res = run(t, data, { history: history, theme: theme });
       if (res.theme) { applyTheme(res.theme, true); }
-      if (res.pager) { pagerOn = res.pager === 'on'; savePager(pagerOn); }
       paint(res, t);
       if (res.cmd) { current = res.cmd; mark(current); }
       setView('content');
@@ -1023,10 +809,7 @@
     tui.addEventListener('click', function (e) {
       var b = e.target.closest ? e.target.closest('button[data-cmd]') : null;
       if (b && tui.contains(b)) { exec(b.getAttribute('data-cmd'), true); }
-      var p = e.target.closest ? e.target.closest('button[data-pager]') : null;
-      if (p) { pagerAct(p.getAttribute('data-pager')); }
     });
-    pchips.addEventListener('mousedown', function (e) { e.preventDefault(); });
     back.addEventListener('click', menuFocus);
     plain.addEventListener('click', function () {
       document.documentElement.classList.add('plain');
@@ -1062,11 +845,7 @@
     input.addEventListener('keydown', function (e) {
       if (e.altKey || e.ctrlKey || e.metaKey) { return; }
       var atEnd = input.selectionStart === input.value.length && input.selectionEnd === input.value.length;
-      // Printable characters always belong to the command line, including f in "features". Page keys work from an empty
-      // prompt; letter shortcuts such as q belong to the focused Output region.
-      if (pg && input.value === '' && !shown && !e.shiftKey && (e.key === 'PageDown' || e.key === 'PageUp' || e.key === 'Escape') && pagerAct(e.key)) {
-        e.preventDefault();
-      } else if (shown && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      if (shown && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         e.preventDefault();
         var n = sug.items.length;
         sel = e.key === 'ArrowDown' ? (sel + 1) % n : (sel < 0 ? n - 1 : (sel + n - 1) % n);
@@ -1122,10 +901,7 @@
       if (document.documentElement.classList.contains('plain')) { return; }
       var t = e.target;
       var typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
-      // Leave selection shortcuts to the browser; shifted G is the explicit last-page command.
-      if (e.shiftKey && e.key !== 'G') { return; }
-      // The pager keys also work with the focus on the output (after a menu choice), not on a button, link or field.
-      if (pg && !typing && t === out && pagerAct(e.key)) { e.preventDefault(); return; }
+      // Leave selection shortcuts to the browser.
       if (e.shiftKey) { return; }
       if (FKEYS[e.key] && e.key !== 'F5') { e.preventDefault(); exec(FKEYS[e.key], false); return; }
       if (e.key === '/' && !typing) { e.preventDefault(); input.focus(); }

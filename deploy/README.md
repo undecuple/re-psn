@@ -2,7 +2,7 @@
 
 Example files for running re-psn as a service and behind a reverse proxy: a settings file, a systemd unit, and Traefik,
 nginx, HAProxy and Caddy configs. They are text files; nothing here runs by itself. The release archives carry this folder as
-`examples/`. The full text is [docs/running.md](../docs/running.md) in the repository.
+`examples/` (the `caddy/` example is on main only; archives up to v0.3.0 do not contain it). The full text is [docs/running.md](../docs/running.md) in the repository.
 
 ## Contents
 

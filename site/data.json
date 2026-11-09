@@ -451,7 +451,7 @@
    "feature": "Go client package",
    "detail": "`app/internal/client`: a Go client for the TCP protocol, for the desktop app. HELLO, heartbeat, create, search, join and leave rooms, record and read scores, and the member and route pushes, with typed messages and errors. `re-psn-app check HOST:PORT` uses it.",
    "status": "partial",
-   "since": "main",
+   "since": "0.3.0",
    "evidence": "app/internal/client, TestConformanceRoomsAndScores, TestConformanceRelayRoute, TestConformanceErrors",
    "note": "Room data and messages, kicks, invite-only rooms, relay streams and UDP are not in it yet.",
    "status_label": "partial",
@@ -463,7 +463,7 @@
    "feature": "Desktop app, terminal UI",
    "detail": "`re-psn-app` with no arguments: a first-run choice of Play, Host or Both with the online ID and the server, a menu and content pane (one at a time under 70 columns), a Status screen with Rooms and Leaderboards tabs over the game protocol or an explicitly configured HTTP status source, a Settings screen that saves `re-psn.ini`, and a dark or light theme in the website colours. Built on Bubble Tea and Lip Gloss.",
    "status": "partial",
-   "since": "main",
+   "since": "0.3.0",
    "evidence": "app/internal/tui, TestFirstRunChooser, TestStatusTabs, TestConnectionErrorsAreText, TestNarrowLayout, TestThemeToggle, TestSettings, app/internal/desktop, TestLaunchSyntheticTerminalProcess, app/internal/tui/http_status.go, TestHTTPStatusNativeViewsAndQuery, TestHTTPStatusFallbackUsesProtocol",
    "note": "Partial: no Host screen, room joining, launch profiles or theme presets yet. Linux desktop starts without a TTY can open a supported terminal; Windows uses its console. Synthetic startup tests ran; physical desktops/emulators remain unverified. The optional HTTP source adds uptime, connection counts, public-room members/age and board leader summaries with bounded authenticated fetches and game-protocol fallback. The game protocol still lacks those extra fields; neither source reports server version. Driven in tmux on Linux; not tried on Windows or macOS terminals.",
    "status_label": "partial",
@@ -701,11 +701,11 @@
    "id": "docs-website",
    "area": "Documentation",
    "feature": "Project website",
-   "detail": "A static page built from the features list, the version, the settings table and the changelog by `tools/site.py`: overview, features with status tags, roadmap, settings, install, connect, docs and credits. With `site/terminal.js` (no dependencies) the page becomes a terminal-style interface: menu, content and a command line with the commands `features`, `roadmap`, `settings`, `install`, `connect`, `changelog`, `docs` and more, suggestions while typing (a dimmed completion and a list of up to eight matches, taken with Tab, Right arrow, Enter or a tap), Tab completion, history, a dark and a light theme chosen with a System / Light / Dark switch in the header or the `theme` command (the same choice, remembered in the browser), colour from the full gruvbox-material palette with every text colour checked at 4.5:1 or more, and scrolling tabs and tappable chips on a phone (a phone starts in the plain view); the same page works without script, and a plain view link switches the interface off. No third-party loads, a content security policy that allows only this site, and the colours of the README art. `pages.yml` deploys `site/` to GitHub Pages. Command output has a file header, line-number gutter, frame and syntax-style colours; a pager trial supplies line ranges, keys and buttons, with pager on/off.",
+   "detail": "A static page built from the features list, the version, the settings table and the changelog by `tools/site.py`: overview, features with status tags, roadmap, settings, install, connect, docs and credits. With `site/terminal.js` (no dependencies) the page becomes a terminal-style interface: menu, content and a command line with the commands `features`, `roadmap`, `settings`, `install`, `connect`, `changelog`, `docs` and more, suggestions while typing (a dimmed completion and a list of up to eight matches, taken with Tab, Right arrow, Enter or a tap), Tab completion, history, a dark and a light theme chosen with a System / Light / Dark switch in the header or the `theme` command (the same choice, remembered in the browser), colour from the full gruvbox-material palette with every text colour checked at 4.5:1 or more, and scrolling tabs and tappable chips on a phone (a phone starts in the plain view); the same page works without script, and a plain view link switches the interface off. No third-party loads, a content security policy that allows only this site, and the colours of the README art. `pages.yml` deploys `site/` to GitHub Pages. Command output has a file header, line-number gutter, frame and syntax-style colours.",
    "status": "partial",
    "since": "main",
    "evidence": "tools/site.py, tools/test_site.py, site/index.html, site/style.css, .github/workflows/pages.yml, tools/terminal.test.js, tools/site_browser_check.mjs, docs/website.md",
-   "note": "Partial: the page is published at https://undecuple.github.io/re-psn/ and deploys from main while PAGES_ENABLED is true. Unit tests and optional headless-browser checks cover pager navigation, rendered page fitting, command typing, autocomplete/history, selection without gutter numbers, dark/light and system-theme changes, narrow layouts and static fallbacks. A real keyboard, screen reader and physical phone have not been tried. The font remains the visitor's monospace; self-hosting is not added.",
+   "note": "Partial: the page is published at https://undecuple.github.io/re-psn/ and deploys from main while PAGES_ENABLED is true. Unit tests and optional headless-browser checks cover command typing, autocomplete/history, selection without gutter numbers, dark/light and system-theme changes, narrow layouts and static fallbacks. A real keyboard, screen reader and physical phone have not been tried. The font remains the visitor's monospace; self-hosting is not added.",
    "status_label": "partial",
    "status_class": "warn"
   },
@@ -864,7 +864,7 @@
    "flag": "-max-udp-rate",
    "variable": "RE_PSN_MAX_UDP_RATE",
    "default": "1000",
-   "description": "UDP packets per second per source IP, shared by probes and relay traffic; same-size burst (0: no limit)"
+   "description": "UDP packets per second per source (IPv4 address or IPv6 /64), shared by probes and relay traffic; same-size burst (0: no limit); on main, not in v0.3.0"
   },
   {
    "flag": "-v",
@@ -943,22 +943,26 @@
      "A recomp developer integration guide with pinned runtime sources, callback/lifecycle and peer-transport guidance.",
      "Native optional HTTP status in the shared Windows/Linux terminal app: server totals, public-room members/age and leaderboard summaries, using a local Bearer-token file.",
      "Linux desktop startup for the shared terminal app: open an installed terminal when no TTY is attached, with literal arguments and a recursion guard.",
-     "Bounded per-source-IP UDP admission with `-max-udp-rate` / `RE_PSN_MAX_UDP_RATE` (default 1000 packets/second, same-size burst; 0 disables it), shared by probes and relay datagrams.",
+     "Bounded per-source UDP admission (per IPv4 address, per IPv6 /64) with `-max-udp-rate` / `RE_PSN_MAX_UDP_RATE` (default 1000 packets/second, same-size burst; 0 disables it), shared by probes and relay datagrams.",
      "`/healthz` on the opt-in status listener, protected by the existing HTTP token.",
      "A stock Caddy 2 example for the HTTP status page, included with the deployment examples.",
      "The opt-in server status page now matches the website and terminal app's gruvbox-material palette and monospace framing, with Overview/Rooms/Leaderboards tabs, System/Light/Dark, text size, spacing and contrast-checked ...",
      "An offline repository check for tracked root/top-level layout, local Markdown links and anchors, and static workflow/Dependabot input paths.",
      "A focused loopback check: `python3 tools/loopback.py` runs the existing native C-client and Go app-client conformance tests against temporary loopback servers.",
      "Numbered file-style output in the website's terminal view: a header, frame, line-number gutter, syntax-style colours and wrapped continuation rows with an empty gutter.",
-     "Optional install scripts: `scripts/install.sh` (POSIX sh; Linux amd64 and arm64) and `scripts/install.ps1` (Windows amd64; written for PowerShell 5.1 and 7, tested on 7 only) install the server for the current user from ..."
+     "Optional install scripts: `scripts/install.sh` (POSIX sh; Linux amd64 and arm64) and `scripts/install.ps1` (Windows amd64; written for PowerShell 5.1 and 7, tested on 7 only) install the server for the current user from ...",
+     "`.github/FUNDING.yml`, which gives the repository a sponsor link (Ko-fi).",
+     "Tests for room kick behavior, contributed by Tzeentchnet."
     ],
     "Changed": [
+     "The website's pager trial is removed: the `pager` command, its keys, buttons and status bar, and the saved pager setting are gone, and long output is shown in full in the scrolling output pane.",
+     "The README install section recommends the release archives and shows an optional quick install: the installer is fetched from a pinned revision of the repository, its hash is checked, and it is read before it is run.",
      "The release carries seven assets: the three archives, the AppImage, `SHA256SUMS`, and the two install scripts as `install.sh` and `install.ps1`, byte for byte the tagged `scripts/` files, with their checksums in ..."
     ]
    },
    "counts": {
-    "Added": 12,
-    "Changed": 1
+    "Added": 14,
+    "Changed": 3
    }
   },
   "latest": {
@@ -1043,7 +1047,7 @@
   {
    "path": "docs/website.md",
    "title": "Website controls",
-   "summary": "Numbered terminal output, the pager trial, keyboard controls and contributor checks",
+   "summary": "Numbered terminal output, keyboard controls and contributor checks",
    "url": "https://github.com/undecuple/re-psn/blob/main/docs/website.md"
   },
   {

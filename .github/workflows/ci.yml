@@ -33,13 +33,17 @@ jobs:
       - name: vet
         run: go vet ./...
       # On Linux this also builds client/test_psnr.c and runs it against the
-      # server (TestCClient); it skips where no C compiler is on PATH.
+      # server (TestCClient); it skips where no C compiler is on PATH. The release script tests skip when sh, awk or diff
+      # is missing, so they are required too: a skip on this runner would mean they no longer protect the release.
       # -race needs cgo, which the Windows runner has no C compiler for.
       - name: test
         if: runner.os == 'Linux'
         run: >-
           python3 tools/check_conformance.py
           --require github.com/sp00nznet/psnr/server:TestCClient
+          --require github.com/sp00nznet/psnr/server:TestCheckReleaseAssets
+          --require github.com/sp00nznet/psnr/server:TestReleaseAssetListsAgree
+          --require github.com/sp00nznet/psnr/server:TestReleaseCheckWorkflow
           -- go test -race -json ./...
       - name: test (Windows)
         if: runner.os == 'Windows'
