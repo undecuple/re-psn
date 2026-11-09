@@ -5,7 +5,7 @@
 **Run your own matchmaking and leaderboard server for statically recompiled PS3 games: one small binary, no accounts, no cloud.**
 
 [![CI](https://github.com/undecuple/re-psn/actions/workflows/ci.yml/badge.svg)](https://github.com/undecuple/re-psn/actions/workflows/ci.yml) <!-- version -->![version v0.3.0](https://img.shields.io/badge/pre--release-v0.3.0-d8a657?labelColor=45403d&style=flat-square)<!-- /version --> ![status: alpha](https://img.shields.io/badge/status-alpha-e78a4e?labelColor=45403d&style=flat-square)
-![licence: MIT](https://img.shields.io/badge/licence-MIT-a9b665?labelColor=45403d&style=flat-square) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/undecuple/re-psn)
+![licence: MIT](https://img.shields.io/badge/licence-MIT-a9b665?labelColor=45403d&style=flat-square) [![Ask DeepWiki](https://img.shields.io/badge/DeepWiki-Ask-blue)](https://deepwiki.com/undecuple/re-psn)
 
 > [!IMPORTANT]
 > **Bring your own game.** This repository has no game code, assets, keys, firmware or BIOS, and you need none from it. Play
@@ -13,9 +13,9 @@
 
 | | |
 |---|---|
-| **1** static server binary | Go standard library only, no third-party modules |
+| **1** static server binary | the server uses only Go's standard library; the optional desktop app uses third-party modules ([app/README.md](app/README.md)) |
 | **1** port | TCP and UDP 36100 for players ([ports](docs/running.md#ports)) |
-| **1** C file | the client, no dependencies, no threads ([client/psnr.c](client/psnr.c)) |
+| **1** C file | the client: no third-party libraries and no threads ([client/psnr.c](client/psnr.c)) |
 | **Linux and Windows** | amd64 and arm64 on Linux, amd64 on Windows ([releases](https://github.com/undecuple/re-psn/releases)) |
 
 ## Quick start: host a server
@@ -47,7 +47,7 @@ has short guides for players and hosts.
 
 | Claim | Proof |
 |---|---|
-| Nothing to sign up for: no accounts or passwords, and nothing is stored on disk | [Security and privacy](#security-and-privacy) |
+| Nothing to sign up for: no accounts or passwords, and nothing is stored on disk except the log file if you set one | [Security and privacy](#security-and-privacy) |
 | The server uses only Go's standard library | [go.mod](go.mod) has no `require` line, and CI enforces it ([ci.yml](.github/workflows/ci.yml)) |
 | Players behind routers get connected, with an optional relay | tested in Docker by the [NAT lab](lab/README.md) |
 | The client is one C file | [client/psnr.c](client/psnr.c), tested against the server by `client/test_psnr.c` |
@@ -214,7 +214,7 @@ Available on `main` today; [docs/features.md](docs/features.md) has every featur
 - **NAT traversal:** address probes and hole punching, an optional relay, and a UDP source address check.
 - **Hosting:** limits, log levels, a status page with an optional token, reverse proxy support, `RE_PSN_*` settings, Docker and
   Podman files, and deployment examples.
-- **C client:** one file, no dependencies, no threads.
+- **C client:** one file, no third-party libraries, no threads.
 - **Checks:** fuzz tests; CI with the race detector, vulnerability and secret scans, the NAT lab and code scanning.
 
 Partial, unverified and planned work (release archives and the AppImage, the nginx and HAProxy examples, storage backends, the
