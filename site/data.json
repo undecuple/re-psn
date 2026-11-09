@@ -5,7 +5,7 @@
  "go": "1.22",
  "status_counts": {
   "available": 29,
-  "unverified": 2,
+  "unverified": 3,
   "partial": 7,
   "in-progress": 0,
   "planned": 15,
@@ -214,6 +214,18 @@
    "since": "main",
    "evidence": "deploy/caddy/Caddyfile, deploy/caddy/README.md, scripts/check-deploy.sh, docs/running.md",
    "note": "Written from the official Caddy documentation; not run or validated with Caddy. No layer-4 plugin is included. The existing HTTP token check is preserved and client-supplied CF-Connecting-IP is removed before forwarding.",
+   "status_label": "not yet verified",
+   "status_class": "unv"
+  },
+  {
+   "id": "deploy-fail2ban",
+   "area": "Deployment",
+   "feature": "Optional fail2ban status-token jail",
+   "detail": "A disabled systemd-journal filter/jail example for repeated HTTP status-token refusals. Uses JSON logs and a host TCP status-port action, with setup, firewall placement, validation and recovery instructions.",
+   "status": "unverified",
+   "since": "main",
+   "evidence": "deploy/fail2ban/re-psn-status.conf, deploy/fail2ban/re-psn-status.local, docs/fail2ban.md, tools/check_fail2ban.py, TestHTTPStatusFail2banFixtures",
+   "note": "Offline synthetic HTTP/logger and native fail2ban-engine checks do not establish live journal/firewall enforcement. Game TCP/UDP, proxy/CDN and bridged-container enforcement are outside the sample's scope; install and verify fail2ban separately.",
    "status_label": "not yet verified",
    "status_class": "unv"
   },
@@ -784,6 +796,7 @@
    "deploy-examples",
    "deploy-nginx-haproxy",
    "deploy-caddy",
+   "deploy-fail2ban",
    "deploy-container",
    "settings-env",
    "store-interface",
@@ -978,6 +991,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "Optional fail2ban instructions and a disabled journal jail/filter for refused HTTP status tokens, with offline synthetic log checks.",
      "A recomp developer integration guide with pinned runtime sources, callback/lifecycle and peer-transport guidance.",
      "Native optional HTTP status in the shared Windows/Linux terminal app: server totals, public-room members/age and leaderboard summaries, using a local Bearer-token file.",
      "Linux desktop startup for the shared terminal app: open an installed terminal when no TTY is attached, with literal arguments and a recursion guard.",
@@ -999,7 +1013,7 @@
     ]
    },
    "counts": {
-    "Added": 13,
+    "Added": 14,
     "Changed": 3
    }
   },

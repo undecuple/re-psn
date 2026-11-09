@@ -34,7 +34,7 @@
 <h2>Overview</h2>
 <p>re-psn answers the matchmaking and leaderboard calls of a statically recompiled PS3 game, for a group running its own server: a LAN, a VPN, or friends connecting to one person&#x27;s machine. The server keeps rooms and leaderboards and tells each player where the others are. Game traffic goes directly between players, and through the server only when two players cannot reach each other and the host has turned the relay on.</p>
 <p>It is a fork of <a href="https://github.com/sp00nznet/psnr">psnr</a> by sp00nz: a Go server and a one-file C client, with no accounts and no public instance.</p>
-<p class="status-line">Version 0.3.0 (pre-release). 63 features: 29 available, 2 not yet verified, 7 partial, 15 planned, 9 later, 1 declined.</p>
+<p class="status-line">Version 0.3.0 (pre-release). 64 features: 29 available, 3 not yet verified, 7 partial, 15 planned, 9 later, 1 declined.</p>
 <p class="notice">Unofficial; not affiliated with Sony. No game files, keys or firmware are in the repository or needed from it. Play only games you own.</p>
 </section>
 <section id="features">
@@ -109,6 +109,7 @@
 <tr id="f-deploy-examples"><td data-label="Feature"><strong>Settings file, service unit and Traefik example</strong> <code>deploy-examples</code><br><code>deploy/</code> holds <code>re-psn.env.example</code> (every setting, commented), a systemd unit and a Traefik config that sends PROXY v2. The release archives carry them as <code>examples/</code>.<br><span class="note"><code>scripts/check-deploy.sh</code> checks the env file and the unit against the server&#x27;s flags. The Traefik run (Traefik 3.1 under Podman) is recorded in docs/running.md; no run of the systemd unit is recorded.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">0.2.0</td></tr>
 <tr id="f-deploy-nginx-haproxy"><td data-label="Feature"><strong>nginx and HAProxy examples</strong> <code>deploy-nginx-haproxy</code><br>An nginx <code>stream</code> block with <code>proxy_protocol on;</code> (PROXY v1) and an HAProxy config with <code>send-proxy-v2</code>.<br><span class="note">Not checked: neither config has been run against the server (docs/running.md says so).</span></td><td data-label="Status"><span class="tag unv">not yet verified</span></td><td data-label="Since">0.2.0</td></tr>
 <tr id="f-deploy-caddy"><td data-label="Feature"><strong>Caddy status-page example</strong> <code>deploy-caddy</code><br>A stock Caddy 2 HTTP reverse-proxy example in <code>deploy/caddy/</code>, copied into future release archives with the other deployment examples. Defaults to loopback and leaves game TCP/UDP direct.<br><span class="note">Written from the official Caddy documentation; not run or validated with Caddy. No layer-4 plugin is included. The existing HTTP token check is preserved and client-supplied CF-Connecting-IP is removed before forwarding.</span></td><td data-label="Status"><span class="tag unv">not yet verified</span></td><td data-label="Since">main</td></tr>
+<tr id="f-deploy-fail2ban"><td data-label="Feature"><strong>Optional fail2ban status-token jail</strong> <code>deploy-fail2ban</code><br>A disabled systemd-journal filter/jail example for repeated HTTP status-token refusals. Uses JSON logs and a host TCP status-port action, with setup, firewall placement, validation and recovery instructions.<br><span class="note">Offline synthetic HTTP/logger and native fail2ban-engine checks do not establish live journal/firewall enforcement. Game TCP/UDP, proxy/CDN and bridged-container enforcement are outside the sample&#x27;s scope; install and verify fail2ban separately.</span></td><td data-label="Status"><span class="tag unv">not yet verified</span></td><td data-label="Since">main</td></tr>
 <tr id="f-deploy-container"><td data-label="Feature"><strong>Docker and Podman</strong> <code>deploy-container</code><br>A two-stage Dockerfile and a compose file in <code>docker/</code>, configured only by <code>RE_PSN_*</code> variables. The status page is off until <code>RE_PSN_HTTP</code> is set.<br><span class="note">A Podman 6.1 run is recorded in docker/README.md, and the NAT lab builds the image with Docker in CI. The v0.2.0 image is pushed to ghcr.io (amd64 and arm64, unsigned; arm64 not run). The server runs as a non-root user and the bases are pinned by digest. Opt-in host-networking compose files, one hardened for a shared test host, are for Linux only. Compose under Podman is not tested.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">0.2.0</td></tr>
 </tbody>
 </table>
@@ -216,7 +217,7 @@
 <h2>Roadmap</h2>
 <p>The same list grouped by status. No dates are promised; <a href="https://github.com/undecuple/re-psn/blob/main/ROADMAP.md">ROADMAP.md</a> has the order and the scope.</p>
 <div class="cols">
-<div><h3>Done <span class="count">(38)</span></h3>
+<div><h3>Done <span class="count">(39)</span></h3>
 <ul>
 <li><a href="#f-rooms-basic">Rooms and search</a></li>
 <li><a href="#f-rooms-data">Room and member data</a></li>
@@ -230,6 +231,7 @@
 <li><a href="#f-deploy-examples">Settings file, service unit and Traefik example</a></li>
 <li><a href="#f-deploy-nginx-haproxy">nginx and HAProxy examples</a> <span class="tag unv">not yet verified</span></li>
 <li><a href="#f-deploy-caddy">Caddy status-page example</a> <span class="tag unv">not yet verified</span></li>
+<li><a href="#f-deploy-fail2ban">Optional fail2ban status-token jail</a> <span class="tag unv">not yet verified</span></li>
 <li><a href="#f-deploy-container">Docker and Podman</a></li>
 <li><a href="#f-settings-env">Flags and RE_PSN_* variables</a></li>
 <li><a href="#f-store-interface">Storage interface</a></li>
@@ -298,6 +300,7 @@
 <h3>Unreleased</h3>
 <h4>Added</h4>
 <ul>
+<li>Optional fail2ban instructions and a disabled journal jail/filter for refused HTTP status tokens, with offline synthetic log checks.</li>
 <li>A recomp developer integration guide with pinned runtime sources, callback/lifecycle and peer-transport guidance.</li>
 <li>Native optional HTTP status in the shared Windows/Linux terminal app: server totals, public-room members/age and leaderboard summaries, using a local Bearer-token file.</li>
 <li>Linux desktop startup for the shared terminal app: open an installed terminal when no TTY is attached, with literal arguments and a recursion guard.</li>

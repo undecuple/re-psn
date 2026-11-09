@@ -7,6 +7,8 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Optional fail2ban instructions and a disabled journal jail/filter for refused HTTP status tokens, with offline
+  synthetic log checks. Live host bans are unverified; the example leaves game TCP/UDP outside its scope.
 - A recomp developer integration guide with pinned runtime sources, callback/lifecycle and peer-transport guidance.
   A minimal C HELLO/search example runs in the required native-client check; C API comments now clarify blocking
   writes, diagnostic state and reply-wait timeout limits without changing implementation or the wire protocol.

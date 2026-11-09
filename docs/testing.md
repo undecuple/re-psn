@@ -10,6 +10,7 @@ missing tests, skips, failed builds and timeouts fail the command.
 - [What runs](#what-runs)
 - [Isolation and cleanup](#isolation-and-cleanup)
 - [Limits](#limits)
+- [Optional fail2ban filter check](#optional-fail2ban-filter-check)
 
 ## Run
 
@@ -58,3 +59,11 @@ These checks do not run games, prove LAN/Internet reachability, exercise NAT tra
 Medius or title compatibility. Use the full Go suites and CI for broader regression coverage, and the separate
 [NAT lab](../lab/README.md) for its Docker scenarios. Runner checks were executed on Linux; Windows and macOS execution
 still need validation.
+
+## Optional fail2ban filter check
+
+For the optional [status-token jail](fail2ban.md), run `python3 tools/check_fail2ban.py --out FRESH_DIRECTORY` with Go and fail2ban-regex
+installed. This separately exercises synthetic HTTP/logger fixtures through the real fail2ban filter engine; its
+required tools and fixture tests must execute. It makes no live journal, daemon or firewall changes. Normal CI runs
+the Go fixture tests but does not install fail2ban. Run the optional checker again after changing the refusal logs,
+filter or jail example, then verify the intended host's journal and firewall separately before enabling it.

@@ -64,6 +64,7 @@ Merged into main. Items are in v0.2.0 or v0.3.0 unless a line says it is on main
 - [deploy-examples] A settings file, a systemd unit and a Traefik example, shipped in the release archives.
 - [deploy-nginx-haproxy] nginx and HAProxy examples, not yet run against the server.
 - [deploy-caddy] A stock Caddy 2 status-page example on main, not released or run/validated with Caddy; game TCP and UDP stay direct.
+- [deploy-fail2ban] Disabled fail2ban example for HTTP status-token failures, with offline filter checks; live journal/firewall enforcement remains unverified.
 - [deploy-container] A Dockerfile and compose file, run under Podman.
 - [settings-env] Every flag as a `RE_PSN_*` variable, with the old `PSNR_*` names as aliases.
 
