@@ -19,17 +19,23 @@ import (
 type roomJSON struct {
 	ID      uint64   `json:"id"`
 	Title   string   `json:"title"`
+	Label   string   `json:"label"`
+	Game    string   `json:"game,omitempty"`
+	Serials []string `json:"serials,omitempty"`
 	Members []string `json:"members"`
 	Max     uint8    `json:"max"`
 	Age     string   `json:"age"`
 }
 
 type boardJSON struct {
-	Title   string `json:"title"`
-	Board   uint32 `json:"board"`
-	Entries int    `json:"entries"`
-	Leader  string `json:"leader"`
-	Best    int64  `json:"best"`
+	Title   string   `json:"title"`
+	Label   string   `json:"label"`
+	Game    string   `json:"game,omitempty"`
+	Serials []string `json:"serials,omitempty"`
+	Board   uint32   `json:"board"`
+	Entries int      `json:"entries"`
+	Leader  string   `json:"leader"`
+	Best    int64    `json:"best"`
 }
 
 type statsJSON struct {
@@ -55,6 +61,7 @@ func (s *Server) boardStats() []boardJSON {
 	}
 	for _, b := range boards {
 		bj := boardJSON{Title: b.Key.Title, Board: b.Key.Board, Entries: b.Entries}
+		bj.Label, bj.Game, bj.Serials = titleLabel(b.Key.Title)
 		if b.Entries > 0 {
 			bj.Leader, bj.Best = b.Leader.OnlineID, b.Leader.Score
 		}
@@ -62,6 +69,9 @@ func (s *Server) boardStats() []boardJSON {
 	}
 	sort.Slice(out, func(i, j int) bool {
 		a, b := out[i], out[j]
+		if a.Label != b.Label {
+			return gameBefore(a.Game, a.Label, b.Game, b.Label)
+		}
 		return a.Title < b.Title || a.Title == b.Title && a.Board < b.Board
 	})
 	return out
@@ -86,13 +96,28 @@ func (s *Server) snapshot() statsJSON {
 		}
 		rj := roomJSON{ID: r.id, Title: r.commID, Max: r.max,
 			Age: time.Since(r.created).Round(time.Second).String()}
+		rj.Label, rj.Game, rj.Serials = titleLabel(r.commID)
 		for _, m := range r.members {
 			rj.Members = append(rj.Members, m.c.onlineID)
 		}
 		st.Rooms = append(st.Rooms, rj)
 	}
-	sort.Slice(st.Rooms, func(i, j int) bool { return st.Rooms[i].ID < st.Rooms[j].ID })
+	sort.Slice(st.Rooms, func(i, j int) bool {
+		a, b := st.Rooms[i], st.Rooms[j]
+		if a.Label != b.Label {
+			return gameBefore(a.Game, a.Label, b.Game, b.Label)
+		}
+		return a.ID < b.ID
+	})
 	return st
+}
+
+// gameBefore orders labels so that known games come first, by label, and bare communication IDs after them.
+func gameBefore(nameA, labelA, nameB, labelB string) bool {
+	if (nameA == "") != (nameB == "") {
+		return nameA != ""
+	}
+	return labelA < labelB
 }
 
 // reachable reports whether an -http address listens beyond this machine.

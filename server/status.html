@@ -44,7 +44,7 @@
       <div class="table-scroll" role="region" aria-label="Rooms table" tabindex="0">
         <table><caption class="sr-only">Public rooms and their members</caption>
           <thead><tr><th scope="col">ID</th><th scope="col">Title</th><th scope="col">Members</th><th scope="col">Age</th></tr></thead>
-          <tbody id="rooms-body">{{range .Rooms}}<tr><td class="number">{{.ID}}</td><td class="identifier">{{.Title}}</td><td>{{len .Members}}/{{.Max}} <span class="muted">{{range .Members}}{{.}} {{end}}</span></td><td>{{.Age}}</td></tr>{{else}}<tr><td colspan="4" class="empty">No public rooms. A room appears here when a player hosts one.</td></tr>{{end}}</tbody>
+          <tbody id="rooms-body">{{range .Rooms}}<tr><td class="number">{{.ID}}</td><td class="identifier">{{if .Label}}{{.Label}}{{else}}{{.Title}}{{end}}</td><td>{{len .Members}}/{{.Max}} <span class="muted">{{range .Members}}{{.}} {{end}}</span></td><td>{{.Age}}</td></tr>{{else}}<tr><td colspan="4" class="empty">No public rooms. A room appears here when a player hosts one.</td></tr>{{end}}</tbody>
         </table>
       </div>
     </section>
@@ -53,7 +53,7 @@
       <div class="table-scroll" role="region" aria-label="Leaderboards table" tabindex="0">
         <table><caption class="sr-only">Leaderboards and leading scores</caption>
           <thead><tr><th scope="col">Title</th><th scope="col">Board</th><th scope="col">Entries</th><th scope="col">Leader</th></tr></thead>
-          <tbody id="boards-body">{{range .Boards}}<tr><td class="identifier">{{.Title}}</td><td class="number">{{.Board}}</td><td>{{.Entries}}</td><td>{{if .Entries}}{{.Leader}} <span class="score">({{.Best}})</span>{{else}}No scores yet{{end}}</td></tr>{{else}}<tr><td colspan="4" class="empty">No leaderboards. Scores appear after a player submits one.</td></tr>{{end}}</tbody>
+          <tbody id="boards-body">{{range .Boards}}<tr><td class="identifier">{{if .Label}}{{.Label}}{{else}}{{.Title}}{{end}}</td><td class="number">{{.Board}}</td><td>{{.Entries}}</td><td>{{if .Entries}}{{.Leader}} <span class="score">({{.Best}})</span>{{else}}No scores yet{{end}}</td></tr>{{else}}<tr><td colspan="4" class="empty">No leaderboards. Scores appear after a player submits one.</td></tr>{{end}}</tbody>
         </table>
       </div>
     </section>

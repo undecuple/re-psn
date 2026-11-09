@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- The status page and `/api/stats` show known games by name: rooms and leaderboards carry a `label` such as
+  `[Killzone 3 (BCUS98234, BCES01007)]`, with `game` and `serials` fields, and are sorted by it. A game the table does not
+  know keeps its communication ID. The table is embedded in the server (four games so far), never fetched, and the
+  `title` field is unchanged. The protocol is unchanged.
+
 ## [0.4.0] - 2026-11-09
 
 ### Added

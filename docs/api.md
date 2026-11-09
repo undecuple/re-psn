@@ -288,5 +288,15 @@ This is a separate listener, off unless `-http` names an address (for example
 | `/api/stats` | the same data as JSON, plus aggregate `udp_drops` counters; see [UDP guardrails](udp-guardrails.md#drop-counters) |
 | `/healthz` | data-free local TCP/UDP readiness: 200 when ready, 503 otherwise; GET/HEAD only |
 
+### Known games
+
+Each room and leaderboard in `/api/stats` keeps `title` (the communication ID the client sent) and adds `label`: for a game in the
+server's embedded table (`server/titles.tsv`) `[Name (SERIAL, SERIAL)]`, with `game` (the name) and `serials`; for any other ID,
+`label` is the ID and `game` and `serials` are absent. Lists are sorted known games first, by label, then other IDs. The table
+is compiled in, never fetched, and changes nothing in the game protocol. A row needs the NP communication ID, the display name
+and the serials of discs that were read, all taken from the game's own files (`PARAM.SFO`, the trophy directory). The
+communication ID of a row may be the trophy directory's ID; a game whose online code uses another ID shows under that ID until a
+row for it is added.
+
 With `-http-token` set, all paths answer 401 unless the request carries the token
 (`Authorization: Bearer <token>`, or `?token=<token>`).

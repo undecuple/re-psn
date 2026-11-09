@@ -1,0 +1,7 @@
+# Known games: NP communication ID, display name, serials. Tab-separated; lines starting with # are comments.
+# Every row comes from the game's own files (PARAM.SFO and the trophy directory). Serials are listed only for discs
+# that were read; names drop trademark symbols. Add a row only with that evidence. See docs/api.md.
+NPWR00153_00	Killzone 2	BCUS98116, BCES00081, BCAS20066, BCJS30032
+NPWR00866_00	TORO ! Let's Party !	BCAS20087
+NPWR01569_00	Killzone 3	BCUS98234, BCES01007
+NPWR08138_00	J-STARS Victory VS+	BLUS31519, BLES02136
