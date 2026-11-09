@@ -1,5 +1,5 @@
 {
- "version": "0.3.0",
+ "version": "0.4.0",
  "stage": "pre-release",
  "repository": "https://github.com/undecuple/re-psn",
  "go": "1.22",
@@ -989,41 +989,16 @@
   "unreleased": {
    "version": "Unreleased",
    "date": "",
-   "sections": {
-    "Added": [
-     "Optional fail2ban instructions and a disabled journal jail/filter for refused HTTP status tokens, with offline synthetic log checks.",
-     "A recomp developer integration guide with pinned runtime sources, callback/lifecycle and peer-transport guidance.",
-     "Native optional HTTP status in the shared Windows/Linux terminal app: server totals, public-room members/age and leaderboard summaries, using a local Bearer-token file.",
-     "Linux desktop startup for the shared terminal app: open an installed terminal when no TTY is attached, with literal arguments and a recursion guard.",
-     "Bounded per-source UDP admission (per IPv4 address, per IPv6 /64) with `-max-udp-rate` / `RE_PSN_MAX_UDP_RATE` (default 1000 packets/second, same-size burst; 0 disables it), shared by probes and relay datagrams.",
-     "`/healthz` on the opt-in status listener, protected by the existing HTTP token.",
-     "A stock Caddy 2 example for the HTTP status page, included with the deployment examples.",
-     "The opt-in server status page now matches the website and terminal app's gruvbox-material palette and monospace framing, with Overview/Rooms/Leaderboards tabs, System/Light/Dark, text size, spacing and contrast-checked ...",
-     "An offline repository check for tracked root/top-level layout, local Markdown links and anchors, and static workflow/Dependabot input paths.",
-     "A focused loopback check: `python3 tools/loopback.py` runs the existing native C-client and Go app-client conformance tests against temporary loopback servers.",
-     "Numbered file-style output in the website's terminal view: a header, frame, line-number gutter, syntax-style colours and wrapped continuation rows with an empty gutter.",
-     "Optional install scripts: `scripts/install.sh` (POSIX sh; Linux amd64 and arm64) and `scripts/install.ps1` (Windows amd64; written for PowerShell 5.1 and 7, tested on 7 only) install the server for the current user from ...",
-     "`.github/FUNDING.yml`, which gives the repository a sponsor link (Ko-fi).",
-     "Tests for room kick behavior, contributed by Tzeentchnet."
-    ],
-    "Changed": [
-     "The website's pager trial is removed: the `pager` command, its keys, buttons and status bar, and the saved pager setting are gone, and long output is shown in full in the scrolling output pane.",
-     "The README install section recommends the release archives and shows an optional quick install: the installer is fetched from a pinned revision of the repository, its hash is checked, and it is read before it is run.",
-     "The release carries seven assets: the three archives, the AppImage, `SHA256SUMS`, and the two install scripts as `install.sh` and `install.ps1`, byte for byte the tagged `scripts/` files, with their checksums in ..."
-    ]
-   },
+   "sections": {},
+   "counts": {}
+  },
+  "latest": {
+   "version": "0.4.0",
+   "date": "2026-11-09",
+   "sections": {},
    "counts": {
     "Added": 14,
     "Changed": 3
-   }
-  },
-  "latest": {
-   "version": "0.3.0",
-   "date": "2026-11-06",
-   "sections": {},
-   "counts": {
-    "Changed": 7,
-    "Added": 9
    }
   }
  },
@@ -1035,16 +1010,16 @@
   "notice": "Unofficial; not affiliated with Sony. No game files, keys or firmware are in the repository or needed from it. Play only games you own."
  },
  "install": {
-  "release_tag": "v0.3.0",
-  "release_url": "https://github.com/undecuple/re-psn/releases/tag/v0.3.0",
+  "release_tag": "v0.4.0",
+  "release_url": "https://github.com/undecuple/re-psn/releases/tag/v0.4.0",
   "archives": "Archives for Linux (amd64, arm64) and Windows (amd64), and a Linux x86_64 AppImage, all unsigned, with a `SHA256SUMS` file. Check a download on Linux:",
   "verify_unix": [
    "sha256sum -c SHA256SUMS --ignore-missing"
   ],
   "verify_windows": "On Windows, compare the output of `Get-FileHash <archive>` with the line in `SHA256SUMS`.",
   "container": [
-   "docker pull ghcr.io/undecuple/re-psn:0.3.0",
-   "docker run --rm -p 36100:36100 -p 36100:36100/udp ghcr.io/undecuple/re-psn:0.3.0"
+   "docker pull ghcr.io/undecuple/re-psn:0.4.0",
+   "docker run --rm -p 36100:36100 -p 36100:36100/udp ghcr.io/undecuple/re-psn:0.4.0"
   ],
   "container_note": "Podman works the same way. See [docker/README.md](docker/README.md).",
   "source_note": "You need Go 1.22 or newer; a C compiler only for the C client and its tests.",

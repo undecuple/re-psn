@@ -23,7 +23,7 @@ import (
 	"github.com/undecuple/re-psn/app/internal/tui"
 )
 
-var version = "0.3.0"
+var version = "0.4.0"
 
 // checkTitle is the communication ID check uses: no real title has it, so the
 // check never sees or touches a game's rooms.

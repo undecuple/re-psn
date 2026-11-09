@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-09
+
 ### Added
 - Optional fail2ban instructions and a disabled journal jail/filter for refused HTTP status tokens, with offline
   synthetic log checks. Live host bans are unverified; the example leaves game TCP/UDP outside its scope.
