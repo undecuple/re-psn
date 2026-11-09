@@ -15,7 +15,7 @@
 <body id="top">
 <a class="skip" href="#overview">Skip to the content</a>
 <header class="bar">
-<h1 class="title"><strong>re:psn</strong> <span>by undecuple &middot; v0.3.0 &middot; pre-release</span></h1>
+<h1 class="title"><strong>re:psn</strong> <span>by undecuple &middot; v0.4.0 &middot; pre-release</span></h1>
 <div class="theme" role="group" aria-label="Theme"><span class="theme-label">Theme</span><button type="button" class="theme-btn" data-theme-set="system" aria-pressed="false">System</button><button type="button" class="theme-btn" data-theme-set="light" aria-pressed="false">Light</button><button type="button" class="theme-btn" data-theme-set="dark" aria-pressed="false">Dark</button></div>
 </header>
 <nav class="bar sticky" aria-label="Sections"><ul>
@@ -34,7 +34,7 @@
 <h2>Overview</h2>
 <p>re-psn answers the matchmaking and leaderboard calls of a statically recompiled PS3 game, for a group running its own server: a LAN, a VPN, or friends connecting to one person&#x27;s machine. The server keeps rooms and leaderboards and tells each player where the others are. Game traffic goes directly between players, and through the server only when two players cannot reach each other and the host has turned the relay on.</p>
 <p>It is a fork of <a href="https://github.com/sp00nznet/psnr">psnr</a> by sp00nz: a Go server and a one-file C client, with no accounts and no public instance.</p>
-<p class="status-line">Version 0.3.0 (pre-release). 64 features: 29 available, 3 not yet verified, 7 partial, 15 planned, 9 later, 1 declined.</p>
+<p class="status-line">Version 0.4.0 (pre-release). 64 features: 29 available, 3 not yet verified, 7 partial, 15 planned, 9 later, 1 declined.</p>
 <p class="notice">Unofficial; not affiliated with Sony. No game files, keys or firmware are in the repository or needed from it. Play only games you own.</p>
 </section>
 <section id="features">
@@ -298,31 +298,8 @@
 <section id="changes">
 <h2>Changes</h2>
 <h3>Unreleased</h3>
-<h4>Added</h4>
-<ul>
-<li>Optional fail2ban instructions and a disabled journal jail/filter for refused HTTP status tokens, with offline synthetic log checks.</li>
-<li>A recomp developer integration guide with pinned runtime sources, callback/lifecycle and peer-transport guidance.</li>
-<li>Native optional HTTP status in the shared Windows/Linux terminal app: server totals, public-room members/age and leaderboard summaries, using a local Bearer-token file.</li>
-<li>Linux desktop startup for the shared terminal app: open an installed terminal when no TTY is attached, with literal arguments and a recursion guard.</li>
-<li>Bounded per-source UDP admission (per IPv4 address, per IPv6 /64) with <code>-max-udp-rate</code> / <code>RE_PSN_MAX_UDP_RATE</code> (default 1000 packets/second, same-size burst; 0 disables it), shared by probes and relay datagrams.</li>
-<li><code>/healthz</code> on the opt-in status listener, protected by the existing HTTP token.</li>
-<li>A stock Caddy 2 example for the HTTP status page, included with the deployment examples.</li>
-<li>The opt-in server status page now matches the website and terminal app&#x27;s gruvbox-material palette and monospace framing, with Overview/Rooms/Leaderboards tabs, System/Light/Dark, text size, spacing and contrast-checked ...</li>
-<li>An offline repository check for tracked root/top-level layout, local Markdown links and anchors, and static workflow/Dependabot input paths.</li>
-<li>A focused loopback check: <code>python3 tools/loopback.py</code> runs the existing native C-client and Go app-client conformance tests against temporary loopback servers.</li>
-<li>Numbered file-style output in the website&#x27;s terminal view: a header, frame, line-number gutter, syntax-style colours and wrapped continuation rows with an empty gutter.</li>
-<li>Optional install scripts: <code>scripts/install.sh</code> (POSIX sh; Linux amd64 and arm64) and <code>scripts/install.ps1</code> (Windows amd64; written for PowerShell 5.1 and 7, tested on 7 only) install the server for the current user from ...</li>
-<li><code>.github/FUNDING.yml</code>, which gives the repository a sponsor link (Ko-fi).</li>
-<li>Tests for room kick behavior, contributed by Tzeentchnet.</li>
-</ul>
-<h4>Changed</h4>
-<ul>
-<li>The website&#x27;s pager trial is removed: the <code>pager</code> command, its keys, buttons and status bar, and the saved pager setting are gone, and long output is shown in full in the scrolling output pane.</li>
-<li>The README install section recommends the release archives and shows an optional quick install: the installer is fetched from a pinned revision of the repository, its hash is checked, and it is read before it is run.</li>
-<li>The release carries seven assets: the three archives, the AppImage, <code>SHA256SUMS</code>, and the two install scripts as <code>install.sh</code> and <code>install.ps1</code>, byte for byte the tagged <code>scripts/</code> files, with their checksums in ...</li>
-</ul>
-<h3>0.3.0 (2026-11-06)</h3>
-<p>7 under Changed, 9 under Added.</p>
+<h3>0.4.0 (2026-11-09)</h3>
+<p>14 under Added, 3 under Changed.</p>
 <p>The full history is in <a href="https://github.com/undecuple/re-psn/blob/main/CHANGELOG.md">CHANGELOG.md</a>.</p>
 </section>
 <section id="settings">
@@ -357,14 +334,14 @@
 </section>
 <section id="install">
 <h2>Install</h2>
-<p>The latest release is <a href="https://github.com/undecuple/re-psn/releases/tag/v0.3.0">v0.3.0</a>, a pre-release.</p>
+<p>The latest release is <a href="https://github.com/undecuple/re-psn/releases/tag/v0.4.0">v0.4.0</a>, a pre-release.</p>
 <h3>Release archives</h3>
 <p>Archives for Linux (amd64, arm64) and Windows (amd64), and a Linux x86_64 AppImage, all unsigned, with a <code>SHA256SUMS</code> file. Check a download on Linux:</p>
 <pre><code>sha256sum -c SHA256SUMS --ignore-missing</code></pre>
 <p>On Windows, compare the output of <code>Get-FileHash &lt;archive&gt;</code> with the line in <code>SHA256SUMS</code>.</p>
 <h3>Container</h3>
-<pre><code>docker pull ghcr.io/undecuple/re-psn:0.3.0
-docker run --rm -p 36100:36100 -p 36100:36100/udp ghcr.io/undecuple/re-psn:0.3.0</code></pre>
+<pre><code>docker pull ghcr.io/undecuple/re-psn:0.4.0
+docker run --rm -p 36100:36100 -p 36100:36100/udp ghcr.io/undecuple/re-psn:0.4.0</code></pre>
 <p>Podman works the same way. See <a href="https://github.com/undecuple/re-psn/blob/main/docker/README.md">docker/README.md</a>.</p>
 <h3>From source</h3>
 <p>You need Go 1.22 or newer; a C compiler only for the C client and its tests.</p>
