@@ -34,7 +34,7 @@
 <h2>Overview</h2>
 <p>re-psn answers the matchmaking and leaderboard calls of a statically recompiled PS3 game, for a group running its own server: a LAN, a VPN, or friends connecting to one person&#x27;s machine. The server keeps rooms and leaderboards and tells each player where the others are. Game traffic goes directly between players, and through the server only when two players cannot reach each other and the host has turned the relay on.</p>
 <p>It is a fork of <a href="https://github.com/sp00nznet/psnr">psnr</a> by sp00nz: a Go server and a one-file C client, with no accounts and no public instance.</p>
-<p class="status-line">Version 0.3.0 (pre-release). 59 features: 29 available, 2 not yet verified, 7 partial, 12 planned, 8 later, 1 declined.</p>
+<p class="status-line">Version 0.3.0 (pre-release). 63 features: 29 available, 2 not yet verified, 7 partial, 15 planned, 9 later, 1 declined.</p>
 <p class="notice">Unofficial; not affiliated with Sony. No game files, keys or firmware are in the repository or needed from it. Play only games you own.</p>
 </section>
 <section id="features">
@@ -152,6 +152,16 @@
 <tr id="f-net-upnp"><td data-label="Feature"><strong>UPnP</strong> <code>net-upnp</code><br>Open a player&#x27;s P2P port on their router automatically.<br><span class="note">Not started.</span></td><td data-label="Status"><span class="tag dim">later</span></td><td data-label="Since">not released</td></tr>
 </tbody>
 </table>
+<h3 id="area-medius-profiles">Medius profiles</h3>
+<table class="stack feat">
+<thead><tr><th>Feature</th><th>Status</th><th>Since</th></tr></thead>
+<tbody>
+<tr id="f-medius-transport"><td data-label="Feature"><strong>Profile-specific transport and discovery</strong> <code>medius-transport</code><br>An opt-in, disabled-by-default Medius-compatible frontend for a named title/build profile, starting with synthetic local transport and discovery. Unknown or unsupported profiles, versions, application IDs and messages fail explicitly.<br><span class="note">Not implemented. Candidate Killzone 3 BCUS98234 update 1.14, app ID 23044: compatibility not tested; not supported.</span></td><td data-label="Status"><span class="tag plan">planned</span></td><td data-label="Since">not released</td></tr>
+<tr id="f-medius-lobby"><td data-label="Feature"><strong>Profile-specific sessions and lobby</strong> <code>medius-lobby</code><br>Logical sessions across service sockets and profile-specific lobby operations, with only an explicitly unauthenticated synthetic local TicketLogin envelope.<br><span class="note">Not implemented; no PSN authentication or real tickets.</span></td><td data-label="Status"><span class="tag plan">planned</span></td><td data-label="Since">not released</td></tr>
+<tr id="f-medius-data"><td data-label="Feature"><strong>Profile-specific data path</strong> <code>medius-data</code><br>A data path considered only after the selected profile&#x27;s transport, membership and authorization requirements are evidenced.<br><span class="note">Not implemented. The data plane, NAT and DME requirements are unknown; no psnr reuse is promised.</span></td><td data-label="Status"><span class="tag plan">planned</span></td><td data-label="Since">not released</td></tr>
+<tr id="f-medius-multititle"><td data-label="Feature"><strong>Further title/build profiles</strong> <code>medius-multititle</code><br>Consider additional explicitly selected title/build profiles, each with its own evidence and failure rules.<br><span class="note">Not started; no general Medius or multi-title compatibility is claimed.</span></td><td data-label="Status"><span class="tag dim">later</span></td><td data-label="Since">not released</td></tr>
+</tbody>
+</table>
 <h3 id="area-client">Client</h3>
 <table class="stack feat">
 <thead><tr><th>Feature</th><th>Status</th><th>Since</th></tr></thead>
@@ -247,7 +257,7 @@
 <li><a href="#f-repo-check">Repository layout check</a></li>
 <li><a href="#f-docs-integration">Recomp developer integration</a></li>
 </ul></div>
-<div><h3>Next <span class="count">(12)</span></h3>
+<div><h3>Next <span class="count">(15)</span></h3>
 <ul>
 <li><a href="#f-rooms-private">Private rooms</a></li>
 <li><a href="#f-players-friends">Friends, presence and invites</a></li>
@@ -255,6 +265,9 @@
 <li><a href="#f-store-backup">Backup and restore</a></li>
 <li><a href="#f-ha-failover">Active/passive failover</a></li>
 <li><a href="#f-net-checks">Connection checks</a></li>
+<li><a href="#f-medius-transport">Profile-specific transport and discovery</a></li>
+<li><a href="#f-medius-lobby">Profile-specific sessions and lobby</a></li>
+<li><a href="#f-medius-data">Profile-specific data path</a></li>
 <li><a href="#f-client-desktop">Desktop client, terminal UI</a></li>
 <li><a href="#f-client-gui">Desktop client, graphical UI</a></li>
 <li><a href="#f-app-themes">Colour themes</a></li>
@@ -262,7 +275,7 @@
 <li><a href="#f-app-colours">Custom colours</a></li>
 <li><a href="#f-ci-more">More CI checks</a></li>
 </ul></div>
-<div><h3>Later <span class="count">(8)</span></h3>
+<div><h3>Later <span class="count">(9)</span></h3>
 <ul>
 <li><a href="#f-players-accounts">Optional sign-in</a></li>
 <li><a href="#f-metrics-endpoint">Metrics endpoint</a></li>
@@ -271,6 +284,7 @@
 <li><a href="#f-store-mariadb">MariaDB storage</a></li>
 <li><a href="#f-ha-multi">Several servers</a></li>
 <li><a href="#f-net-upnp">UPnP</a></li>
+<li><a href="#f-medius-multititle">Further title/build profiles</a></li>
 <li><a href="#f-release-signing">Signed releases</a></li>
 </ul></div>
 <div><h3>Not planned <span class="count">(1)</span></h3>

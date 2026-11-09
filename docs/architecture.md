@@ -1,13 +1,15 @@
 # Architecture
 
-How re-psn fits between a recompiled title and other players: the server in `server/` handles rooms, leaderboards and the
-address hand-out over TCP, the C client in `client/` runs inside the title, and game traffic goes peer to peer, through the
-server's relay only when it has to.
+In the current psnr path, the server in `server/` handles rooms, leaderboards and the address hand-out over TCP, the C
+client in `client/` runs inside the title, and game traffic goes peer to peer, through the server's relay only when it
+has to.
 
 ## Contents
 
 - [Overview](#overview)
 - [The parts](#the-parts)
+- [Planned title-profile-specific Medius frontend](#planned-title-profile-specific-medius-frontend)
+  - [Logical sessions across service sockets](#logical-sessions-across-service-sockets)
 - [Why the server doesn't carry game traffic](#why-the-server-doesnt-carry-game-traffic)
   - [A relayed connection](#a-relayed-connection)
 - [Why rooms and leaderboards first](#why-rooms-and-leaderboards-first)
@@ -34,8 +36,8 @@ flowchart LR
   sa <-. "UDP, peer to peer" .-> sb
 ```
 
-Rooms, leaderboards and the address hand-out go through the server over TCP. Game traffic goes peer to peer over UDP, and through the
-server's relay only when two players cannot reach each other directly (`-relay`).
+In the psnr path, rooms, leaderboards and the address hand-out go through the server over TCP. Game traffic goes peer to
+peer over UDP, and through the server's relay only when two players cannot reach each other directly (`-relay`).
 
 Behind a reverse proxy (optional, off by default; see [running.md](running.md#behind-a-reverse-proxy)), the game's TCP connection passes through
 the proxy, which tells the server the player's real address with PROXY protocol. UDP is published straight to the server:
@@ -72,9 +74,35 @@ flowchart LR
   callbacks run on the thread it expects. A background reader thread would
   need a second queue and a lock to get to the same place.
 
+## Planned title-profile-specific Medius frontend
+
+This is a future boundary, not an implemented service. The existing psnr frontend and its C client keep their present
+behavior. A separate, explicitly enabled Medius-compatible frontend would handle framing, profile and service state,
+then translate only evidenced operations into domain operations. The domain boundary would own session, membership and
+authorization invariants rather than exposing psnr handlers as a presumed Medius protocol. This is a design direction,
+not a claim that the current server is already split into independent layers.
+
+Profiles are selected explicitly for a particular title and build; the frontend is off by default. Unknown or
+unsupported profiles, versions, application IDs and messages must cause explicit failure, not a generic success or
+fallback. If a wire field's layout is unknown, it cannot be claimed as validated. The only allowed TicketLogin is the
+unauthenticated synthetic local envelope in the [scope](../ROADMAP.md#scope); it cannot establish a PSN identity or
+entitlement. SVO is not part of re-psn and would require a separate companion decision.
+
+### Logical sessions across service sockets
+
+A future Medius logical session may span discovery, session/login and lobby sockets, and possibly a data connection.
+The sockets have distinct service roles and states; a socket is not itself a player identity or a complete session.
+Any cross-socket association needs profile and application isolation, bounded lifetimes and resources, scoped
+authorization, and explicit transfer, replay and cleanup rules. Local or private addressing is not authentication.
+The actual service order and transfer rules remain unknown.
+
+Medius worlds, parties and memberships are not assumed to be equivalent to psnr rooms. No reuse of psnr NAT traversal,
+relay or a DME data path is promised: the required data plane and its authorization must first be established for the
+profile. The [Medius scope and profile](medius-scope.md) separates source observations from assumptions and unknowns.
+
 ## Why the server doesn't carry game traffic
 
-It follows xlive's model: the relay handles discovery, and the game traffic
+The psnr path follows xlive's model: the relay handles discovery, and the game traffic
 itself goes peer to peer.
 
 - Each room member entry carries the peer's address as the server sees it,
@@ -141,16 +169,19 @@ These are the two services that show up across the recompiled library:
   including Crazy Taxi.
 
 Titles whose online play ran on their own servers need a stand-in for that
-server, not for PSN:
+server, not for PSN; these publisher servers are outside this project's scope:
 
 | Server | Titles |
 |---|---|
 | Demonware | Guitar Hero III |
 | GameSpy | Marvel Ultimate Alliance, Saints Row 2 |
 | EA | Orange Box, Trivial Pursuit |
-| First-party Medius/DNAS | several |
 
-The protocol is modelled on the SDK's concepts, not its structs:
+Some titles also use Medius or DNAS. Only the narrow, opt-in Medius profiles described above are in scope; DNAS remains
+excluded. A title that requires DNAS, a real PSN ticket, a publisher service or a real secret cannot be supported under
+this scope.
+
+The psnr protocol is modelled on the SDK's concepts, not its structs:
 
 - Matching2 bin attributes travel as opaque `external`/`internal` blobs.
 - Error codes are the server's own. The client maps them to whatever SDK error
