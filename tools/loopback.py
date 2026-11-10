@@ -12,7 +12,8 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 SERVER = "github.com/sp00nznet/psnr/server"
 CLIENT = "github.com/undecuple/re-psn/app/internal/client"
-APP_TESTS = ("TestConformanceRoomsAndScores", "TestConformanceRelayRoute", "TestConformanceErrors")
+APP_TESTS = ("TestConformanceRoomsAndScores", "TestConformanceRelayRoute", "TestConformanceErrors",
+             "TestConformanceHeartbeatReportsRTT")
 
 
 def clean_env():

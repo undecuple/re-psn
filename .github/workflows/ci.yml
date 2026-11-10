@@ -115,6 +115,7 @@ jobs:
           --require github.com/undecuple/re-psn/app/internal/client:TestConformanceRoomsAndScores
           --require github.com/undecuple/re-psn/app/internal/client:TestConformanceRelayRoute
           --require github.com/undecuple/re-psn/app/internal/client:TestConformanceErrors
+          --require github.com/undecuple/re-psn/app/internal/client:TestConformanceHeartbeatReportsRTT
           -- go test -mod=readonly -race -json ./...
       - name: test (Windows)
         if: runner.os == 'Windows'
@@ -123,6 +124,7 @@ jobs:
           --require github.com/undecuple/re-psn/app/internal/client:TestConformanceRoomsAndScores
           --require github.com/undecuple/re-psn/app/internal/client:TestConformanceRelayRoute
           --require github.com/undecuple/re-psn/app/internal/client:TestConformanceErrors
+          --require github.com/undecuple/re-psn/app/internal/client:TestConformanceHeartbeatReportsRTT
           -- go test -mod=readonly -json ./...
       - name: cross-build
         if: runner.os == 'Linux'

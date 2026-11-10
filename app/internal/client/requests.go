@@ -21,9 +21,16 @@ func (c *Conn) Hello(ctx context.Context, h Hello) (HelloAck, error) {
 	return finish(op, d, decodeHelloAck(d))
 }
 
-// Heartbeat sends HEARTBEAT, which keeps the connection alive and has no reply.
+// Heartbeat sends HEARTBEAT, which keeps the connection alive and has no reply. After ReportRTT(true), and once a
+// call has been timed, it carries the round trip in milliseconds (rtt_ms); otherwise it has no body, as before.
 func (c *Conn) Heartbeat(ctx context.Context) error {
-	if err := c.send(ctx, typeHeartbeat, c.nextReq.Add(1), nil); err != nil {
+	var body func(*encoder)
+	if c.reportRTT.Load() {
+		if ms, ok := c.rtt.min(); ok {
+			body = func(e *encoder) { e.u16(ms) }
+		}
+	}
+	if err := c.send(ctx, typeHeartbeat, c.nextReq.Add(1), body); err != nil {
 		return fmt.Errorf("heartbeat: %w", err)
 	}
 	return nil
