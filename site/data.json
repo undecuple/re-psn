@@ -991,12 +991,13 @@
    "date": "",
    "sections": {
     "Added": [
+     "HEARTBEAT may carry the player's own last round trip (`rtt_ms`, 2 bytes).",
      "`/api/stats` and the status page count verified players: each public room has `verified` (members whose UDP probe the server has accepted on this connection) and the top level has `verified_players`.",
      "The status page and `/api/stats` show known games by name: rooms and leaderboards carry a `label` such as `[Killzone 3 (BCUS98234, BCES01007)]`, with `game` and `serials` fields, and are sorted by it."
     ]
    },
    "counts": {
-    "Added": 2
+    "Added": 3
    }
   },
   "latest": {

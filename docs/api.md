@@ -62,7 +62,15 @@ server carries it only with `-relay` (see [Relay](#relay)).
 | Type | Name | Request (after `req`) | Reply |
 |---|---|---|---|
 | 0x01 | HELLO | `comm_id [12]` `online_id [16]` `p2p_port u16` | HELLO_ACK |
-| 0x02 | HEARTBEAT | — | none |
+| 0x02 | HEARTBEAT | optional `rtt_ms u16` | none |
+
+**HEARTBEAT `rtt_ms`:** a client may add the round trip it last measured to the server, in milliseconds (`u16`, big endian;
+`0xFFFF` means unknown). The server keeps the latest value, shows it on the status page and in `/api/stats` (`rtt_ms`, parallel to
+`members`, `null` when there is none, it is unknown, or it is older than 3 minutes), and uses it for nothing else. It is reported
+by the player, not measured by the server, and nobody checks it. A value above 60000 clears the report. Bytes after the first two
+are ignored. A HEARTBEAT without the field changes nothing: clients that do not send it keep working, and a server from before
+this field ignores the body of a HEARTBEAT, so a client that sends it works against older servers too. The C client's timing and
+sending are not part of this change.
 
 **HELLO fields:**
 - `comm_id` is the title's NP communication ID (`NPWR00860_00`). It scopes

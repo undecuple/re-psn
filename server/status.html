@@ -43,8 +43,8 @@
       <div class="file-head"><h2 id="rooms-heading"><span aria-hidden="true">// </span>Rooms</h2><span>public rooms</span></div>
       <div class="table-scroll" role="region" aria-label="Rooms table" tabindex="0">
         <table><caption class="sr-only">Public rooms and their members</caption>
-          <thead><tr><th scope="col">ID</th><th scope="col">Title</th><th scope="col">Members</th><th scope="col">Age</th></tr></thead>
-          <tbody id="rooms-body">{{range .Rooms}}<tr><td class="number">{{.ID}}</td><td class="identifier">{{if .Label}}{{.Label}}{{else}}{{.Title}}{{end}}</td><td>{{len .Members}}/{{.Max}}{{if .Verified}} ({{.Verified}} verified){{end}} <span class="muted">{{range .Members}}{{.}} {{end}}</span></td><td>{{.Age}}</td></tr>{{else}}<tr><td colspan="4" class="empty">No public rooms. A room appears here when a player hosts one.</td></tr>{{end}}</tbody>
+          <thead><tr><th scope="col">ID</th><th scope="col">Title</th><th scope="col">Members (latency as reported by the player)</th><th scope="col">Age</th></tr></thead>
+          <tbody id="rooms-body">{{range .Rooms}}{{$room := .}}<tr><td class="number">{{.ID}}</td><td class="identifier">{{if .Label}}{{.Label}}{{else}}{{.Title}}{{end}}</td><td>{{len .Members}}/{{.Max}}{{if .Verified}} ({{.Verified}} verified){{end}} <span class="muted">{{range $i, $m := .Members}}{{$m}}{{$room.MemberRTT $i}} {{end}}</span></td><td>{{.Age}}</td></tr>{{else}}<tr><td colspan="4" class="empty">No public rooms. A room appears here when a player hosts one.</td></tr>{{end}}</tbody>
         </table>
       </div>
     </section>
