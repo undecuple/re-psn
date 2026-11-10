@@ -14,6 +14,22 @@
  * connection that sends nothing for 90 seconds.
  *
  * Not thread-safe: one thread per psnr_client at a time.
+ *
+ * What it touches. The client owns only the sockets it makes itself: the TCP
+ * connection psnr_connect opens to the server, and the TCP connection each
+ * relay stream opens (psnr_stream_connect and psnr_stream_accept return it to
+ * the caller, who owns and closes it). It never opens, reads, writes or closes
+ * a socket of the title's; the UDP peer socket is the title's, and the library
+ * only builds and reads the packets it exchanges. Connecting and disconnecting
+ * are explicit: nothing connects until the title calls psnr_connect, nothing
+ * reconnects by itself (psnr_poll returns -1 once the connection is lost), and
+ * psnr_close closes it. A title that never calls psnr_connect sends nothing.
+ * Process-wide effects: on Windows each psnr_connect calls WSAStartup (2.2) and
+ * the library never calls WSACleanup; psnr_connect_error is one process-global
+ * value; the library starts no threads and installs no signal handlers or
+ * timers. It sends with plain send(), so on POSIX a write to a connection the
+ * server has closed can raise SIGPIPE unless the title ignores that signal. It
+ * resolves and connects over IPv4 only.
  */
 #ifndef PSNR_H
 #define PSNR_H
