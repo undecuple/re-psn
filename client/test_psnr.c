@@ -162,6 +162,23 @@ int main(int argc, char** argv)
     assert(psnr_get16(m.data + 12) == 2 && memcmp(m.data + 14, "hi", 2) == 0);
     psnr_msg_free(&m);
 
+    {   /* the round trip the library times from its own calls, reported in HEARTBEAT */
+        uint8_t search[4] = {0, 0, 0, 10};
+        assert(psnr_rtt_ms(a) >= 0 && psnr_rtt_ms(a) < 5000);
+        psnr_report_rtt(a, 1);                       /* alice opts in; bob stays at the default (off) */
+        assert(psnr_heartbeat(a) && psnr_heartbeat(b));
+        assert(psnr_call(a, PSNR_SEARCH_ROOMS, search, 4, &m, 2000) == 1);   /* the server has handled both */
+        psnr_msg_free(&m);
+        assert(psnr_call(b, PSNR_SEARCH_ROOMS, search, 4, &m, 2000) == 1);
+        psnr_msg_free(&m);
+        if (argc > 3 && strcmp(argv[3], "--rtt-sync") == 0) {   /* the Go test looks at the server now */
+            char line[16];
+            printf("RTT_SENT\n");
+            fflush(stdout);
+            if (!fgets(line, sizeof(line), stdin)) return 1;
+        }
+    }
+
     psnr_close(b);
     m = wait_push(a, PSNR_MEMBER_LEFT);
     psnr_msg_free(&m);

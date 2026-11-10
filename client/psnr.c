@@ -44,6 +44,8 @@
 #endif
 
 #define HEARTBEAT_SECS 20
+#define RTT_SAMPLES    8       /* completed calls the reported round trip is the smallest of */
+#define RTT_MAX_MS     60000   /* the server ignores more; so do we */
 
 static uint64_t now_ms(void)
 {
@@ -70,6 +72,9 @@ struct psnr_client {
     int      relay;                       /* HELLO_ACK: the server relays */
     uint8_t  server_ip[4], local_ip[4];   /* the TCP connection's two ends */
     uint16_t server_port;
+    uint16_t rtt[RTT_SAMPLES];            /* round trips of recent psnr_call replies, in ms */
+    int      rtt_n, rtt_next;
+    int      report_rtt;                  /* send the smallest in HEARTBEAT; off until psnr_report_rtt(c, 1) */
 };
 
 static int send_all(psnr_client* c, const uint8_t* p, size_t n)
@@ -153,10 +158,32 @@ static int take(psnr_client* c, psnr_msg* out, uint32_t want_req)
     return 1;
 }
 
+int psnr_rtt_ms(const psnr_client* c)
+{
+    int i, best = -1;
+    for (i = 0; i < c->rtt_n; i++)
+        if (best < 0 || c->rtt[i] < best) best = c->rtt[i];
+    return best;
+}
+
+void psnr_report_rtt(psnr_client* c, int on)
+{
+    c->report_rtt = on != 0;
+}
+
+uint32_t psnr_heartbeat(psnr_client* c)
+{
+    uint8_t body[2];
+    int ms = c->report_rtt ? psnr_rtt_ms(c) : -1;
+    if (ms < 0) return psnr_send(c, PSNR_HEARTBEAT, NULL, 0);   /* as before: no body */
+    psnr_put16(body, (uint16_t)ms);
+    return psnr_send(c, PSNR_HEARTBEAT, body, sizeof(body));
+}
+
 int psnr_poll(psnr_client* c, psnr_msg* out)
 {
     if (!c->dead && time(NULL) - c->last_send >= HEARTBEAT_SECS)
-        psnr_send(c, PSNR_HEARTBEAT, NULL, 0);
+        psnr_heartbeat(c);
     if (!c->dead) pump(c);
     if (take(c, out, 0)) return 1;
     return c->dead ? -1 : 0;
@@ -165,13 +192,22 @@ int psnr_poll(psnr_client* c, psnr_msg* out)
 int psnr_call(psnr_client* c, uint8_t type, const void* body, uint32_t len,
               psnr_msg* reply, int timeout_ms)
 {
+    uint64_t t0 = now_ms();
     uint32_t req = psnr_send(c, type, body, len);
-    uint64_t end = now_ms() + (uint64_t)timeout_ms;
+    uint64_t end = t0 + (uint64_t)timeout_ms;
     if (!req) return -1;
     for (;;) {
         pollfd_t pf;
         if (!c->dead) pump(c);
-        if (take(c, reply, req)) return 1;
+        if (take(c, reply, req)) {
+            uint64_t ms = now_ms() - t0;   /* send to reply: this player's round trip, server time included */
+            if (ms <= RTT_MAX_MS) {
+                c->rtt[c->rtt_next] = (uint16_t)ms;
+                c->rtt_next = (c->rtt_next + 1) % RTT_SAMPLES;
+                if (c->rtt_n < RTT_SAMPLES) c->rtt_n++;
+            }
+            return 1;
+        }
         if (c->dead) return -1;
         if (now_ms() >= end) return 0;
         pf.fd = c->s; pf.events = POLLIN; pf.revents = 0;
