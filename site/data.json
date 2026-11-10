@@ -125,10 +125,10 @@
    "id": "logs-levels",
    "area": "Logging",
    "feature": "Log levels and formats",
-   "detail": "`-log-level` (debug, info, warn, error), `-v` as debug, `-log-format` text or json, and `-log-file` to append to a file (mode 0600). Connection and room refusals are logged at warn level; UDP drops use aggregate counters, with one warning per player for a mismatched probe. Tokens and query strings are never logged.",
+   "detail": "`-log-level` (debug, info, warn, error), `-v` as debug, `-log-format` text or json, and `-log-file` to append to a file (mode 0600). Connection and room refusals are logged at warn level; UDP drops use aggregate counters, with one warning per player for a mismatched probe. Tokens, room codes, peer keys and query strings are never logged, at any level (`TestLogsHoldNoSecrets` drives a session at debug level in both formats).",
    "status": "available",
    "since": "0.2.0",
-   "evidence": "server/logging.go, TestLogHelloAndRefusals, TestLogLevelAndFormat, TestLogStatusRefusalKeepsTokenOut, #4",
+   "evidence": "server/logging.go, TestLogHelloAndRefusals, TestLogLevelAndFormat, TestLogStatusRefusalKeepsTokenOut, #4, TestLogsHoldNoSecrets, server/log_secrets_test.go",
    "note": "Not checked: no test covers `-log-file`. The server does not rotate the file.",
    "status_label": "available",
    "status_class": "ok"
@@ -999,6 +999,7 @@
     "Added": [
      "HEARTBEAT may carry the player's own last round trip (`rtt_ms`, 2 bytes).",
      "`/api/stats` and the status page count verified players: each public room has `verified` (members whose UDP probe the server has accepted on this connection) and the top level has `verified_players`.",
+     "A test checks that no secret reaches the log: it drives a session at debug level, in both log formats, and looks for each player's UDP token, a room's invite code (right and wrong), a peer key and the status token ...",
      "Peer keys, for players who connect directly: a client may send PEER_AUTH (0x03, after HELLO, when HELLO_ACK's flag bit 2 says the server issues keys), and then each pair of members who both asked gets one new random ...",
      "`-relay-force` (`RE_PSN_RELAY_FORCE`, off by default, needs `-relay`): every stream goes through the relay, even between players who could connect directly, so the relay can be tested from one network.",
      "The status page and `/api/stats` show known games by name: rooms and leaderboards carry a `label` such as `[Killzone 3 (BCUS98234, BCES01007)]`, with `game` and `serials` fields, and are sorted by it."
@@ -1008,7 +1009,7 @@
     ]
    },
    "counts": {
-    "Added": 5,
+    "Added": 6,
     "Fixed": 1
    }
   },
