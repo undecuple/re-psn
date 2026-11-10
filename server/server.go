@@ -92,6 +92,7 @@ type client struct {
 	udpWarned  bool      // a probe from another address was already logged for this player
 	udpPort    uint16
 	localIP    [4]byte   // the client's own address, from its UDP probe
+	peerAuth   bool      // asked for PEER_KEY pushes (peerkey.go)
 	rttMs      uint16    // the player's own last round trip in milliseconds, from an optional HEARTBEAT body (display only)
 	rttAt      time.Time // when it was reported; the zero time means none or unknown
 	rooms      map[uint64]*room
@@ -285,6 +286,8 @@ func (s *Server) handle(c *client, t byte, p []byte) {
 	switch t {
 	case msgHello:
 		rt, reply = s.hello(c, req, r)
+	case msgPeerAuth:
+		rt, reply, out = s.peerAuth(c, req)
 	case msgHeartbeat:
 		// An optional body is the player's own last round trip: rtt_ms u16, 0xFFFF for unknown. It is reported by the
 		// player, not measured here, and is only displayed. Servers before this ignored any body; a HEARTBEAT without
@@ -364,6 +367,7 @@ func (s *Server) hello(c *client, req uint32, r *reader) (byte, []byte) {
 		flags |= 1 // the relay is available
 	}
 	flags |= 2 // invite-only rooms (room codes)
+	flags |= helloPeerKeys
 	w.u8(flags)
 	return msgHelloAck, w.b
 }
