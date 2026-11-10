@@ -21,6 +21,13 @@ All notable changes to this project are documented here. The format follows
   know keeps its communication ID. The table is embedded in the server (four games so far), never fetched, and the
   `title` field is unchanged. The protocol is unchanged.
 
+### Fixed
+- `re-psn -h` no longer prints the status token. The `-http-token` default was read from `RE_PSN_HTTP_TOKEN` (or the old
+  `PSNR_HTTP_TOKEN`), so the usage text showed it, and a pasted `-h` or a CI log could leak it. The flag's own default is now
+  empty, as for `-db`, and the variable is read after the command line is parsed. The token is still taken from either
+  variable or the flag, the flag still wins, and nothing else about the status page changes. If you ever ran `-h` with the
+  token set and kept the output, rotate the token.
+
 ## [0.4.0] - 2026-11-09
 
 ### Added
