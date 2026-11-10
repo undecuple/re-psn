@@ -71,26 +71,28 @@ func (l *udpLimiter) allow(source netip.Addr, now time.Time) (rateLimited, capac
 }
 
 type udpDropCounters struct {
-	rateLimit      atomic.Uint64
-	sourceCapacity atomic.Uint64
-	malformed      atomic.Uint64
-	unauthorized   atomic.Uint64
-	sourceMismatch atomic.Uint64
-	relayDisabled  atomic.Uint64
-	writeError     atomic.Uint64
+	rateLimit       atomic.Uint64
+	sourceCapacity  atomic.Uint64
+	malformed       atomic.Uint64
+	unauthorized    atomic.Uint64
+	sourceMismatch  atomic.Uint64
+	relayDisabled   atomic.Uint64
+	writeError      atomic.Uint64
+	discoverRefused atomic.Uint64
 }
 
 type udpDropStats struct {
-	RateLimit      uint64 `json:"rate_limit"`
-	SourceCapacity uint64 `json:"source_capacity"`
-	Malformed      uint64 `json:"malformed"`
-	Unauthorized   uint64 `json:"unauthorized"`
-	SourceMismatch uint64 `json:"source_mismatch"`
-	RelayDisabled  uint64 `json:"relay_disabled"`
-	WriteError     uint64 `json:"write_error"`
+	RateLimit       uint64 `json:"rate_limit"`
+	SourceCapacity  uint64 `json:"source_capacity"`
+	Malformed       uint64 `json:"malformed"`
+	Unauthorized    uint64 `json:"unauthorized"`
+	SourceMismatch  uint64 `json:"source_mismatch"`
+	RelayDisabled   uint64 `json:"relay_disabled"`
+	WriteError      uint64 `json:"write_error"`
+	DiscoverRefused uint64 `json:"discover_refused"`
 }
 
 func (c *udpDropCounters) snapshot() udpDropStats {
 	return udpDropStats{c.rateLimit.Load(), c.sourceCapacity.Load(), c.malformed.Load(),
-		c.unauthorized.Load(), c.sourceMismatch.Load(), c.relayDisabled.Load(), c.writeError.Load()}
+		c.unauthorized.Load(), c.sourceMismatch.Load(), c.relayDisabled.Load(), c.writeError.Load(), c.discoverRefused.Load()}
 }

@@ -10,6 +10,10 @@ All notable changes to this project are documented here. The format follows
 - `-lan-public-addr IP` (`RE_PSN_LAN_PUBLIC_ADDR`, off by default, IPv4): when a player connected from a private, carrier-grade NAT or
   link-local address, players on public addresses are given IP and that player's P2P port instead of the unreachable LAN address
   (the host must forward that port). Players on private addresses and players with public addresses are unaffected.
+- LAN discovery on the server, opt-in: `-discover` (`RE_PSN_DISCOVER`, off by default) answers a 64-byte DISCOVER sent to the game UDP
+  port with a 52-byte DISCOVER_REPLY (TCP and UDP ports, relay flag, player count, name, version), only to private, carrier-grade NAT,
+  link-local or loopback senders, under the existing UDP rate limit. `-name` (`RE_PSN_NAME`, at most 24 printable ASCII bytes) sets the
+  name shown. `/api/stats` `udp_drops` gains `discover_refused`. With the flag off the server behaves as before. No client helper yet.
 - `/api/stats` reports the server's version, whether the relay is on, the payload the relay has carried, the limits in force and
   how many TCP connections were refused (too many from one address, request rate). Aggregate only; same access rules as the rest
   of `/api/stats`. Older servers omit the fields.

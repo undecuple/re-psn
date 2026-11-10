@@ -8,9 +8,11 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -57,6 +59,8 @@ func main() {
 	relay := toggle("relay", false, "carry traffic between players who can't reach each other directly (uses this server's bandwidth)")
 	relayForce := toggle("relay-force", false, "send every stream through the relay, whether or not the players could connect directly (for testing the relay from one network; needs -relay; uses this server's bandwidth)")
 	lanPublic := flag.String("lan-public-addr", "", "IPv4 address to give players outside the LAN as the address of players who connected over a private, CGNAT or link-local address (the host must forward each such player's P2P port to them; off unless set)")
+	discover := toggle("discover", false, "answer LAN discovery broadcasts on the game UDP port, from private-network senders only (off by default)")
+	name := flag.String("name", "", "server name shown in LAN discovery, at most 24 printable ASCII bytes (default: none)")
 	db := flag.String("db", "off", "score storage: off or memory (both keep scores in memory; no database backend is built yet)")
 	dbFile := flag.String("db-file", "", "read the -db setting from this file instead (it may hold a password)")
 	replace := toggle("replace", false, "if the game port is already in use by an earlier instance of this server, ask it to stop, wait for the port, then start (Linux only)")
@@ -140,6 +144,11 @@ func main() {
 	}
 	s.trustedProxies, s.proxyProto = trusted, *proxyProto
 	s.udpAnySource = *udpAny
+	nameSet := lookupSetting("name", *name, onCmdLine["name"])
+	if err := validServerName(nameSet.val); err != nil {
+		fatal(err)
+	}
+	s.discover, s.name = *discover, nameSet.val
 	if *udpAny {
 		logger.Warn("-udp-any-source: UDP probes and relay packets are accepted from any address that has the right token")
 	}
@@ -149,6 +158,10 @@ func main() {
 	ln, pc, err := listenGame(logger, tcpA, udpA, *replace)
 	if err != nil {
 		fatal(err)
+	}
+	s.tcpPort = uint16(ln.Addr().(*net.TCPAddr).Port)
+	if s.discover {
+		logger.Info("lan discovery on", "name", fmt.Sprintf("%q", s.name))
 	}
 	pidPath := writePidFile(logger, portOf(ln.Addr().String()), ln.Addr().String())
 
