@@ -23,6 +23,13 @@ import (
 
 const clientTimeout = 90 * time.Second // HELLO/HEARTBEAT keep a client alive
 
+// A reported round trip is shown while it is fresh, and values above maxReportedRTT (including 0xFFFF, "unknown")
+// clear it.
+const (
+	maxReportedRTT = 60000 // milliseconds
+	rttFresh       = 3 * time.Minute
+)
+
 type Server struct {
 	log   *slog.Logger
 	relay bool // -relay: carry traffic for players who can't reach each other (relay.go)
@@ -83,7 +90,9 @@ type client struct {
 	udpIP      [4]byte   // P2P socket's public endpoint, from its UDP probe
 	udpWarned  bool      // a probe from another address was already logged for this player
 	udpPort    uint16
-	localIP    [4]byte // the client's own address, from its UDP probe
+	localIP    [4]byte   // the client's own address, from its UDP probe
+	rttMs      uint16    // the player's own last round trip in milliseconds, from an optional HEARTBEAT body (display only)
+	rttAt      time.Time // when it was reported; the zero time means none or unknown
 	rooms      map[uint64]*room
 	sendMu     sync.Mutex
 }
@@ -276,6 +285,16 @@ func (s *Server) handle(c *client, t byte, p []byte) {
 	case msgHello:
 		rt, reply = s.hello(c, req, r)
 	case msgHeartbeat:
+		// An optional body is the player's own last round trip: rtt_ms u16, 0xFFFF for unknown. It is reported by the
+		// player, not measured here, and is only displayed. Servers before this ignored any body; a HEARTBEAT without
+		// one changes nothing. Bytes after the first two are ignored.
+		if len(r.b) >= 2 {
+			if ms := r.u16(); ms <= maxReportedRTT {
+				c.rttMs, c.rttAt = ms, time.Now()
+			} else {
+				c.rttAt = time.Time{}
+			}
+		}
 		s.mu.Unlock()
 		return
 	case msgCreateRoom:

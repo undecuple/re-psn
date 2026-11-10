@@ -23,6 +23,8 @@ type roomJSON struct {
 	Game    string   `json:"game,omitempty"`
 	Serials []string `json:"serials,omitempty"`
 	Members []string `json:"members"`
+	// RTT is parallel to Members: the round trip in milliseconds the player reported, or null (none, unknown or stale).
+	RTT []*int `json:"rtt_ms"`
 	// Verified counts members whose UDP probe the server has accepted on this connection (see docs/api.md).
 	Verified int    `json:"verified"`
 	Max      uint8  `json:"max"`
@@ -108,6 +110,7 @@ func (s *Server) snapshot() statsJSON {
 		rj.Label, rj.Game, rj.Serials = titleLabel(r.commID)
 		for _, m := range r.members {
 			rj.Members = append(rj.Members, m.c.onlineID)
+			rj.RTT = append(rj.RTT, reportedRTT(m.c))
 			if m.c.udpPort != 0 {
 				rj.Verified++
 			}
@@ -122,6 +125,23 @@ func (s *Server) snapshot() statsJSON {
 		return a.ID < b.ID
 	})
 	return st
+}
+
+// reportedRTT is the player's reported round trip while it is fresh, otherwise nil. Callers hold s.mu.
+func reportedRTT(c *client) *int {
+	if c.rttAt.IsZero() || time.Since(c.rttAt) > rttFresh {
+		return nil
+	}
+	ms := int(c.rttMs)
+	return &ms
+}
+
+// MemberRTT is " (N ms)" for the i-th member when a fresh report exists, for the status page template.
+func (r roomJSON) MemberRTT(i int) string {
+	if i < len(r.RTT) && r.RTT[i] != nil {
+		return fmt.Sprintf(" (%d ms)", *r.RTT[i])
+	}
+	return ""
 }
 
 // gameBefore orders labels so that known games come first, by label, and bare communication IDs after them.
