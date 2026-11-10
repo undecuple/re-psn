@@ -109,7 +109,7 @@ type setting struct {
 
 // lookupSetting reads flag from the environment, then lets the command line
 // win. The flag's own default stays fixed so -h never shows the variable:
-// -db can hold a password.
+// -db can hold a password and -http-token is one.
 func lookupSetting(flag, val string, onCmdLine bool) setting {
 	v, name, ok := lookupEnv(flag)
 	if onCmdLine {
