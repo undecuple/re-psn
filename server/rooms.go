@@ -291,6 +291,11 @@ func (s *Server) joinMember(c *client, req uint32, r *room, mine []byte) (byte, 
 			}
 		}
 	}
+	for _, m := range r.members {
+		if m != me {
+			out = append(out, s.peerKeyPushes(r, c, m.c)...)
+		}
+	}
 	s.log.Debug("room joined", "room", r.id, "online_id", c.onlineID, "member", me.id)
 	return msgRoomJoined, r.joinedReply(req, me), out
 }

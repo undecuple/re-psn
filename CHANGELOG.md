@@ -14,6 +14,7 @@ All notable changes to this project are documented here. The format follows
 - `/api/stats` and the status page count verified players: each public room has `verified` (members whose UDP probe the server
   has accepted on this connection) and the top level has `verified_players`. The page shows "(N verified)" after a room's
   member count when N is above zero. The protocol is unchanged.
+- Peer keys, for players who connect directly: a client may send PEER_AUTH (0x03, after HELLO, when HELLO_ACK's flag bit 2 says the server issues keys), and then each pair of members who both asked gets one new random 16-byte key from the server in a PEER_KEY push (0xA8) when they share a room. It is the groundwork for tagging packets between peers; no client uses it yet. A client that does not ask is unaffected, and the keys are not confidential on the wire (they travel over the plain TCP connection). HELLO_ACK's flags gain bit 2.
 - `-relay-force` (`RE_PSN_RELAY_FORCE`, off by default, needs `-relay`): every stream goes through the relay, even between players
   who could connect directly, so the relay can be tested from one network. The server logs a warning at start and refuses to
   start with it and without `-relay`. It sets the existing ROUTE flag, so clients need no change; datagrams (UDP RELAY) are not

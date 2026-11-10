@@ -63,6 +63,7 @@ server carries it only with `-relay` (see [Relay](#relay)).
 |---|---|---|---|
 | 0x01 | HELLO | `comm_id [12]` `online_id [16]` `p2p_port u16` | HELLO_ACK |
 | 0x02 | HEARTBEAT | optional `rtt_ms u16` | none |
+| 0x03 | PEER_AUTH | none | OK |
 
 **HEARTBEAT `rtt_ms`:** a client may add the round trip it last measured to the server, in milliseconds (`u16`, big endian;
 `0xFFFF` means unknown). The server keeps the latest value, shows it on the status page and in `/api/stats` (`rtt_ms`, parallel to
@@ -100,7 +101,7 @@ client's `psnr_poll` sends a HEARTBEAT every 20 seconds.
 
 | Type | Name | Payload (after `req`) |
 |---|---|---|
-| 0x81 | HELLO_ACK | `user_id u32` `public_ip [4]` `token u32` (the token UDP PROBEs carry; 0.3 on) `flags u8` (bit 0: the server relays; 0.3 on. bit 1: invite-only rooms, see below; 0.4 on) |
+| 0x81 | HELLO_ACK | `user_id u32` `public_ip [4]` `token u32` (the token UDP PROBEs carry; 0.3 on) `flags u8` (bit 0: the server relays; 0.3 on. bit 1: invite-only rooms, see below; 0.4 on. bit 2: the server issues peer keys, see "Peer keys"; after 0.4) |
 | 0x93 | OK | — |
 | 0x8F | ERROR | `code u32` |
 
@@ -181,7 +182,17 @@ These are modelled on sceNpMatching2 rooms.
 | 0xA4 | ROOM_MSG | `room_id u64` `from u16` `to u16` (0 = everyone) `data blob` |
 | 0xA5 | KICKED | `room_id u64`, sent to the kicked member only; the rest get MEMBER_LEFT |
 | 0xA6 | STREAM_OFFER | `stream_id u32` `from_user u32` `vport u16`: a relayed stream is waiting for you (see "Relay") |
+| 0xA8 | PEER_KEY | `room_id u64` `user u32` `key [16]`: the key you share with that member in that room (see "Peer keys"); sent only to a member who sent PEER_AUTH, about a member who did too |
 | 0xA7 | ROUTE | `room_id u64` `user u32` `flags u8`: how to reach that member; bit 0 set = streams to it go through the relay (the server sets it for a player behind a router seen from outside its network, and for every player with `-relay-force`). Sent to both sides when a member joins, only with `-relay` |
+
+## Peer keys
+
+Game datagrams between players who connect directly never pass through the server, so it cannot vouch for who sent one, as it does for a relayed datagram. Peer keys let two players tag their packets to each other and check the tags they get.
+
+- **Asking.** A client sends PEER_AUTH (no body) after HELLO, only if HELLO_ACK's flag bit 2 is set; the reply is OK. Asking twice changes nothing. A client that never asks gets no key and nobody gets a key about it, so older clients and titles are unaffected, and a server from before this does not set the bit.
+- **The keys.** When two members who both asked are in a room together (when the second joins, or when the second asks), each gets a PEER_KEY push with the same new random 16-byte key about the other. A third member gets a different key for each of its own pairs. The key is new for every join and is not kept by the server or used for anything else.
+- **What it gives.** A key only two players and the server hold, so a member cannot forge a packet from another member to a third, and a sender outside the room cannot make one. What the tags look like on a game's packets is up to the client: the C client and the app's client add helpers for it in later releases.
+- **What it does not give.** The keys travel over the plain TCP connection like the HELLO token, so someone who can read a player's network traffic can read them: no confidentiality, and no protection from a path attacker. Direct TCP streams are not covered.
 
 ## Leaderboards
 
