@@ -236,6 +236,8 @@ with the four bytes `PSNR` and a type byte.
 | 0x01 | PROBE | P2P socket → server | `user_id u32` `token u32` `local_ip [4]` |
 | 0x81 | PROBE_REPLY | server → P2P socket | `public_ip [4]` `public_port u16` |
 | 0x02 | PUNCH | P2P socket → peer | `user_id u32` |
+| 0x04 | DISCOVER | client → server (broadcast) | `nonce u32` then zero padding, 64 bytes in all (opt-in, `-discover`) |
+| 0x84 | DISCOVER_REPLY | server → client | `nonce u32` `tcp_port u16` `udp_port u16` `flags u8` `players u16` `name [24]` `version [12]` (52 bytes) |
 
 - **PROBE.** Sent from the P2P socket after HELLO, repeated until a
   PROBE_REPLY arrives, and again now and then, because routers forget idle
@@ -252,6 +254,13 @@ with the four bytes `PSNR` and a type byte.
 - **PUNCH.** When a peer appears, a few of these sent to the address its
   member entry gives open this side's router for the peer's traffic. Both
   sides do it.
+- **DISCOVER.** Finds servers on the local network; see [Finding a server on the LAN](connecting.md#finding-a-server-on-the-lan).
+  The server answers only with `-discover` on, only a datagram of exactly 64 bytes (the four-byte header, `nonce`, then
+  zeros), and only to a private, carrier-grade NAT, link-local or loopback source address. The reply goes to the sender and
+  echoes `nonce`. `flags` bit 0: the server relays. `players` is the number of connected clients (at most 65535). `name` and
+  `version` are ASCII padded with NUL (the name is at most 24 bytes, the version is cut at 12). The reply is never larger
+  than the request. With `-discover` off, or for a datagram of any other length, type 0x04 is an unknown type: it is
+  dropped without a reply and counted as `malformed`.
 - **Receiving.** Anything starting with `PSNR` is a control packet; the
   runtime drops it before the title sees it.
 

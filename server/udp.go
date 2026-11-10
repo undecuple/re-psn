@@ -15,6 +15,8 @@ package main
 //   PROBE        client -> server  user_id u32 | token u32 | local_ip [4]
 //   PROBE_REPLY  server -> client  public_ip [4] | public_port u16
 //   PUNCH        peer -> peer      user_id u32
+//   DISCOVER        client -> server  nonce u32 | zero padding (64 bytes in all); only with -discover (discover.go)
+//   DISCOVER_REPLY  server -> client  nonce u32 | tcp_port u16 | udp_port u16 | flags u8 | players u16 | name [24] | version [12] (52 bytes)
 
 import (
 	"encoding/binary"
@@ -78,6 +80,10 @@ func (s *Server) serveUDP(pc net.PacketConn, now func() time.Time) error {
 		}
 		if capacity {
 			s.udpDrops.sourceCapacity.Add(1)
+			continue
+		}
+		if s.discover && isDiscover(buf[:n]) {
+			s.discoverUDP(pc, buf[:n], ua, source)
 			continue
 		}
 		if n < 17 || string(buf[:4]) != udpMagic || (buf[4] != udpRelay && buf[4] != udpProbe) {

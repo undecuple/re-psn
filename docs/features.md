@@ -6,14 +6,14 @@ What re-psn does today and what is planned, one row per feature. Each status res
 
 | Status | Meaning | Features |
 |---|---|---|
-| available | merged, with a test or a recorded run | 35 |
+| available | merged, with a test or a recorded run | 36 |
 | not yet verified | merged, but nothing in the repository checks it | 3 |
 | partial | merged in part, or with known gaps | 8 |
 | in progress | an open pull request or branch | 0 |
 | planned | wanted and intended, not started | 15 |
 | later | after the planned items, or after a decision | 9 |
 | declined | will not be done | 1 |
-| all | | 71 |
+| all | | 72 |
 
 ## Rooms and matchmaking
 
@@ -121,6 +121,7 @@ What re-psn does today and what is planned, one row per feature. Each status res
 | `net-relay-force` | **Force the relay (testing)**: `-relay-force` (`RE_PSN_RELAY_FORCE`, off by default, needs `-relay`) sends every stream through the relay, even between players who could connect directly, so the relay can be tested from one network. Datagrams are not forced. | available | main | [`server/relay.go`](../server/relay.go), [`TestRelayForceRule`](../server/relay_force_test.go), [`TestRoutePushForced`](../server/relay_force_test.go), [`TestRelayForceNeedsRelay`](../server/relay_force_test.go), [`TestRelayForceFlagAndEnv`](../server/relay_force_test.go) | Not in v0.4.0. For testing only: it uses the host's bandwidth. |
 | `net-peer-keys` | **Peer keys (server side)**: A client may ask with `PEER_AUTH`; each pair of members who both asked then gets one new random 16-byte key in a `PEER_KEY` push, for tagging their direct packets. Opt-in; clients that do not ask are unaffected. | partial | main | [`server/peerkey.go`](../server/peerkey.go), [`TestPeerKeyPair`](../server/peerkey_test.go), [`TestPeerKeysPerPair`](../server/peerkey_test.go), [`TestPeerKeyNeedsBoth`](../server/peerkey_test.go), [`TestPeerKeyLateOptIn`](../server/peerkey_test.go), [`TestPeerKeyRepeatAndRejoin`](../server/peerkey_test.go), [`TestPeerAuthNeedsHello`](../server/peerkey_test.go) | Not in v0.4.0. No client uses the keys yet, and nothing is tagged on the wire. The keys travel over plain TCP, so this gives no confidentiality and no protection from someone who can read a player's network traffic. |
 | `net-lan-public-addr` | **Public address for LAN players**: `-lan-public-addr IP` (`RE_PSN_LAN_PUBLIC_ADDR`, IPv4, off by default) gives players on public addresses the host's address and the member's P2P port for a player who connected from a private, CGNAT or link-local address. The host forwards each such P2P port. Players on private addresses are unaffected. | available | main | [`server/udp.go`](../server/udp.go), [`TestLANPublicAddrOff`](../server/lan_public_test.go), [`TestLANPublicAddrRemoteViewer`](../server/lan_public_test.go), [`TestLANPublicAddrLANViewer`](../server/lan_public_test.go), [`TestLANPublicAddrPublicMember`](../server/lan_public_test.go), [`TestLANPublicAddrParse`](../server/lan_public_test.go), [`TestLANPublicAddrBadFlag`](../server/lan_public_test.go), [`TestLANPublicAddrFlagAndEnv`](../server/lan_public_test.go) | Not in v0.4.0. Off by default. Several LAN players behind one forward need distinct P2P ports; the relay covers a failed connection. |
+| `net-lan-discover` | **LAN discovery (server side)**: `-discover` (`RE_PSN_DISCOVER`, off by default) answers a 64-byte DISCOVER sent to the game UDP port with a 52-byte reply: TCP and UDP ports, relay flag, player count, name (`-name`) and version. Only private, carrier-grade NAT, link-local and loopback senders are answered, under the UDP rate limit. | available | main | [`server/discover.go`](../server/discover.go), [`TestDiscoverReply`](../server/discover_test.go), [`TestDiscoverOffNoReply`](../server/discover_test.go), [`TestDiscoverWrongLengthAndOtherTypes`](../server/discover_test.go), [`TestDiscoverSourceClasses`](../server/discover_test.go), [`TestDiscoverPublicSourceRefused`](../server/discover_test.go), [`TestDiscoverRateLimited`](../server/discover_test.go), [`TestDiscoverNameRules`](../server/discover_test.go) | Not in v0.4.0. Off by default. Server side only: no client helper yet. A broadcast does not cross subnets or Wi-Fi client isolation. |
 
 ## Medius profiles
 

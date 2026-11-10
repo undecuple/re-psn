@@ -395,7 +395,7 @@ func TestUDPCountersStatsAuthenticationAndConcurrency(t *testing.T) {
 			t.Fatal("invalid stats response")
 		}
 		var drops map[string]uint64
-		if json.Unmarshal(data["udp_drops"], &drops) != nil || len(drops) != 7 || drops["rate_limit"] != 4000 {
+		if json.Unmarshal(data["udp_drops"], &drops) != nil || len(drops) != 8 || drops["rate_limit"] != 4000 {
 			t.Fatalf("aggregate counters missing or unexpected data: %s", data["udp_drops"])
 		}
 	}

@@ -68,6 +68,10 @@ type Server struct {
 	maxReqRate     int            // requests per second per connection
 	addrConns      map[string]int // open connections by remote host
 
+	discover bool   // -discover: answer LAN DISCOVER packets (discover.go)
+	name     string // -name: shown in discovery, at most 24 bytes
+	tcpPort  uint16 // the game TCP port, for discovery replies
+
 	udpAnySource   bool // accept UDP probes and relay packets from an address other than the player's TCP address (udp.go)
 	maxUDPRate     int  // datagrams per second per source IP; zero disables admission limiting
 	udpDrops       udpDropCounters

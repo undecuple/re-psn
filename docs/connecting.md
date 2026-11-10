@@ -14,6 +14,7 @@ and ports are in [running.md](running.md); the protocol is in [api.md](api.md).
 - [ZeroTier](#zerotier)
 - [Other overlay networks](#other-overlay-networks)
 - [How a player connects](#how-a-player-connects)
+- [Finding a server on the LAN](#finding-a-server-on-the-lan)
 - [What has been tested](#what-has-been-tested)
 
 ## What the server needs
@@ -223,6 +224,18 @@ sequenceDiagram
 ```
 
 A room created with an invite code is joined with JOIN_BY_CODE instead of SEARCH_ROOMS and JOIN_ROOM.
+
+## Finding a server on the LAN
+
+A server started with `-discover` (optionally `-name "Garage"`) answers discovery broadcasts, so a client on the same
+network can learn its address and ports without typing them. It is off by default. A client broadcasts a 64-byte DISCOVER
+to the server's UDP port (36100 by default) and each server replies directly to the sender with its TCP and UDP ports,
+whether the relay is on, how many players are connected, its name and its version. The packet format is in
+[api.md](api.md#udp).
+
+Limits: a broadcast does not cross subnets, and Wi-Fi networks with client isolation drop it. The server answers only
+senders on private (10/8, 172.16/12, 192.168/16), carrier-grade NAT (100.64/10), link-local or loopback addresses, never a
+public one. Requests share the [UDP rate limit](udp-guardrails.md). The ports in a reply are the ones the server is bound to, so behind a container port mapping or a router forward they may differ from the ones players reach. The server judges the address the packet arrives from, so behind Docker's userland proxy or any NAT that rewrites the source, a request from the internet can look private and be answered (with the same small reply the status page already shows); keep `-discover` off on a server that is reachable that way. There is no client helper for this yet.
 
 ## What has been tested
 
