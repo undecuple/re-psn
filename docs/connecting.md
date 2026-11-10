@@ -231,6 +231,7 @@ A room created with an invite code is joined with JOIN_BY_CODE instead of SEARCH
 | Players behind NATing routers, with and without `-relay` | the [NAT lab](../lab/README.md) scenarios |
 | Two players with 100.64.0.x addresses reach each other directly, with and without `-relay` | a local simulation: Linux network namespaces with 100.64.0.1 (server), 100.64.0.2 and 100.64.0.3 (players), routed with no NAT, running the server and two `lab/natcheck` players. Both pinged and streamed directly. This imitates an overlay's addressing only; no VPN software was involved. |
 | A player connected by `127.0.0.1` is handed to others as `127.0.0.1` | the same simulation, with one player connecting by loopback: the other player was given `127.0.0.1:3658` and its ping failed |
+| The port of J-STARS Victory VS+ (US build) creates and joins a room on re-psn v0.3.0: two copies on one Linux PC over loopback, both reached the same Friendly Match and its fight, and the title's NP signaling connected both ways | the title's own test run, with the re-psn log: one room created by the first player, joined by the second, closed at the end, no warnings or refusals. Not run: Rank Match (no leaderboard calls were made), a Windows build, two separate PCs, the EU build |
 | re-psn over a real Tailscale tailnet or ZeroTier network | **not tested here** |
 | re-psn over NetBird, Headscale or plain WireGuard | **not tested here** |
 | A Tailscale subnet router or ZeroTier managed route in front of players | **not tested here**; the caution above is reasoning from the code |
