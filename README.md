@@ -1,6 +1,6 @@
 # re-psn
 
-![re-psn: matchmaking rooms and leaderboards for recompiled PS3 games; self-hosted, with NAT traversal and an optional relay](docs/img/banner.png)
+![re-psn: matchmaking rooms and leaderboards for recompiled PS3 games; self-hosted, with NAT traversal, an optional relay and a desktop app](docs/img/banner.png)
 
 **Run your own matchmaking and leaderboard server for statically recompiled PS3 games: one small binary, no accounts, no cloud.**
 
