@@ -178,7 +178,7 @@
       const data = parseStats(await response.text());
       if (!Array.isArray(data.rooms) || !Array.isArray(data.boards)) throw new Error('Invalid status response');
       for (const [id, value] of [['uptime', data.uptime], ['clients', data.clients], ['connections', data.connections_total], ['unlisted', data.unlisted_rooms], ['rooms-count', data.rooms.length], ['boards-count', data.boards.length]]) byID(id).textContent = String(value);
-      rows('rooms-body', data.rooms, 'No public rooms. A room appears here when a player hosts one.', room => [cell(room.id, 'number'), cell(room.label || room.title, 'identifier'), cell(`${(room.members || []).length}/${room.max} ${(room.members || []).join(' ')}`), cell(room.age)]);
+      rows('rooms-body', data.rooms, 'No public rooms. A room appears here when a player hosts one.', room => [cell(room.id, 'number'), cell(room.label || room.title, 'identifier'), cell(`${(room.members || []).length}/${room.max}${room.verified ? ` (${room.verified} verified)` : ''} ${(room.members || []).join(' ')}`), cell(room.age)]);
       rows('boards-body', data.boards, 'No leaderboards. Scores appear after a player submits one.', board => [cell(board.label || board.title, 'identifier'), cell(board.board, 'number'), cell(board.entries), cell(board.entries ? `${board.leader} (${board.best})` : 'No scores yet')]);
       state.removeAttribute('data-error'); state.textContent = updated();
     } catch (error) {

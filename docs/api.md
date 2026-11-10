@@ -288,6 +288,15 @@ This is a separate listener, off unless `-http` names an address (for example
 | `/api/stats` | the same data as JSON, plus aggregate `udp_drops` counters; see [UDP guardrails](udp-guardrails.md#drop-counters) |
 | `/healthz` | data-free local TCP/UDP readiness: 200 when ready, 503 otherwise; GET/HEAD only |
 
+### Verified players
+
+`/api/stats` has `verified_players` (connected players, in a room or not) and, on each room, `verified` (its members) counting
+players whose UDP PROBE the server has accepted on this connection: the token matched and, unless `-udp-any-source` is set, the
+probe came from the same address as the TCP connection. It shows that the player's UDP path was confirmed once, not that it works
+now: the client sends probes only until the reply comes back and then now and then, so there is no time window. A player that
+never probes, or probes with a wrong token, is not counted. The status page shows "(N verified)" after a room's member count when
+N is above zero.
+
 ### Known games
 
 Each room and leaderboard in `/api/stats` keeps `title` (the communication ID the client sent) and adds `label`: for a game in the

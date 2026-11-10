@@ -68,7 +68,7 @@ func TestStatusThemeAuthenticationAndHeaders(t *testing.T) {
 			}
 			if want == http.StatusOK && path == "/api/stats" {
 				var data map[string]any
-				if json.Unmarshal(out.Body.Bytes(), &data) != nil || len(data) != 7 {
+				if json.Unmarshal(out.Body.Bytes(), &data) != nil || len(data) != 8 {
 					t.Fatal("status JSON schema changed")
 				}
 			}
