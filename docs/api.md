@@ -181,7 +181,7 @@ These are modelled on sceNpMatching2 rooms.
 | 0xA4 | ROOM_MSG | `room_id u64` `from u16` `to u16` (0 = everyone) `data blob` |
 | 0xA5 | KICKED | `room_id u64`, sent to the kicked member only; the rest get MEMBER_LEFT |
 | 0xA6 | STREAM_OFFER | `stream_id u32` `from_user u32` `vport u16`: a relayed stream is waiting for you (see "Relay") |
-| 0xA7 | ROUTE | `room_id u64` `user u32` `flags u8`: how to reach that member; bit 0 set = streams to it go through the relay. Sent to both sides when a member joins, only with `-relay` |
+| 0xA7 | ROUTE | `room_id u64` `user u32` `flags u8`: how to reach that member; bit 0 set = streams to it go through the relay (the server sets it for a player behind a router seen from outside its network, and for every player with `-relay-force`). Sent to both sides when a member joins, only with `-relay` |
 
 ## Leaderboards
 

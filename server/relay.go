@@ -49,8 +49,13 @@ type stream struct {
 // relayStream is how a player needing the relay for streams is told.
 // The target can't take a direct connection when it's behind a router (its
 // probe came from a public address that isn't its own) and the viewer isn't
-// on its network. Without a probe, direct is assumed.
+// on its network. Without a probe, direct is assumed. With -relay-force every
+// stream goes through the relay, whoever the two are, so a test can use it
+// from one network.
 func (s *Server) relayStream(target, viewer *client) bool {
+	if s.relay && s.relayForce {
+		return true
+	}
 	return s.relay && target.udpPort != 0 && target.udpIP != target.localIP && viewer.ip != target.ip
 }
 
