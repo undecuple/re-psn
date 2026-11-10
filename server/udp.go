@@ -18,8 +18,10 @@ package main
 
 import (
 	"encoding/binary"
+	"fmt"
 	"net"
 	"net/netip"
+	"strings"
 	"time"
 )
 
@@ -155,6 +157,41 @@ func usableLocalIP(local, source [4]byte) [4]byte {
 // their LAN back to their own public address. Without a probe it falls back
 // to what TCP shows: m's address and the P2P port m declared.
 func endpoint(m, viewer *client) ([4]byte, uint16) {
+	return (*Server)(nil).endpoint(m, viewer)
+}
+
+// isLANAddr reports whether ip is private (10/8, 172.16/12, 192.168/16),
+// carrier-grade NAT (100.64/10) or link-local (169.254/16): an address a
+// player on the internet cannot reach.
+func isLANAddr(ip [4]byte) bool {
+	return ip[0] == 10 ||
+		ip[0] == 172 && ip[1]&0xf0 == 16 ||
+		ip[0] == 192 && ip[1] == 168 ||
+		ip[0] == 100 && ip[1]&0xc0 == 64 ||
+		ip[0] == 169 && ip[1] == 254
+}
+
+// parseLANPublic reads the -lan-public-addr setting: empty (off) or one IPv4 address.
+func parseLANPublic(v string) ([4]byte, error) {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return [4]byte{}, nil
+	}
+	a, err := netip.ParseAddr(v)
+	if err != nil || !a.Is4() {
+		return [4]byte{}, fmt.Errorf("-lan-public-addr: %q is not an IPv4 address", v)
+	}
+	return a.As4(), nil
+}
+
+// endpoint is the method form of the package function: with -lan-public-addr
+// set, a member whose TCP address is on a LAN (see isLANAddr) is announced to
+// a viewer outside any LAN as that address and the member's P2P port, which
+// the host must forward. A nil Server behaves as if the setting were off.
+func (s *Server) endpoint(m, viewer *client) ([4]byte, uint16) {
+	if s != nil && s.lanPublic != ([4]byte{}) && isLANAddr(m.ip) && !isLANAddr(viewer.ip) {
+		return s.lanPublic, m.p2pPort
+	}
 	if m.udpPort != 0 && m.ip != viewer.ip {
 		return m.udpIP, m.udpPort
 	}

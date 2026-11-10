@@ -53,6 +53,8 @@ Whatever the network, these hold (see [running.md](running.md#ports) and [api.md
 | **VPN overlay** (Tailscale, ZeroTier) | friends who can all install the same overlay software | every player and the host on one overlay network; the host's overlay address; the overlay's access rules allowing TCP and UDP 36100 and the P2P port | not tested here with a real overlay. Everyone, including the host's own game, must use overlay addresses. See [Tailscale](#tailscale) and [ZeroTier](#zerotier). |
 | **Behind a reverse proxy** | the host already runs Traefik, nginx or HAProxy in front of its services | PROXY protocol on the game TCP port, `-trusted-proxies` and `-proxy-protocol` ([running.md](running.md#behind-a-reverse-proxy), [deploy/](../deploy/README.md)) | TCP only: UDP 36100 is published straight to the server, never through the proxy. Only the Traefik example has been run. |
 
+**A LAN server with some players outside.** By default a player who connected over the LAN is given to players elsewhere as an address they cannot reach. Start the server with `-lan-public-addr IP` (`RE_PSN_LAN_PUBLIC_ADDR`, IPv4, off by default), where IP is the address players outside reach the host at. Those players are then given IP and the LAN player's P2P port. The host's router must forward each such player's P2P port to that player; several LAN players behind one forward need distinct P2P ports. Players on private addresses keep getting LAN addresses. If the direct connection still fails, `-relay` covers it.
+
 ## Which one to use
 
 The decision flow below picks a way to connect from where the players are.
