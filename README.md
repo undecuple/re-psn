@@ -266,6 +266,23 @@ sh install.sh --version v0.4.0
 This installs into `~/.local/bin` for the current user. The script comes from a pinned repository revision; the v0.4.0 release carries the same `install.sh` (identical SHA-256) as a release asset, listed in `SHA256SUMS`. See
 [docs/installing.md](docs/installing.md) for options and the Windows installer.
 
+### Optional quick install (Windows)
+
+The same idea for Windows (amd64): download the pinned script with the `curl.exe` that ships with Windows 10 and 11, check
+its hash and read it before running it. In PowerShell:
+
+```powershell
+curl.exe -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 -o install.ps1 https://raw.githubusercontent.com/undecuple/re-psn/2eb988b63eaebbe3a9bc7e7aa81c9daa3370780c/scripts/install.ps1
+if ((Get-FileHash install.ps1 -Algorithm SHA256).Hash -ine '98ab633eeeffaecc6968e2fa342830ad4ceed4a5d2397a19dfcfb28e16d9d3a7') { throw 'install.ps1 does not match the pinned hash' }
+notepad install.ps1
+powershell -ExecutionPolicy Bypass -File install.ps1 -Version v0.4.0
+```
+
+This installs the server only (`re-psn.exe` into `%LOCALAPPDATA%\re-psn\bin`, no administrator rights, no PATH change unless you add
+`-AddToPath`); there is no desktop app download yet. The script comes from a pinned repository revision, and the v0.4.0 release carries the same
+`install.ps1` (identical SHA-256) as a release asset. It has been tested on PowerShell 7 only and, like the Windows binary, has not been run on Windows by us. See
+[docs/installing.md](docs/installing.md) for options.
+
 ### From source
 
 Prerequisites: Go 1.22 or newer (as in `go.mod`); a C compiler only for the C client and its tests. The quick way is `Setup.cmd`
