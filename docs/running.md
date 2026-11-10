@@ -66,7 +66,7 @@ With `-http 127.0.0.1:36101`, open `http://127.0.0.1:36101/`. The read-only stat
 gruvbox-material palette and monospace framing as the project website and terminal app. Rooms and Leaderboards
 are tabs; Overview shows both tables together. Use the arrow keys while a tab is focused, or click one.
 Invite-only rooms remain counted without names.
-`/api/stats` keeps its existing JSON fields and token rules, and adds aggregate [`udp_drops` counters](udp-guardrails.md#drop-counters).
+`/api/stats` keeps its existing JSON fields and token rules, and adds aggregate [`udp_drops` counters](udp-guardrails.md#drop-counters). It also reports the server state (version, relay, limits in force and TCP refusals); see [Server state](api.md#server-state).
 
 The header offers System, Light and Dark; System follows the browser and responds to changes while the page is open.
 Appearance offers 14/16/18 px text, comfortable/compact spacing and eight custom colour slots for each light or dark mode.

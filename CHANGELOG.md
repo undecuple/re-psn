@@ -7,6 +7,9 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- `/api/stats` reports the server's version, whether the relay is on, the payload the relay has carried, the limits in force and
+  how many TCP connections were refused (too many from one address, request rate). Aggregate only; same access rules as the rest
+  of `/api/stats`. Older servers omit the fields.
 - HEARTBEAT may carry the player's own last round trip (`rtt_ms`, 2 bytes). The server shows it next to each member on the status
   page and in `/api/stats` as reported by the player, unverified and for display only; a HEARTBEAT without it, and older servers,
   behave as before. The C client sends it once a title opts in with `psnr_report_rtt(c, 1)` (recommended; off by default), from the

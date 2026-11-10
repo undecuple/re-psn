@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/sp00nznet/psnr/server/store"
@@ -75,6 +76,9 @@ type Server struct {
 	streams    map[uint32]*stream // relay streams waiting for their target to accept
 	nextStream uint32
 	relayed    uint64 // bytes carried by the relay (atomic)
+
+	refusedConns   uint64 // connections refused for too many from one address (atomic)
+	refusedReqRate uint64 // connections closed for sending requests too fast (atomic)
 }
 
 type client struct {
@@ -187,6 +191,7 @@ func (s *Server) admit(conn net.Conn) {
 	s.mu.Lock()
 	if s.maxPerAddr > 0 && s.addrConns[host] >= s.maxPerAddr {
 		s.mu.Unlock()
+		atomic.AddUint64(&s.refusedConns, 1)
 		s.log.Warn("connection refused", "addr", host, "reason", "too many connections", "limit", s.maxPerAddr)
 		conn.Close()
 		return
@@ -251,6 +256,7 @@ func (s *Server) run(c *client) {
 			windowStart, inWindow = now, 0
 		}
 		if inWindow++; s.maxReqRate > 0 && inWindow > s.maxReqRate {
+			atomic.AddUint64(&s.refusedReqRate, 1)
 			s.log.Warn("connection closed", "client", c.id, "online_id", c.onlineID, "reason", "request rate", "limit", s.maxReqRate)
 			return
 		}

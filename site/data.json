@@ -4,7 +4,7 @@
  "repository": "https://github.com/undecuple/re-psn",
  "go": "1.22",
  "status_counts": {
-  "available": 33,
+  "available": 34,
   "unverified": 3,
   "partial": 8,
   "in-progress": 0,
@@ -806,6 +806,18 @@
    "status_class": "ok"
   },
   {
+   "id": "status-server-state",
+   "area": "Status page",
+   "feature": "Server state in /api/stats",
+   "detail": "`/api/stats` reports the version, whether the relay is on, the payload the relay has carried, the limits in force and the TCP connections refused (per address, request rate). Aggregate only; no address or player. The protocol is unchanged.",
+   "status": "available",
+   "since": "main",
+   "evidence": "server/api.go, TestStatsReportServerState",
+   "note": "Not in v0.4.0. Counts are since start. `relay_bytes` is payload, not interface traffic.",
+   "status_label": "available",
+   "status_class": "ok"
+  },
+  {
    "id": "status-latency",
    "area": "Status page",
    "feature": "Player-reported latency",
@@ -885,6 +897,7 @@
    "docs-integration",
    "status-games",
    "status-verified",
+   "status-server-state",
    "status-latency",
    "net-relay-force",
    "net-peer-keys"
@@ -1062,6 +1075,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "`/api/stats` reports the server's version, whether the relay is on, the payload the relay has carried, the limits in force and how many TCP connections were refused (too many from one address, request rate).",
      "HEARTBEAT may carry the player's own last round trip (`rtt_ms`, 2 bytes).",
      "`/api/stats` and the status page count verified players: each public room has `verified` (members whose UDP probe the server has accepted on this connection) and the top level has `verified_players`.",
      "`client/psnr.h` now says what the C client touches: only the sockets it makes itself (the server connection and relay stream connections, which the caller owns), never the title's; connecting and disconnecting are ...",
@@ -1075,7 +1089,7 @@
     ]
    },
    "counts": {
-    "Added": 7,
+    "Added": 8,
     "Fixed": 1
    }
   },

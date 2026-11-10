@@ -34,7 +34,7 @@
 <h2>Overview</h2>
 <p>re-psn answers the matchmaking and leaderboard calls of a statically recompiled PS3 game, for a group running its own server: a LAN, a VPN, or friends connecting to one person&#x27;s machine. The server keeps rooms and leaderboards and tells each player where the others are. Game traffic goes directly between players, and through the server only when two players cannot reach each other and the host has turned the relay on.</p>
 <p>It is a fork of <a href="https://github.com/sp00nznet/psnr">psnr</a> by sp00nz: a Go server and a one-file C client, with no accounts and no public instance.</p>
-<p class="status-line">Version 0.4.0 (pre-release). 69 features: 33 available, 3 not yet verified, 8 partial, 15 planned, 9 later, 1 declined.</p>
+<p class="status-line">Version 0.4.0 (pre-release). 70 features: 34 available, 3 not yet verified, 8 partial, 15 planned, 9 later, 1 declined.</p>
 <p class="notice">Unofficial; not affiliated with Sony. No game files, keys or firmware are in the repository or needed from it. Play only games you own.</p>
 </section>
 <section id="features">
@@ -87,6 +87,7 @@
 <tr id="f-status-page"><td data-label="Feature"><strong>Status page and /api/stats, with a token</strong> <code>status-page</code><br>A read-only page and JSON on a separate listener, off unless <code>-http</code> names an address (<code>127.0.0.1:36101</code> keeps it on localhost). <code>-http-token</code> requires a token (<code>Authorization: Bearer</code>, or <code>?token=</code>), and the server warns at start when the page is reachable from elsewhere without one. Since v0.4.0 the page uses gruvbox-material, Rooms/Leaderboards tabs, System/Light/Dark and browser-local text size, spacing and contrast-checked custom colours.<br><span class="note">The page and /api/stats are upstream work (0.1.0); the token is the fork&#x27;s.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">0.2.0</td></tr>
 <tr id="f-status-games"><td data-label="Feature"><strong>Known games by name</strong> <code>status-games</code><br><code>/api/stats</code> and the status page label rooms and leaderboards with the game&#x27;s name and serials, for example <code>[Killzone 3 (BCUS98234, BCES01007)]</code>, from a small table embedded in the server (four games so far); a game the table does not know keeps its communication ID. The protocol is unchanged.<br><span class="note">Not in v0.4.0. The table is never fetched at run time.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
 <tr id="f-status-verified"><td data-label="Feature"><strong>Verified player count</strong> <code>status-verified</code><br>Each public room has <code>verified</code> (members whose UDP probe the server accepted on this connection) and the top level has <code>verified_players</code>; the page shows &#x27;(N verified)&#x27; beside a room&#x27;s member count. The protocol is unchanged.<br><span class="note">Not in v0.4.0. A count of probes the server accepted, not a check of who the players are.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
+<tr id="f-status-server-state"><td data-label="Feature"><strong>Server state in /api/stats</strong> <code>status-server-state</code><br><code>/api/stats</code> reports the version, whether the relay is on, the payload the relay has carried, the limits in force and the TCP connections refused (per address, request rate). Aggregate only; no address or player. The protocol is unchanged.<br><span class="note">Not in v0.4.0. Counts are since start. <code>relay_bytes</code> is payload, not interface traffic.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
 <tr id="f-status-latency"><td data-label="Feature"><strong>Player-reported latency</strong> <code>status-latency</code><br>HEARTBEAT may carry the player&#x27;s own last round trip (<code>rtt_ms</code>, 2 bytes); the server shows it next to each member as reported by the player. The C client and the app&#x27;s Go client send it once a title opts in (recommended, off by default).<br><span class="note">Not in v0.4.0. Reported by the player and not verified; display only. The round trip includes the server&#x27;s own time.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
 </tbody>
 </table>
@@ -222,7 +223,7 @@
 <h2>Roadmap</h2>
 <p>The same list grouped by status. No dates are promised; <a href="https://github.com/undecuple/re-psn/blob/main/ROADMAP.md">ROADMAP.md</a> has the order and the scope.</p>
 <div class="cols">
-<div><h3>Done <span class="count">(44)</span></h3>
+<div><h3>Done <span class="count">(45)</span></h3>
 <ul>
 <li><a href="#f-rooms-basic">Rooms and search</a></li>
 <li><a href="#f-rooms-data">Room and member data</a></li>
@@ -265,6 +266,7 @@
 <li><a href="#f-docs-integration">Recomp developer integration</a></li>
 <li><a href="#f-status-games">Known games by name</a></li>
 <li><a href="#f-status-verified">Verified player count</a></li>
+<li><a href="#f-status-server-state">Server state in /api/stats</a></li>
 <li><a href="#f-status-latency">Player-reported latency</a></li>
 <li><a href="#f-net-relay-force">Force the relay (testing)</a></li>
 <li><a href="#f-net-peer-keys">Peer keys (server side)</a> <span class="tag warn">partial</span></li>
@@ -310,6 +312,7 @@
 <h3>Unreleased</h3>
 <h4>Added</h4>
 <ul>
+<li><code>/api/stats</code> reports the server&#x27;s version, whether the relay is on, the payload the relay has carried, the limits in force and how many TCP connections were refused (too many from one address, request rate).</li>
 <li>HEARTBEAT may carry the player&#x27;s own last round trip (<code>rtt_ms</code>, 2 bytes).</li>
 <li><code>/api/stats</code> and the status page count verified players: each public room has <code>verified</code> (members whose UDP probe the server has accepted on this connection) and the top level has <code>verified_players</code>.</li>
 <li><code>client/psnr.h</code> now says what the C client touches: only the sockets it makes itself (the server connection and relay stream connections, which the caller owns), never the title&#x27;s; connecting and disconnecting are ...</li>
