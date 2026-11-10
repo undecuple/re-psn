@@ -7,6 +7,11 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- `/api/stats` and the status page count verified players: each public room has `verified` (members whose UDP probe the server
+  has accepted on this connection) and the top level has `verified_players`. The page shows "(N verified)" after a room's
+  member count when N is above zero. The protocol is unchanged.
+
+### Added
 - The status page and `/api/stats` show known games by name: rooms and leaderboards carry a `label` such as
   `[Killzone 3 (BCUS98234, BCES01007)]`, with `game` and `serials` fields, and are sorted by it. A game the table does not
   know keeps its communication ID. The table is embedded in the server (four games so far), never fetched, and the

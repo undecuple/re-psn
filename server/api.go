@@ -23,8 +23,10 @@ type roomJSON struct {
 	Game    string   `json:"game,omitempty"`
 	Serials []string `json:"serials,omitempty"`
 	Members []string `json:"members"`
-	Max     uint8    `json:"max"`
-	Age     string   `json:"age"`
+	// Verified counts members whose UDP probe the server has accepted on this connection (see docs/api.md).
+	Verified int    `json:"verified"`
+	Max      uint8  `json:"max"`
+	Age      string `json:"age"`
 }
 
 type boardJSON struct {
@@ -39,13 +41,15 @@ type boardJSON struct {
 }
 
 type statsJSON struct {
-	Uptime      string       `json:"uptime"`
-	Clients     int          `json:"clients"`
-	Connections uint64       `json:"connections_total"`
-	Rooms       []roomJSON   `json:"rooms"`
-	Unlisted    int          `json:"unlisted_rooms"`
-	Boards      []boardJSON  `json:"boards"`
-	UDPDrops    udpDropStats `json:"udp_drops"`
+	Uptime      string     `json:"uptime"`
+	Clients     int        `json:"clients"`
+	Connections uint64     `json:"connections_total"`
+	Rooms       []roomJSON `json:"rooms"`
+	Unlisted    int        `json:"unlisted_rooms"`
+	// VerifiedPlayers counts every connected player with an accepted UDP probe, in a room or not.
+	VerifiedPlayers int          `json:"verified_players"`
+	Boards          []boardJSON  `json:"boards"`
+	UDPDrops        udpDropStats `json:"udp_drops"`
 }
 
 // boardStats lists the leaderboards, sorted by title and board. A store
@@ -89,6 +93,11 @@ func (s *Server) snapshot() statsJSON {
 		Boards:      boards,
 		UDPDrops:    s.udpDrops.snapshot(),
 	}
+	for _, c := range s.clients {
+		if c.commID != "" && c.udpPort != 0 {
+			st.VerifiedPlayers++
+		}
+	}
 	for _, r := range s.rooms {
 		if r.code != "" { // invite-only rooms are counted, not listed
 			st.Unlisted++
@@ -99,6 +108,9 @@ func (s *Server) snapshot() statsJSON {
 		rj.Label, rj.Game, rj.Serials = titleLabel(r.commID)
 		for _, m := range r.members {
 			rj.Members = append(rj.Members, m.c.onlineID)
+			if m.c.udpPort != 0 {
+				rj.Verified++
+			}
 		}
 		st.Rooms = append(st.Rooms, rj)
 	}
