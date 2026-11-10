@@ -87,7 +87,7 @@ protocol; [LICENSE](LICENSE) keeps upstream's MIT licence and copyright line, an
 This fork adds hardened CI and fuzz tests, invite-only rooms, limits, logging, reverse proxy support, a UDP source check, container
 files and release tooling; the [features list](docs/features.md) and [CHANGELOG.md](CHANGELOG.md) have the details. Since v0.4.0, `main`
 also has a lobby view with game names, verified player counts and player-reported latency, `-relay-force` for testing the relay from
-one network, and the server half of opt-in peer keys; these ship with the next release.
+one network, and the server half of opt-in peer keys; these are on `main` and not in a release yet.
 
 ## Overview
 
