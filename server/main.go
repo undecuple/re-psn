@@ -56,6 +56,7 @@ func main() {
 	udpAny := toggle("udp-any-source", false, "accept UDP probes and relay packets from an address other than the player's TCP address (for players whose UDP leaves from another address, such as some multi-WAN or carrier NAT setups; weakens the check against spoofed or stolen-token probes)")
 	relay := toggle("relay", false, "carry traffic between players who can't reach each other directly (uses this server's bandwidth)")
 	relayForce := toggle("relay-force", false, "send every stream through the relay, whether or not the players could connect directly (for testing the relay from one network; needs -relay; uses this server's bandwidth)")
+	lanPublic := flag.String("lan-public-addr", "", "IPv4 address to give players outside the LAN as the address of players who connected over a private, CGNAT or link-local address (the host must forward each such player's P2P port to them; off unless set)")
 	db := flag.String("db", "off", "score storage: off or memory (both keep scores in memory; no database backend is built yet)")
 	dbFile := flag.String("db-file", "", "read the -db setting from this file instead (it may hold a password)")
 	replace := toggle("replace", false, "if the game port is already in use by an earlier instance of this server, ask it to stop, wait for the port, then start (Linux only)")
@@ -69,6 +70,11 @@ func main() {
 	onCmdLine := map[string]bool{}
 	flag.Visit(func(f *flag.Flag) { onCmdLine[f.Name] = true })
 	udpRateN, err := parseUDPRate(lookupSetting("max-udp-rate", *udpRate, onCmdLine["max-udp-rate"]))
+	if err != nil {
+		log.Fatal(err)
+	}
+	lanSet := lookupSetting("lan-public-addr", *lanPublic, onCmdLine["lan-public-addr"])
+	lanPublicIP, err := parseLANPublic(lanSet.val)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -113,6 +119,10 @@ func main() {
 		fatal(errors.New("-relay-force needs -relay"))
 	}
 	s.relayForce = *relayForce
+	s.lanPublic = lanPublicIP
+	if lanPublicIP != ([4]byte{}) {
+		logger.Info("lan public address", "addr", ipString(lanPublicIP))
+	}
 	if *relayForce {
 		logger.Warn("-relay-force: every stream goes through the relay; use it for testing only, it costs this server's bandwidth")
 	}

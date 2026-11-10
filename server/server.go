@@ -33,8 +33,9 @@ const (
 
 type Server struct {
 	log        *slog.Logger
-	relay      bool // -relay: carry traffic for players who can't reach each other (relay.go)
-	relayForce bool // -relay-force: with relay, send every stream through it (a test aid)
+	relay      bool    // -relay: carry traffic for players who can't reach each other (relay.go)
+	relayForce bool    // -relay-force: with relay, send every stream through it (a test aid)
+	lanPublic  [4]byte // -lan-public-addr: address announced for LAN members to viewers outside the LAN (zero: off)
 
 	httpToken string // -http-token: required by the status page when set (api.go)
 

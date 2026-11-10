@@ -40,6 +40,7 @@ type room struct {
 	members    []*member
 	nextMember uint16
 	created    time.Time
+	srv        *Server
 }
 
 type member struct {
@@ -55,7 +56,7 @@ func (r *room) putMember(w *writer, m *member, viewer *client) {
 	w.u16(m.id)
 	w.u32(m.c.id)
 	w.str(m.c.onlineID, 16)
-	ip, port := endpoint(m.c, viewer)
+	ip, port := r.srv.endpoint(m.c, viewer)
 	w.bytes(ip[:])
 	w.u16(port)
 	if m.id == r.owner {
@@ -200,7 +201,7 @@ func (s *Server) createRoom(c *client, req uint32, rd *reader) (byte, []byte) {
 	}
 	s.nextRoom++
 	r := &room{id: s.nextRoom, commID: c.commID, max: max, flags: flags,
-		external: ext, internal: in, created: time.Now()}
+		external: ext, internal: in, created: time.Now(), srv: s}
 	s.rooms[r.id] = r
 	me := s.addMember(r, c, mine)
 	r.owner = me.id
