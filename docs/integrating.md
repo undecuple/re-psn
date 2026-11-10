@@ -168,7 +168,7 @@ game library. Other languages need an FFI wrapper or a separately tested impleme
 |---|---|
 | Connect | Call `psnr_connect`, supplying the real communication ID, player name and actual bound peer port; handle NULL. DNS, TCP and HELLO setup can block. |
 | Send | Save the nonzero ID returned by `psnr_send` in a pending-request table. It transmits synchronously and may wait for writability. |
-| Pump | Call `psnr_poll` regularly; 1 returns a message, 0 means nothing ready, -1 means disconnected after queued messages are drained. |
+| Pump | Call `psnr_poll` regularly; 1 returns a message, 0 means nothing ready, -1 means disconnected after queued messages are drained. Its HEARTBEAT carries the player's round trip, timed from the library's own calls (`psnr_rtt_ms`); it is off until you call `psnr_report_rtt(c, 1)`, which is recommended. |
 | Complete | `req == 0` is a push; otherwise correlate by the returned request ID. Validate type and payload length before decoding big-endian fields. |
 | Release | Call `psnr_msg_free` for every returned message, including errors, pushes and late replies. Copy any data retained after dispatch. |
 | Close | The serialized owner calls `psnr_close`; invalidate pending guest requests and cached room/member IDs. Close application-owned peer/relay sockets separately. |

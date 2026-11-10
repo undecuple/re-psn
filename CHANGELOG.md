@@ -9,7 +9,8 @@ All notable changes to this project are documented here. The format follows
 ### Added
 - HEARTBEAT may carry the player's own last round trip (`rtt_ms`, 2 bytes). The server shows it next to each member on the status
   page and in `/api/stats` as reported by the player, unverified and for display only; a HEARTBEAT without it, and older servers,
-  behave as before. No client sends it yet.
+  behave as before. The C client sends it once a title opts in with `psnr_report_rtt(c, 1)` (recommended; off by default), from the
+  round trips of its own calls (`psnr_rtt_ms`, `psnr_heartbeat`).
 - `/api/stats` and the status page count verified players: each public room has `verified` (members whose UDP probe the server
   has accepted on this connection) and the top level has `verified_players`. The page shows "(N verified)" after a room's
   member count when N is above zero. The protocol is unchanged.

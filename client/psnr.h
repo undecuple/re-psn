@@ -119,6 +119,19 @@ void psnr_close(psnr_client* c);
  * after a failed write the connection is unusable. */
 uint32_t psnr_send(psnr_client* c, uint8_t type, const void* body, uint32_t len);
 
+/* Round trip reported to the server. The library times every psnr_call (send to
+ * reply, so the server's own time is included) and keeps the smallest of the last
+ * eight; psnr_rtt_ms returns it in milliseconds, or -1 before the first reply.
+ * HEARTBEAT (automatic in psnr_poll, or psnr_heartbeat) carries it as an optional
+ * 2-byte body, which the server shows next to the player's name on its status
+ * page as reported by the player. Servers that do not know the field ignore it.
+ * It is off until the title calls psnr_report_rtt(c, 1), which is recommended: hosts then see
+ * who is lagging. psnr_report_rtt(c, 0) stops it again; nothing else changes.
+ * psnr_heartbeat sends a HEARTBEAT now and returns the request id, or 0 on failure. */
+int      psnr_rtt_ms(const psnr_client* c);
+void     psnr_report_rtt(psnr_client* c, int on);
+uint32_t psnr_heartbeat(psnr_client* c);
+
 /* 1: *out holds the next reply or push. 0: nothing yet. -1: disconnected after
  * queued messages drain. Automatic heartbeat sends may wait for writability. */
 int psnr_poll(psnr_client* c, psnr_msg* out);
