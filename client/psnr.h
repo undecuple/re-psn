@@ -18,13 +18,15 @@
  * What it touches. The client owns only the sockets it makes itself: the TCP
  * connection psnr_connect opens to the server, and the TCP connection each
  * relay stream opens (psnr_stream_connect and psnr_stream_accept return it to
- * the caller, who owns and closes it). It never opens, reads, writes or closes
+ * the caller, who owns and closes it) and, only if the title calls
+ * psnr_discover, one temporary UDP socket that call opens and closes before it
+ * returns. It never opens, reads, writes or closes
  * a socket of the title's; the UDP peer socket is the title's, and the library
  * only builds and reads the packets it exchanges. Connecting and disconnecting
  * are explicit: nothing connects until the title calls psnr_connect, nothing
  * reconnects by itself (psnr_poll returns -1 once the connection is lost), and
  * psnr_close closes it. A title that never calls psnr_connect sends nothing.
- * Process-wide effects: on Windows each psnr_connect calls WSAStartup (2.2) and
+ * Process-wide effects: on Windows each psnr_connect and psnr_discover calls WSAStartup (2.2) and
  * the library never calls WSACleanup; psnr_connect_error is one process-global
  * value; the library starts no threads and installs no signal handlers or
  * timers. It sends with plain send(), so on POSIX a write to a connection the
@@ -123,6 +125,31 @@ int     psnr_relay_unwrap(const void* buf, size_t len, uint32_t* from_user,
                           const uint8_t** payload, size_t* payload_len);
 int64_t psnr_stream_connect(const psnr_client* c, uint32_t to_user, uint16_t vport, int timeout_ms);
 int64_t psnr_stream_accept(const psnr_client* c, uint32_t stream_id, int timeout_ms);
+
+/* LAN discovery. One server found on the local network. name and version are
+ * NUL-terminated printable ASCII; ip is where the reply came from, tcp_port is
+ * the port to give psnr_connect. */
+typedef struct {
+    uint8_t  ip[4];
+    uint16_t tcp_port;
+    uint16_t udp_port;
+    uint8_t  relay;      /* 1 if the server's relay is on */
+    uint16_t players;
+    char     name[25];
+    char     version[13];
+} psnr_found;
+
+/* Looks for servers on the local network (the DISCOVER packets in docs/api.md). Opens
+ * its own temporary UDP socket, never a title socket, sets SO_BROADCAST, sends
+ * one request to 255.255.255.255:port and, on POSIX, to each IPv4 interface's
+ * directed broadcast address (Windows: 255.255.255.255 only), then collects
+ * replies until timeout_ms has passed or max are found, and closes the socket.
+ * port is the UDP port to probe; 0 means 36100, the default server port. Fills
+ * out[0..max) and returns the number found, or -1 on error. Only a server
+ * started with its discovery option answers, and only same-subnet, non-isolated
+ * networks are reached: keep a manual host:port path. IPv4 only, no threads,
+ * blocks for about timeout_ms at most, and does not touch psnr_connect_error. */
+int psnr_discover(uint16_t port, int timeout_ms, psnr_found* out, int max);
 
 /* Last HELLO refusal diagnostic, process-global (PSNR_E_NAME_TAKEN: another
  * player has that name). An earlier DNS/TCP failure may retain a prior code;

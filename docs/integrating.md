@@ -178,6 +178,7 @@ game library. Other languages need an FFI wrapper or a separately tested impleme
 | Complete | `req == 0` is a push; otherwise correlate by the returned request ID. Validate type and payload length before decoding big-endian fields. |
 | Release | Call `psnr_msg_free` for every returned message, including errors, pushes and late replies. Copy any data retained after dispatch. |
 | Close | The serialized owner calls `psnr_close`; invalidate pending guest requests and cached room/member IDs. Close application-owned peer/relay sockets separately. |
+| Discover (optional) | `psnr_discover(port, timeout_ms, out, max)` broadcasts one UDP request from its own temporary socket and returns the LAN servers that answered; it blocks for up to `timeout_ms`, so run it on the networking owner, not in a frame callback. Discovery is opt-in on the server: only servers started with discovery on answer. It does not cross subnets or client-isolated Wi-Fi, and on Windows it broadcasts to 255.255.255.255 only. Keep a manual `host:port` path. |
 
 Use one serialized owner for each `psnr_client`. For a new adapter, keep transport work on a host networking owner
 with queues to/from the guest callback thread, rather than putting potentially blocking work in a timing-sensitive

@@ -85,6 +85,130 @@ static psnr_msg wait_push(psnr_client* c, uint8_t type)
     exit(1);
 }
 
+/* Internal entry point of psnr_discover (psnr.c), not in the public header:
+ * it takes the destination list so the test can probe loopback. */
+int psnr_discover_to(uint16_t port, int timeout_ms, psnr_found* out, int max,
+                     const uint32_t* dests, int ndests);
+
+static void disc_reply(uint8_t* r, uint32_t nonce, uint16_t tcp, const char* name)
+{
+    memset(r, 0, 52);
+    memcpy(r, "PSNR", 4);
+    r[4] = 0x84;
+    psnr_put32(r + 5, nonce);
+    psnr_put16(r + 9, tcp);
+    psnr_put16(r + 11, 36101);
+    r[13] = 1;
+    psnr_put16(r + 14, 7);
+    memcpy(r + 16, name, strlen(name) < 24 ? strlen(name) : 24);
+    memcpy(r + 40, "1.2.3", 5);
+}
+
+/* Fake responder on loopback. Each call runs it in a forked child that waits
+ * for one request and answers according to mode, so psnr_discover_to can
+ * block in the parent. POSIX only; the Windows build skips these checks. */
+#ifndef _WIN32
+#  include <sys/wait.h>
+
+static void disc_serve(int sock, int mode)
+{
+    uint8_t req[128], r[64];
+    struct sockaddr_in from;
+    socklen_t fl = sizeof(from);
+    int n = (int)recvfrom(sock, (char*)req, sizeof(req), 0, (struct sockaddr*)&from, &fl);
+    uint32_t nonce;
+    assert(n == 64 && memcmp(req, "PSNR", 4) == 0 && req[4] == 4);
+    nonce = psnr_get32(req + 5);
+    for (int i = 9; i < 64; i++) assert(req[i] == 0);             /* zero padding */
+    if (mode == 0) return;                                        /* no reply at all */
+    if (mode == 2) {                                              /* garbage name */
+        disc_reply(r, nonce, 36100, "");
+        memcpy(r + 16, "ab\x01\xff" "cd", 6);
+        sendto(sock, (char*)r, 52, 0, (struct sockaddr*)&from, fl);
+        return;
+    }
+    disc_reply(r, nonce + 1, 1111, "wrong-nonce");                /* ignored */
+    sendto(sock, (char*)r, 52, 0, (struct sockaddr*)&from, fl);
+    disc_reply(r, nonce, 2222, "short");                          /* ignored: 51 bytes */
+    sendto(sock, (char*)r, 51, 0, (struct sockaddr*)&from, fl);
+    disc_reply(r, nonce, 3333, "long");                           /* ignored: 53 bytes */
+    sendto(sock, (char*)r, 53, 0, (struct sockaddr*)&from, fl);
+    disc_reply(r, nonce, 4444, "wrong-type");
+    r[4] = 0x83;                                                  /* ignored */
+    sendto(sock, (char*)r, 52, 0, (struct sockaddr*)&from, fl);
+    disc_reply(r, nonce, 36100, "lan box");                       /* accepted */
+    sendto(sock, (char*)r, 52, 0, (struct sockaddr*)&from, fl);
+    sendto(sock, (char*)r, 52, 0, (struct sockaddr*)&from, fl);   /* duplicate: ignored */
+    disc_reply(r, nonce, 36200, "second");                        /* same ip, other port: kept */
+    sendto(sock, (char*)r, 52, 0, (struct sockaddr*)&from, fl);
+}
+
+static pid_t disc_start(int sock, int mode)
+{
+    pid_t pid = fork();
+    assert(pid >= 0);
+    if (pid == 0) { disc_serve(sock, mode); _exit(0); }
+    return pid;
+}
+
+static void disc_finish(pid_t pid)
+{
+    int st = 0;
+    assert(waitpid(pid, &st, 0) == pid && WIFEXITED(st) && WEXITSTATUS(st) == 0);
+}
+#endif
+
+static void discover_tests(void)
+{
+    psnr_found f[4];
+    /* bad arguments */
+    assert(psnr_discover(0, 10, NULL, 4) == -1 && psnr_discover(0, 10, f, 0) == -1);
+#ifndef _WIN32
+    {
+        int sock = (int)socket(AF_INET, SOCK_DGRAM, 0);
+        struct sockaddr_in a;
+        socklen_t n = sizeof(a);
+        uint32_t lo = 0x7f000001u;
+        uint16_t port;
+        pid_t pid;
+
+        memset(&a, 0, sizeof(a));
+        a.sin_family = AF_INET;
+        a.sin_addr.s_addr = htonl(lo);
+        assert(sock >= 0 && bind(sock, (struct sockaddr*)&a, sizeof(a)) == 0);
+        assert(getsockname(sock, (struct sockaddr*)&a, &n) == 0);
+        port = ntohs(a.sin_port);
+
+        /* wrong nonce, length and type and a duplicate are ignored; fields decode */
+        pid = disc_start(sock, 1);
+        assert(psnr_discover_to(port, 500, f, 4, &lo, 1) == 2);
+        disc_finish(pid);
+        assert(f[0].ip[0] == 127 && f[0].ip[3] == 1 && f[0].tcp_port == 36100 && f[0].udp_port == 36101);
+        assert(f[0].relay == 1 && f[0].players == 7);
+        assert(strcmp(f[0].name, "lan box") == 0 && strcmp(f[0].version, "1.2.3") == 0);
+        assert(f[1].tcp_port == 36200 && strcmp(f[1].name, "second") == 0);
+
+        /* max is respected */
+        pid = disc_start(sock, 1);
+        assert(psnr_discover_to(port, 500, f, 1, &lo, 1) == 1);
+        disc_finish(pid);
+        assert(f[0].tcp_port == 36100);
+
+        /* a garbage name is made printable ASCII */
+        pid = disc_start(sock, 2);
+        assert(psnr_discover_to(port, 500, f, 4, &lo, 1) == 1);
+        disc_finish(pid);
+        assert(strcmp(f[0].name, "ab??cd") == 0);
+
+        /* no reply: 0 after about the timeout */
+        pid = disc_start(sock, 0);
+        assert(psnr_discover_to(port, 200, f, 4, &lo, 1) == 0);
+        disc_finish(pid);
+        close(sock);
+    }
+#endif
+}
+
 int main(int argc, char** argv)
 {
     const char* host = argc > 1 ? argv[1] : "127.0.0.1";
@@ -92,6 +216,7 @@ int main(int argc, char** argv)
     uint32_t ida, idb;
     uint8_t ip[4];
 
+    discover_tests();
     psnr_client* a = psnr_connect(host, port, COMM, "alice", 3658, &ida, ip);
     psnr_client* b = psnr_connect(host, port, COMM, "bob", 3659, &idb, ip);
     assert(a && b && ida != idb);

@@ -14,6 +14,7 @@ All notable changes to this project are documented here. The format follows
   port with a 52-byte DISCOVER_REPLY (TCP and UDP ports, relay flag, player count, name, version), only to private, carrier-grade NAT,
   link-local or loopback senders, under the existing UDP rate limit. `-name` (`RE_PSN_NAME`, at most 24 printable ASCII bytes) sets the
   name shown. `/api/stats` `udp_drops` gains `discover_refused`. With the flag off the server behaves as before. No client helper yet.
+- The C client can find servers on the local network: `psnr_discover(port, timeout_ms, out, max)` (`client/psnr.h`) broadcasts one UDP request from its own temporary socket (never a title socket) and returns each server that answers. Only servers started with discovery on reply; it does not cross subnets or client-isolated Wi-Fi, so keep a manual host:port path. On Windows it broadcasts to 255.255.255.255 only; elsewhere it also tries each IPv4 interface's directed broadcast.
 - `/api/stats` reports the server's version, whether the relay is on, the payload the relay has carried, the limits in force and
   how many TCP connections were refused (too many from one address, request rate). Aggregate only; same access rules as the rest
   of `/api/stats`. Older servers omit the fields.

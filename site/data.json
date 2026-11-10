@@ -4,7 +4,7 @@
  "repository": "https://github.com/undecuple/re-psn",
  "go": "1.22",
  "status_counts": {
-  "available": 36,
+  "available": 37,
   "unverified": 3,
   "partial": 8,
   "in-progress": 0,
@@ -876,6 +876,18 @@
    "note": "Not in v0.4.0. Off by default. Server side only: no client helper yet. A broadcast does not cross subnets or Wi-Fi client isolation.",
    "status_label": "available",
    "status_class": "ok"
+  },
+  {
+   "id": "client-lan-discover",
+   "area": "Client",
+   "feature": "LAN discovery in the C client",
+   "detail": "`psnr_discover` broadcasts one UDP request from its own temporary socket and returns the LAN servers that answer, with their ports, relay flag, player count, name and version.",
+   "status": "available",
+   "since": "main",
+   "evidence": "client/psnr.c, client/test_psnr.c",
+   "note": "Not in v0.4.0. Finds only servers started with -discover. Tested against a fake responder and, by hand, against a real server on loopback; not a real broadcast across a network. Does not cross subnets or client-isolated Wi-Fi. The Windows build broadcasts to 255.255.255.255 only and is untested.",
+   "status_label": "available",
+   "status_class": "ok"
   }
  ],
  "roadmap": {
@@ -926,7 +938,8 @@
    "net-relay-force",
    "net-peer-keys",
    "net-lan-public-addr",
-   "net-lan-discover"
+   "net-lan-discover",
+   "client-lan-discover"
   ],
   "Now": [],
   "Next": [
@@ -1103,6 +1116,7 @@
     "Added": [
      "`-lan-public-addr IP` (`RE_PSN_LAN_PUBLIC_ADDR`, off by default, IPv4): when a player connected from a private, carrier-grade NAT or link-local address, players on public addresses are given IP and that player's P2P ...",
      "LAN discovery on the server, opt-in: `-discover` (`RE_PSN_DISCOVER`, off by default) answers a 64-byte DISCOVER sent to the game UDP port with a 52-byte DISCOVER_REPLY (TCP and UDP ports, relay flag, player count, name, ...",
+     "The C client can find servers on the local network: `psnr_discover(port, timeout_ms, out, max)` (`client/psnr.h`) broadcasts one UDP request from its own temporary socket (never a title socket) and returns each server ...",
      "`/api/stats` reports the server's version, whether the relay is on, the payload the relay has carried, the limits in force and how many TCP connections were refused (too many from one address, request rate).",
      "HEARTBEAT may carry the player's own last round trip (`rtt_ms`, 2 bytes).",
      "`/api/stats` and the status page count verified players: each public room has `verified` (members whose UDP probe the server has accepted on this connection) and the top level has `verified_players`.",
@@ -1117,7 +1131,7 @@
     ]
    },
    "counts": {
-    "Added": 10,
+    "Added": 11,
     "Fixed": 1
    }
   },

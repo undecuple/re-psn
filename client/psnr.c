@@ -36,6 +36,8 @@
 #  include <unistd.h>
 #  include <errno.h>
 #  include <poll.h>
+#  include <ifaddrs.h>
+#  include <net/if.h>
    typedef int sock_t;
 #  define BAD_SOCK (-1)
 #  define sock_close close
@@ -449,4 +451,143 @@ void psnr_close(psnr_client* c)
     while (take(c, &m, 0)) psnr_msg_free(&m);
     free(c->rx);
     free(c);
+}
+
+/* LAN discovery (docs/api.md, "LAN discovery"). */
+#define DISC_REQ_LEN   64
+#define DISC_REPLY_LEN 52
+#define DISC_MAX_DEST  32
+
+static uint32_t disc_nonce(void)
+{
+    static uint32_t counter;
+    uint32_t v = 0;
+#ifdef _WIN32
+    LARGE_INTEGER q;
+    QueryPerformanceCounter(&q);
+    v = (uint32_t)q.QuadPart ^ (uint32_t)GetCurrentProcessId() << 16;
+#else
+    FILE* f = fopen("/dev/urandom", "rb");
+    if (f) {
+        if (fread(&v, sizeof(v), 1, f) != 1) v = 0;
+        fclose(f);
+    }
+    if (!v) v = (uint32_t)getpid() << 16;
+#endif
+    v ^= (uint32_t)now_ms() * 2654435761u;
+    return v ^ (++counter * 40503u);
+}
+
+/* Fill the given printable-ASCII, NUL-terminated string from a NUL-padded field. */
+static void disc_text(char* dst, const uint8_t* src, size_t n)
+{
+    size_t i;
+    for (i = 0; i < n && src[i]; i++)
+        dst[i] = (src[i] >= 0x20 && src[i] < 0x7f) ? (char)src[i] : '?';
+    dst[i] = 0;
+}
+
+/* Probes every address in dests (IPv4, host order) at port, then collects replies.
+ * Not in psnr.h: the public psnr_discover builds the broadcast list and calls
+ * this; test_psnr.c calls it directly with a loopback address. */
+int psnr_discover_to(uint16_t port, int timeout_ms, psnr_found* out, int max,
+                     const uint32_t* dests, int ndests);
+int psnr_discover_to(uint16_t port, int timeout_ms, psnr_found* out, int max,
+                     const uint32_t* dests, int ndests)
+{
+    uint8_t req[DISC_REQ_LEN] = {0}, buf[128];
+    uint32_t nonce = disc_nonce();
+    uint64_t deadline;
+    sock_t s;
+    int one = 1, sent = 0, found = 0, i;
+
+    if (!out || max <= 0) return -1;
+    if (timeout_ms < 0) timeout_ms = 0;
+#ifdef _WIN32
+    { WSADATA w; WSAStartup(MAKEWORD(2, 2), &w); }
+#endif
+    s = socket(AF_INET, SOCK_DGRAM, 0);
+    if (s == BAD_SOCK) return -1;
+    setsockopt(s, SOL_SOCKET, SO_BROADCAST, (const char*)&one, sizeof(one));
+
+    memcpy(req, "PSNR", 4);
+    req[4] = 0x04;
+    psnr_put32(req + 5, nonce);
+    for (i = 0; i < ndests; i++) {
+        struct sockaddr_in a;
+        memset(&a, 0, sizeof(a));
+        a.sin_family = AF_INET;
+        a.sin_port = htons(port);
+        a.sin_addr.s_addr = htonl(dests[i]);
+        if (sendto(s, (const char*)req, DISC_REQ_LEN, 0, (struct sockaddr*)&a, sizeof(a)) == DISC_REQ_LEN) sent++;
+    }
+    if (!sent) { sock_close(s); return -1; }
+
+    deadline = now_ms() + (uint64_t)timeout_ms;
+    while (found < max) {
+        uint64_t now = now_ms();
+        pollfd_t pf;
+        struct sockaddr_in from;
+        socklen_t fl = sizeof(from);
+        int r, k;
+        if (now >= deadline) break;
+        pf.fd = s;
+        pf.events = POLLIN;
+        pf.revents = 0;
+        r = poll(&pf, 1, (int)(deadline - now));
+        if (r < 0) {
+#ifndef _WIN32
+            if (errno == EINTR) continue;
+#endif
+            found = -1;
+            break;
+        }
+        if (r == 0) break;
+        r = (int)recvfrom(s, (char*)buf, sizeof(buf), 0, (struct sockaddr*)&from, &fl);
+        if (r != DISC_REPLY_LEN || memcmp(buf, "PSNR", 4) != 0 || buf[4] != 0x84 ||
+            psnr_get32(buf + 5) != nonce)
+            continue;
+        {
+            psnr_found f;
+            memset(&f, 0, sizeof(f));
+            memcpy(f.ip, &from.sin_addr, 4);
+            f.tcp_port = psnr_get16(buf + 9);
+            f.udp_port = psnr_get16(buf + 11);
+            f.relay = buf[13] & 1;
+            f.players = psnr_get16(buf + 14);
+            disc_text(f.name, buf + 16, 24);
+            disc_text(f.version, buf + 40, 12);
+            for (k = 0; k < found; k++)
+                if (memcmp(out[k].ip, f.ip, 4) == 0 && out[k].tcp_port == f.tcp_port) break;
+            if (k == found) out[found++] = f;
+        }
+    }
+    sock_close(s);
+    return found;
+}
+
+int psnr_discover(uint16_t port, int timeout_ms, psnr_found* out, int max)
+{
+    uint32_t dests[DISC_MAX_DEST];
+    int n = 0;
+    dests[n++] = 0xffffffffu;
+#ifndef _WIN32
+    {   /* each IPv4 interface's directed broadcast; Windows uses 255.255.255.255 only */
+        struct ifaddrs *ifa, *p;
+        if (getifaddrs(&ifa) == 0) {
+            for (p = ifa; p; p = p->ifa_next) {
+                uint32_t d;
+                int k;
+                if (!p->ifa_addr || p->ifa_addr->sa_family != AF_INET || !p->ifa_broadaddr) continue;
+                if ((p->ifa_flags & (IFF_BROADCAST | IFF_UP)) != (IFF_BROADCAST | IFF_UP)) continue;
+                d = ntohl(((struct sockaddr_in*)p->ifa_broadaddr)->sin_addr.s_addr);
+                if (!d) continue;
+                for (k = 0; k < n && dests[k] != d; k++) {}
+                if (k == n && n < DISC_MAX_DEST) dests[n++] = d;
+            }
+            freeifaddrs(ifa);
+        }
+    }
+#endif
+    return psnr_discover_to(port ? port : 36100, timeout_ms, out, max, dests, n);
 }
