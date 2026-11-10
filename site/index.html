@@ -302,6 +302,7 @@
 <ul>
 <li>HEARTBEAT may carry the player&#x27;s own last round trip (<code>rtt_ms</code>, 2 bytes).</li>
 <li><code>/api/stats</code> and the status page count verified players: each public room has <code>verified</code> (members whose UDP probe the server has accepted on this connection) and the top level has <code>verified_players</code>.</li>
+<li><code>client/psnr.h</code> now says what the C client touches: only the sockets it makes itself (the server connection and relay stream connections, which the caller owns), never the title&#x27;s; connecting and disconnecting are ...</li>
 <li>A test checks that no secret reaches the log: it drives a session at debug level, in both log formats, and looks for each player&#x27;s UDP token, a room&#x27;s invite code (right and wrong), a peer key and the status token ...</li>
 <li>Peer keys, for players who connect directly: a client may send PEER_AUTH (0x03, after HELLO, when HELLO_ACK&#x27;s flag bit 2 says the server issues keys), and then each pair of members who both asked gets one new random ...</li>
 <li><code>-relay-force</code> (<code>RE_PSN_RELAY_FORCE</code>, off by default, needs <code>-relay</code>): every stream goes through the relay, even between players who could connect directly, so the relay can be tested from one network.</li>
