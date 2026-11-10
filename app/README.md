@@ -57,7 +57,7 @@ one, for example by a file manager. See [Starting from the desktop](#starting-fr
 **First start.** With no settings file yet, the app asks what it is for on this machine: **Play** (join servers), **Host** (run a
 server; the Host screen comes later, Status works now) or **Both**. Then the online ID (not for Host) and the server as
 `host:port`, each checked with the settings file's own rules. Enter saves `re-psn.ini`; Esc quits without saving, as does `q` on
-the first question; backspace in an empty field goes back one step.
+the first question; backspace in an empty field goes back one step. While typing the server, Ctrl+F opens **Find on LAN** (below).
 
 **Home.** A menu (Overview, Rooms, Leaderboards, Settings, Help), the chosen item's content beside it, and a line of keys at the
 bottom. Under 70 columns the menu and the content are shown one at a time.
@@ -71,6 +71,14 @@ bottom. Under 70 columns the menu and the content are shown one at a time.
 - **Settings:** mode, name, server, status URL and theme. Enter changes the selected row; `s` saves to `re-psn.ini` (mode 0600).
   A refused value says which rule it broke. The optional status URL takes effect on refresh. Its token-file path is
   set in `re-psn.ini`; the UI does not display or edit the token itself.
+  **Find on LAN:** `f` here (or Ctrl+F while typing the server, also on the first start) broadcasts a discovery request and lists
+  the servers that answer, each with name, address:port, players, relay on or off and version. Up/down and Enter put the chosen
+  address in the server field (in Settings it is then an unsaved change; `s` saves it); `r` searches again, Esc closes. The search
+  runs in the background for about 1.5 s and never blocks the screen. With no answer the screen says: none found (the server must
+  run with discovery on; it does not cross subnets). Typing `host:port` works as before. If the server field already has a port,
+  the request goes to that UDP port, otherwise to 36100. The request is sent from a temporary UDP socket to 255.255.255.255 and to
+  the broadcast address of each IPv4 interface that is up; only servers started with discovery on answer, and only senders on a
+  private network. `internal/client` has `Discover` for it. `server = auto` in `re-psn.ini` is not supported.
 - **Help:** the keys and what the screens can show.
 
 | Key | What it does |
@@ -81,6 +89,7 @@ bottom. Under 70 columns the menu and the content are shown one at a time.
 | Tab | switch between Rooms and Leaderboards |
 | `e`, `b` | type the title, the board id |
 | `r` | ask the server again |
+| `f`, Ctrl+F | find servers on the LAN (Settings; while typing the server) |
 | `s` | save the settings |
 | `t` | dark or light theme (saved with the settings) |
 | `q`, Ctrl+C | quit (Ctrl+C also while typing) |

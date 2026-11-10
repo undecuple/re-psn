@@ -6,11 +6,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"strconv"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/undecuple/re-psn/app/internal/client"
 	"github.com/undecuple/re-psn/app/internal/config"
 )
 
@@ -24,6 +26,8 @@ type Options struct {
 	Timeout  time.Duration // for one refresh; 0 means 5 s
 	NoColor  bool          // NO_COLOR is set: bold and reverse only
 	Now      func() time.Time
+	// Discover looks for servers on the local network; nil means client.Discover. port is 0 for the default.
+	Discover func(ctx context.Context, wait time.Duration, port uint16) ([]client.Found, error)
 }
 
 type stage int
@@ -93,6 +97,8 @@ type Model struct {
 	fetchErr  error
 	fetchedAt time.Time
 
+	lan lanState
+
 	setRow   int
 	dirty    bool
 	saveNote string
@@ -107,6 +113,22 @@ type fetchedMsg struct {
 	snap Snapshot
 	err  error
 	at   time.Time
+}
+
+// lanState is the Find on LAN list: open while it is on screen, loading while a search runs.
+type lanState struct {
+	open    bool
+	loading bool
+	seq     int // the latest search; older answers are dropped
+	found   []client.Found
+	err     error
+	cur     int
+}
+
+type lanMsg struct {
+	seq   int
+	found []client.Found
+	err   error
 }
 
 type savedMsg struct {
@@ -131,6 +153,9 @@ func New(o Options) Model {
 	}
 	if o.Now == nil {
 		o.Now = time.Now
+	}
+	if o.Discover == nil {
+		o.Discover = client.Discover
 	}
 	m := Model{opt: o, file: o.File, set: o.File.Settings, w: 80, h: 24, stage: stageHome}
 	m.light = m.set.Theme == config.ThemeLight
@@ -168,6 +193,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case savedMsg:
 		return m.saved(msg)
+	case lanMsg:
+		if msg.seq == m.lan.seq && m.lan.open {
+			m.lan.loading, m.lan.found, m.lan.err, m.lan.cur = false, msg.found, msg.err, 0
+		}
 	case tea.PasteMsg:
 		if f := m.activeField(); f != nil {
 			f.insert(msg.Content)
@@ -175,6 +204,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		if msg.String() == "ctrl+c" {
 			return m.quit()
+		}
+		if m.lan.open {
+			return m.lanKey(msg.String())
 		}
 		if m.stage != stageHome {
 			return m.chooserKey(msg)
@@ -238,6 +270,9 @@ func (m Model) chooserKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 		return m, nil
+	}
+	if key == "ctrl+f" && m.stage == stageServer {
+		return m.startLAN(m.input.trimmed())
 	}
 	if key == "backspace" && m.input.value == "" {
 		m.problem = ""
@@ -384,6 +419,11 @@ func (m Model) editKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "esc":
 		m.editing, m.problem = editNone, ""
 		return m, nil
+	case "ctrl+f":
+		if m.editing == editServer {
+			return m.startLAN(m.edit.trimmed())
+		}
+		return m, nil
 	case "enter":
 	default:
 		m.edit.key(k)
@@ -479,6 +519,8 @@ func (m Model) settingsKey(key string) (tea.Model, tea.Cmd) {
 	case "s":
 		m.saveNote, m.saveErr = "", nil
 		return m, m.save(false)
+	case "f":
+		return m.startLAN(m.set.Server)
 	case "enter", "space":
 		switch m.setRow {
 		case 0:
@@ -525,4 +567,81 @@ func (m *Model) refresh() tea.Cmd {
 		s, err := f.Fetch(ctx, q)
 		return fetchedMsg{seq: seq, snap: s, err: err, at: now()}
 	}
+}
+
+// Find on LAN. The search runs in a command, so the screen stays responsive; its answer is the list below the
+// server field. Choosing a server puts its address into the field being edited, or into Server in Settings.
+
+// lanWait is how long one search listens for answers.
+const lanWait = client.DefaultDiscoverWait
+
+// startLAN opens the list and starts a search on the port of the server typed so far (the default if there is none).
+func (m Model) startLAN(typed string) (tea.Model, tea.Cmd) {
+	var port uint16
+	if _, p, err := net.SplitHostPort(typed); err == nil {
+		if n, err := strconv.ParseUint(p, 10, 16); err == nil {
+			port = uint16(n)
+		}
+	}
+	m.lan.seq++
+	m.lan.open, m.lan.loading, m.lan.found, m.lan.err, m.lan.cur = true, true, nil, nil, 0
+	seq, find := m.lan.seq, m.opt.Discover
+	return m, func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), lanWait+time.Second)
+		defer cancel()
+		found, err := find(ctx, lanWait, port)
+		return lanMsg{seq: seq, found: found, err: err}
+	}
+}
+
+func (m Model) lanKey(key string) (tea.Model, tea.Cmd) {
+	n := len(m.lan.found)
+	switch key {
+	case "esc", "q":
+		m.lan.open = false
+		m.lan.seq++ // drop the answer of a search still running
+	case "up", "k":
+		if n > 0 {
+			m.lan.cur = (m.lan.cur + n - 1) % n
+		}
+	case "down", "j":
+		if n > 0 {
+			m.lan.cur = (m.lan.cur + 1) % n
+		}
+	case "r":
+		if !m.lan.loading {
+			typed := m.set.Server
+			switch {
+			case m.stage == stageServer:
+				typed = m.input.trimmed()
+			case m.editing == editServer:
+				typed = m.edit.trimmed()
+			}
+			return m.startLAN(typed)
+		}
+	case "enter":
+		if m.lan.loading || n == 0 {
+			return m, nil
+		}
+		return m.useFound(m.lan.found[m.lan.cur]), nil
+	}
+	return m, nil
+}
+
+func (m Model) useFound(f client.Found) Model {
+	addr := f.Addr()
+	m.lan.open = false
+	m.problem = ""
+	switch {
+	case m.stage == stageServer:
+		m.input.value = addr
+	case m.editing == editServer:
+		m.edit.value = addr
+	default:
+		m.set.Server = addr
+		m.snap, m.fetchErr, m.loading = nil, nil, false
+		m.seq++
+		m.dirty = m.set != m.file.Settings
+	}
+	return m
 }

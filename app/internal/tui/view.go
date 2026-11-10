@@ -96,8 +96,14 @@ func (m Model) renderChooser() string {
 		b = append(b, m.st.text.Render("The server to use, as host:port (for example 127.0.0.1:36100)."), "",
 			"  "+m.st.muted.Render("Server ")+m.cursorField(m.input))
 		b = append(b, m.problemLines()...)
+		if m.lan.open {
+			b = append(b, "")
+			b = append(b, m.lanLines()...)
+			b = append(b, "", m.hints(m.lanHints()...))
+			break
+		}
 		b = append(b, "", m.st.muted.Render("Enter saves to "+m.opt.Path+"."), "",
-			m.hints("enter", "save", "backspace", "back (when empty)", "esc", "quit"))
+			m.hints("enter", "save", "ctrl+f", "find on LAN", "backspace", "back (when empty)", "esc", "quit"))
 	}
 	return lipgloss.NewStyle().Padding(1, 2).Render(strings.Join(b, "\n"))
 }
@@ -177,6 +183,10 @@ func (m Model) renderMenu() string {
 
 func (m Model) hintBar() string {
 	switch {
+	case m.lan.open:
+		return m.hints(m.lanHints()...)
+	case m.editing == editServer:
+		return m.hints("enter", "done", "esc", "cancel", "ctrl+u", "clear", "ctrl+f", "find on LAN")
 	case m.editing != editNone:
 		return m.hints("enter", "done", "esc", "cancel", "ctrl+u", "clear")
 	case !m.content:
@@ -186,7 +196,7 @@ func (m Model) hintBar() string {
 	case m.menu == paneBoards:
 		return m.hints("tab", "rooms", "e", "title", "b", "board", "r", "refresh", "esc", "menu", "q", "quit")
 	case m.menu == paneSettings:
-		return m.hints("↑/↓", "move", "enter", "change", "s", "save", "esc", "menu", "t", "theme", "q", "quit")
+		return m.hints("↑/↓", "move", "enter", "change", "f", "find on LAN", "s", "save", "esc", "menu", "t", "theme", "q", "quit")
 	case m.menu == paneOverview:
 		return m.hints("r", "refresh", "esc", "menu", "t", "theme", "q", "quit")
 	}
@@ -393,7 +403,7 @@ func (m Model) renderSettings() []string {
 	rows := []struct{ label, value, note string }{
 		{"Mode", orUnset(string(m.set.Mode)), "enter: play, host, both"},
 		{"Name", orUnset(m.set.Name), "enter to edit"},
-		{"Server", orUnset(m.set.Server), "host:port"},
+		{"Server", orUnset(m.set.Server), "host:port; f finds one on the LAN"},
 		{"Status URL", orUnset(m.set.StatusURL), "optional HTTP status; r refreshes"},
 		{"Theme", m.themeName(), "enter or t"},
 	}
@@ -413,6 +423,9 @@ func (m Model) renderSettings() []string {
 		b = append(b, mark+label+" "+value+" "+m.st.muted.Render(r.note))
 	}
 	b = append(b, "")
+	if m.lan.open {
+		return append(b, m.lanLines()...)
+	}
 	if m.problem != "" {
 		b = append(b, m.st.bad.Render("Not accepted: ")+m.st.text.Render(m.problem))
 	}
@@ -435,6 +448,8 @@ func (m Model) renderHelp() []string {
 		{"tab", "switch between Rooms and Leaderboards"},
 		{"e / b", "type the title / the board id"},
 		{"r", "ask the server again"},
+		{"f", "find servers on the LAN (Settings)"},
+		{"ctrl+f", "the same, while typing the server"},
 		{"s", "save the settings"},
 		{"t", "dark or light theme"},
 		{"q, ctrl+c", "quit"},
@@ -455,4 +470,35 @@ func onOff(b bool) string {
 		return "on"
 	}
 	return "off"
+}
+
+// lanNone is the whole answer when nothing replied.
+const lanNone = "none found (the server must run with discovery on; it does not cross subnets)"
+
+func (m Model) lanHints() []string {
+	if m.lan.loading {
+		return []string{"esc", "cancel"}
+	}
+	return []string{"↑/↓", "choose", "enter", "use", "r", "search again", "esc", "close"}
+}
+
+func (m Model) lanLines() []string {
+	b := []string{m.st.heading.Render("Servers on the LAN")}
+	switch {
+	case m.lan.loading:
+		return append(b, m.st.warn.Render("Searching..."))
+	case m.lan.err != nil:
+		b = append(b, m.st.bad.Render("Search failed: ")+m.st.text.Render(clean(m.lan.err.Error())))
+	case len(m.lan.found) == 0:
+		return append(b, m.st.text.Render(lanNone))
+	}
+	for i, f := range m.lan.found {
+		line := fmt.Sprintf("%s  %s  %d players  relay %s  %s", f.Name, f.Addr(), f.Players, onOff(f.Relay), f.Version)
+		if i == m.lan.cur {
+			b = append(b, m.st.selected.Render("> "+line))
+		} else {
+			b = append(b, m.st.text.Render("  "+line))
+		}
+	}
+	return b
 }

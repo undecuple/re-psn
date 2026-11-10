@@ -32,6 +32,10 @@ All notable changes to this project are documented here. The format follows
   who could connect directly, so the relay can be tested from one network. The server logs a warning at start and refuses to
   start with it and without `-relay`. It sets the existing ROUTE flag, so clients need no change; datagrams (UDP RELAY) are not
   forced. For testing only: it uses the host's bandwidth.
+- The desktop app can find servers on the local network: Find on LAN (`f` in Settings, Ctrl+F while typing the server, also on the
+  first start) broadcasts one 64-byte UDP datagram (`PSNR`, type 0x04, a random nonce) from a temporary socket, lists the replies
+  (name, address:port, players, relay, version) and puts the chosen address in the server field; typing `host:port` still works.
+  The Go client package has `Discover` for it. A server answers only when it was started with `-discover`, and only inside its own subnet; otherwise the list says none found.
 
 ### Added
 - The status page and `/api/stats` show known games by name: rooms and leaderboards carry a `label` such as
