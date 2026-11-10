@@ -6,14 +6,14 @@ What re-psn does today and what is planned, one row per feature. Each status res
 
 | Status | Meaning | Features |
 |---|---|---|
-| available | merged, with a test or a recorded run | 29 |
+| available | merged, with a test or a recorded run | 33 |
 | not yet verified | merged, but nothing in the repository checks it | 3 |
-| partial | merged in part, or with known gaps | 7 |
+| partial | merged in part, or with known gaps | 8 |
 | in progress | an open pull request or branch | 0 |
 | planned | wanted and intended, not started | 15 |
 | later | after the planned items, or after a decision | 9 |
 | declined | will not be done | 1 |
-| all | | 64 |
+| all | | 69 |
 
 ## Rooms and matchmaking
 
@@ -55,6 +55,9 @@ What re-psn does today and what is planned, one row per feature. Each status res
 | ID | Feature | Status | Since | Evidence | Note |
 |---|---|---|---|---|---|
 | `status-page` | **Status page and /api/stats, with a token**: A read-only page and JSON on a separate listener, off unless `-http` names an address (`127.0.0.1:36101` keeps it on localhost). `-http-token` requires a token (`Authorization: Bearer`, or `?token=`), and the server warns at start when the page is reachable from elsewhere without one. Since v0.4.0 the page uses gruvbox-material, Rooms/Leaderboards tabs, System/Light/Dark and browser-local text size, spacing and contrast-checked custom colours. | available | 0.2.0 | [`server/api.go`](../server/api.go), [`TestStatusToken`](../server/api_test.go), [`TestReachable`](../server/api_test.go), [`TestStatusPageOff`](../server/statuspage_test.go), [`TestStatusPageOn`](../server/statuspage_test.go), [`docs/status.png`](status.png), [`server/status_theme_test.go`](../server/status_theme_test.go), [`TestStatusTerminalPage`](../server/status_theme_test.go), [`TestStatusThemeAuthenticationAndHeaders`](../server/status_theme_test.go), [`tools/status_browser_check.mjs`](../tools/status_browser_check.mjs), [`docs/running.md`](running.md) | The page and /api/stats are upstream work (0.1.0); the token is the fork's. |
+| `status-games` | **Known games by name**: `/api/stats` and the status page label rooms and leaderboards with the game's name and serials, for example `[Killzone 3 (BCUS98234, BCES01007)]`, from a small table embedded in the server (four games so far); a game the table does not know keeps its communication ID. The protocol is unchanged. | available | main | [`server/titles.go`](../server/titles.go), [`server/titles.tsv`](../server/titles.tsv), [`TestTitleTableRows`](../server/titles_test.go), [`TestParseGamesSkipsBadLines`](../server/titles_test.go), [`TestTitleLabel`](../server/titles_test.go), [`TestStatusShowsGameLabelsSorted`](../server/titles_test.go) | Not in v0.4.0. The table is never fetched at run time. |
+| `status-verified` | **Verified player count**: Each public room has `verified` (members whose UDP probe the server accepted on this connection) and the top level has `verified_players`; the page shows '(N verified)' beside a room's member count. The protocol is unchanged. | available | main | [`server/api.go`](../server/api.go), [`TestVerifiedPlayerCount`](../server/verified_test.go) | Not in v0.4.0. A count of probes the server accepted, not a check of who the players are. |
+| `status-latency` | **Player-reported latency**: HEARTBEAT may carry the player's own last round trip (`rtt_ms`, 2 bytes); the server shows it next to each member as reported by the player. The C client and the app's Go client send it once a title opts in (recommended, off by default). | available | main | [`server/api.go`](../server/api.go), [`TestHeartbeatReportsRTT`](../server/rtt_test.go), [`TestReportedRTTGoesStale`](../server/rtt_test.go), [`TestCClientReportsRTT`](../server/rtt_client_test.go), [`TestConformanceHeartbeatReportsRTT`](../app/internal/client/rtt_test.go) | Not in v0.4.0. Reported by the player and not verified; display only. The round trip includes the server's own time. |
 
 ## Metrics
 
@@ -114,6 +117,8 @@ What re-psn does today and what is planned, one row per feature. Each status res
 | `net-guardrails` | **More UDP and relay guardrails**: Bounded per-source-IP UDP packet admission shared by probes, relay and invalid traffic, plus aggregate drop-reason counters in /api/stats. The token bucket tracks at most 4096 sources, expires idle entries and rejects new sources at capacity. | partial | 0.4.0 | [`server/udp_guard.go`](../server/udp_guard.go), [`server/udp.go`](../server/udp.go), [`server/relay.go`](../server/relay.go), [`TestUDPLimiter`](../server/udp_guard_test.go), [`TestUDPAdmissionRealPackets`](../server/udp_guard_test.go), [`TestUDPCountersStatsAuthenticationAndConcurrency`](../server/udp_guard_test.go), [`docs/udp-guardrails.md`](udp-guardrails.md) | Initial packet limiter only: default 1000 packets/second with the same burst, configurable with -max-udp-rate and 0 for off; players behind one NAT share it. Per-player relay byte/datagram budgets, payload and TCP stream limits, failed-token blocking and UDP fuzz coverage remain planned. A larger token needs a protocol version bump. |
 | `net-checks` | **Connection checks**: A check for players and hosts that says where a connection fails (server reachable, HELLO accepted, UDP probe answered, NAT behaviour, peer reachable, relay available) and shows round trip, loss and whether each peer is up. | planned |  |  | Not designed yet. |
 | `net-upnp` | **UPnP**: Open a player's P2P port on their router automatically. | later |  |  | Not started. |
+| `net-relay-force` | **Force the relay (testing)**: `-relay-force` (`RE_PSN_RELAY_FORCE`, off by default, needs `-relay`) sends every stream through the relay, even between players who could connect directly, so the relay can be tested from one network. Datagrams are not forced. | available | main | [`server/relay.go`](../server/relay.go), [`TestRelayForceRule`](../server/relay_force_test.go), [`TestRoutePushForced`](../server/relay_force_test.go), [`TestRelayForceNeedsRelay`](../server/relay_force_test.go), [`TestRelayForceFlagAndEnv`](../server/relay_force_test.go) | Not in v0.4.0. For testing only: it uses the host's bandwidth. |
+| `net-peer-keys` | **Peer keys (server side)**: A client may ask with `PEER_AUTH`; each pair of members who both asked then gets one new random 16-byte key in a `PEER_KEY` push, for tagging their direct packets. Opt-in; clients that do not ask are unaffected. | partial | main | [`server/peerkey.go`](../server/peerkey.go), [`TestPeerKeyPair`](../server/peerkey_test.go), [`TestPeerKeysPerPair`](../server/peerkey_test.go), [`TestPeerKeyNeedsBoth`](../server/peerkey_test.go), [`TestPeerKeyLateOptIn`](../server/peerkey_test.go), [`TestPeerKeyRepeatAndRejoin`](../server/peerkey_test.go), [`TestPeerAuthNeedsHello`](../server/peerkey_test.go) | Not in v0.4.0. No client uses the keys yet, and nothing is tagged on the wire. The keys travel over plain TCP, so this gives no confidentiality and no protection from someone who can read a player's network traffic. |
 
 ## Medius profiles
 

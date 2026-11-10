@@ -4,9 +4,9 @@
  "repository": "https://github.com/undecuple/re-psn",
  "go": "1.22",
  "status_counts": {
-  "available": 29,
+  "available": 33,
   "unverified": 3,
-  "partial": 7,
+  "partial": 8,
   "in-progress": 0,
   "planned": 15,
   "later": 9,
@@ -780,6 +780,66 @@
    "note": "Runtime integration was inspected at the linked upstream revision; no actual title was built or run for the guide. Native example/conformance checks are synthetic loopback evidence, not gameplay or NAT certification.",
    "status_label": "available",
    "status_class": "ok"
+  },
+  {
+   "id": "status-games",
+   "area": "Status page",
+   "feature": "Known games by name",
+   "detail": "`/api/stats` and the status page label rooms and leaderboards with the game's name and serials, for example `[Killzone 3 (BCUS98234, BCES01007)]`, from a small table embedded in the server (four games so far); a game the table does not know keeps its communication ID. The protocol is unchanged.",
+   "status": "available",
+   "since": "main",
+   "evidence": "server/titles.go, server/titles.tsv, TestTitleTableRows, TestParseGamesSkipsBadLines, TestTitleLabel, TestStatusShowsGameLabelsSorted",
+   "note": "Not in v0.4.0. The table is never fetched at run time.",
+   "status_label": "available",
+   "status_class": "ok"
+  },
+  {
+   "id": "status-verified",
+   "area": "Status page",
+   "feature": "Verified player count",
+   "detail": "Each public room has `verified` (members whose UDP probe the server accepted on this connection) and the top level has `verified_players`; the page shows '(N verified)' beside a room's member count. The protocol is unchanged.",
+   "status": "available",
+   "since": "main",
+   "evidence": "server/api.go, TestVerifiedPlayerCount",
+   "note": "Not in v0.4.0. A count of probes the server accepted, not a check of who the players are.",
+   "status_label": "available",
+   "status_class": "ok"
+  },
+  {
+   "id": "status-latency",
+   "area": "Status page",
+   "feature": "Player-reported latency",
+   "detail": "HEARTBEAT may carry the player's own last round trip (`rtt_ms`, 2 bytes); the server shows it next to each member as reported by the player. The C client and the app's Go client send it once a title opts in (recommended, off by default).",
+   "status": "available",
+   "since": "main",
+   "evidence": "server/api.go, TestHeartbeatReportsRTT, TestReportedRTTGoesStale, TestCClientReportsRTT, TestConformanceHeartbeatReportsRTT",
+   "note": "Not in v0.4.0. Reported by the player and not verified; display only. The round trip includes the server's own time.",
+   "status_label": "available",
+   "status_class": "ok"
+  },
+  {
+   "id": "net-relay-force",
+   "area": "Network",
+   "feature": "Force the relay (testing)",
+   "detail": "`-relay-force` (`RE_PSN_RELAY_FORCE`, off by default, needs `-relay`) sends every stream through the relay, even between players who could connect directly, so the relay can be tested from one network. Datagrams are not forced.",
+   "status": "available",
+   "since": "main",
+   "evidence": "server/relay.go, TestRelayForceRule, TestRoutePushForced, TestRelayForceNeedsRelay, TestRelayForceFlagAndEnv",
+   "note": "Not in v0.4.0. For testing only: it uses the host's bandwidth.",
+   "status_label": "available",
+   "status_class": "ok"
+  },
+  {
+   "id": "net-peer-keys",
+   "area": "Network",
+   "feature": "Peer keys (server side)",
+   "detail": "A client may ask with `PEER_AUTH`; each pair of members who both asked then gets one new random 16-byte key in a `PEER_KEY` push, for tagging their direct packets. Opt-in; clients that do not ask are unaffected.",
+   "status": "partial",
+   "since": "main",
+   "evidence": "server/peerkey.go, TestPeerKeyPair, TestPeerKeysPerPair, TestPeerKeyNeedsBoth, TestPeerKeyLateOptIn, TestPeerKeyRepeatAndRejoin, TestPeerAuthNeedsHello",
+   "note": "Not in v0.4.0. No client uses the keys yet, and nothing is tagged on the wire. The keys travel over plain TCP, so this gives no confidentiality and no protection from someone who can read a player's network traffic.",
+   "status_label": "partial",
+   "status_class": "warn"
   }
  ],
  "roadmap": {
@@ -822,7 +882,12 @@
    "docs-art",
    "docs-website",
    "repo-check",
-   "docs-integration"
+   "docs-integration",
+   "status-games",
+   "status-verified",
+   "status-latency",
+   "net-relay-force",
+   "net-peer-keys"
   ],
   "Now": [],
   "Next": [
