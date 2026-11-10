@@ -17,6 +17,7 @@
 | **1** port | TCP and UDP 36100 for players ([ports](docs/running.md#ports)) |
 | **1** C file | the client: no third-party libraries and no threads ([client/psnr.c](client/psnr.c)) |
 | **Linux and Windows** | amd64 and arm64 on Linux, amd64 on Windows ([releases](https://github.com/undecuple/re-psn/releases)) |
+| **1** desktop app | a terminal UI to watch a server's rooms and leaderboards; build it from source today, a release download is planned ([app/README.md](app/README.md)) |
 
 ## Quick start: host a server
 
@@ -52,6 +53,7 @@ has short guides for players and hosts.
 | Players behind routers get connected, with an optional relay | tested in Docker by the [NAT lab](lab/README.md) |
 | The client is one C file | [client/psnr.c](client/psnr.c), tested against the server by `client/test_psnr.c` |
 | Hardened and checked | fuzz tests, race detector, vulnerability and secret scans in [CI](.github/workflows/ci.yml) |
+| A lobby you can read: games by name, verified player counts and player-reported latency | on `main`, not in v0.4.0: [features list](docs/features.md), [`/api/stats`](docs/api.md#http) |
 | Every feature says how far it got | [features list](docs/features.md) with status and evidence |
 
 ## Coming soon
@@ -83,7 +85,9 @@ client, a metrics endpoint, signed releases.
 re-psn is a fork of [psnr](https://github.com/sp00nznet/psnr) by sp00nz, who wrote the original server, the C client and the
 protocol; [LICENSE](LICENSE) keeps upstream's MIT licence and copyright line, and [NOTICE.md](NOTICE.md) credits the upstream work.
 This fork adds hardened CI and fuzz tests, invite-only rooms, limits, logging, reverse proxy support, a UDP source check, container
-files and release tooling; the [features list](docs/features.md) and [CHANGELOG.md](CHANGELOG.md) have the details.
+files and release tooling; the [features list](docs/features.md) and [CHANGELOG.md](CHANGELOG.md) have the details. Since v0.4.0, `main`
+also has a lobby view with game names, verified player counts and player-reported latency, `-relay-force` for testing the relay from
+one network, and the server half of opt-in peer keys; these are on `main` and not in a release yet.
 
 ## Overview
 
@@ -214,6 +218,10 @@ Available on `main` today; [docs/features.md](docs/features.md) has every featur
 - **NAT traversal:** address probes and hole punching, an optional relay, and a UDP source address check.
 - **Hosting:** limits, log levels, a status page with an optional token, reverse proxy support, `RE_PSN_*` settings, Docker and
   Podman files, and deployment examples.
+- **Lobby view (on `main`, after v0.4.0):** the status page and `/api/stats` name known games, count verified players and show the
+  round trip each player reports, labelled as reported and unverified.
+- **Peer keys (on `main`, after v0.4.0, server side only):** an opt-in way for the server to give each pair of players in a room a shared
+  key for tagging their direct packets. No client uses it yet, and it gives no confidentiality ([docs/api.md](docs/api.md#peer-keys)).
 - **C client:** one file, no third-party libraries, no threads.
 - **Checks:** fuzz tests; CI with the race detector, vulnerability and secret scans, the NAT lab and code scanning.
 
@@ -230,7 +238,7 @@ website's colours. The server's version, uptime and connection counts are not av
 An explicitly configured [HTTP status source](app/README.md#optional-native-http-status) adds uptime, connection totals,
 public-room members and board summaries natively, with the existing token rules and no browser. It falls back to the
 game protocol when HTTP is unavailable; the server version remains unshared.
-The app has no release binary: build it from source (see [app/README.md](app/README.md)). On Linux desktops, starting without a terminal can open a supported terminal; the Windows build uses its console.
+The app has no release binary yet: build it from source (see [app/README.md](app/README.md)); a download is planned for the next release. On Linux desktops, starting without a terminal can open a supported terminal; the Windows build uses its console.
 See the [desktop startup instructions](app/README.md#starting-from-the-desktop) and the limits of local testing.
 The terminal UI uses [Bubble Tea](https://github.com/charmbracelet/bubbletea) and [Lip Gloss](https://github.com/charmbracelet/lipgloss)
 (MIT); the server module stays standard-library only. The app module needs Go 1.26 or newer; the server and the C client keep
