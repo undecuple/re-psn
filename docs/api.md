@@ -71,7 +71,9 @@ by the player, not measured by the server, and nobody checks it. A value above 6
 are ignored. A HEARTBEAT without the field changes nothing: clients that do not send it keep working, and a server from before
 this field ignores the body of a HEARTBEAT, so a client that sends it works against older servers too. The C client times each `psnr_call`
 (send to reply, so the server's own time is included), reports the smallest of the last eight in the HEARTBEAT that `psnr_poll`
-sends, once a title opts in with `psnr_report_rtt(c, 1)`, which is recommended; the default is off. See `client/psnr.h`.
+sends, once a title opts in with `psnr_report_rtt(c, 1)`, which is recommended; the default is off. See `client/psnr.h`. The desktop app's
+Go client (`app/internal/client`) does the same: it times each call, and `Conn.ReportRTT(true)` makes `Heartbeat` carry the smallest of the
+last eight; the default is off.
 
 **HELLO fields:**
 - `comm_id` is the title's NP communication ID (`NPWR00860_00`). It scopes

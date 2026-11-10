@@ -72,6 +72,9 @@ type Conn struct {
 	wmu     sync.Mutex
 	nextReq atomic.Uint32
 
+	rtt       rttTracker  // round trips of recent calls (rtt.go)
+	reportRTT atomic.Bool // Heartbeat carries the smallest of them
+
 	mu      sync.Mutex
 	waiting map[uint32]chan frame
 	queue   []Push
@@ -260,6 +263,7 @@ func (c *Conn) send(ctx context.Context, t byte, req uint32, body func(*encoder)
 func (c *Conn) call(ctx context.Context, op string, t, want byte, body func(*encoder)) (*decoder, error) {
 	req := c.nextReq.Add(1)
 	ch := make(chan frame, 1)
+	started := time.Now()
 	c.mu.Lock()
 	if c.err != nil {
 		c.mu.Unlock()
@@ -278,6 +282,7 @@ func (c *Conn) call(ctx context.Context, op string, t, want byte, body func(*enc
 	}
 	select {
 	case f := <-ch:
+		c.rtt.note(time.Since(started))
 		return replyFields(op, want, f)
 	case <-ctx.Done():
 		return nil, fmt.Errorf("%s: waiting for the reply: %w", op, ctx.Err())

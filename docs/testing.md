@@ -33,7 +33,7 @@ build may need more time. The command can be invoked by its absolute path from a
 | Phase | Existing tests | Coverage |
 |---|---|---|
 | Native client | `TestCClient`, `TestCClientReportsRTT` | Builds/runs `client/test_psnr.c` and `client/examples/minimal.c` against the in-process TCP/UDP server, including example argument validation and empty/populated searches; the second checks the round trip a client reports in HEARTBEAT reaches the server |
-| Go app client | `TestConformanceRoomsAndScores`, `TestConformanceRelayRoute`, `TestConformanceErrors` | Builds the server, starts it on free loopback ports, and exercises two-client room/score operations, route notifications and protocol errors |
+| Go app client | `TestConformanceRoomsAndScores`, `TestConformanceRelayRoute`, `TestConformanceErrors`, `TestConformanceHeartbeatReportsRTT` | Builds the server, starts it on free loopback ports, and exercises two-client room/score operations, route notifications and protocol errors; the last test checks that a connection that opted in reports its round trip in HEARTBEAT and one that did not sends an empty one |
 
 CI also requires `TestCheckReleaseAssets`, `TestReleaseAssetListsAgree` and `TestReleaseCheckWorkflow` to run on Linux, so a
 missing `sh`, `awk` or `diff` fails the job instead of skipping them.
