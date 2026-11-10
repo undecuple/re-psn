@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -52,6 +53,27 @@ type statsJSON struct {
 	VerifiedPlayers int          `json:"verified_players"`
 	Boards          []boardJSON  `json:"boards"`
 	UDPDrops        udpDropStats `json:"udp_drops"`
+	// The fields below are aggregate and carry no address or player. A client that does not know them ignores them.
+	Version     string       `json:"version"`
+	Relay       bool         `json:"relay"`
+	RelayBytes  uint64       `json:"relay_bytes"` // payload carried by the relay since start, not interface traffic
+	Limits      limitsJSON   `json:"limits"`
+	TCPRefusals refusalsJSON `json:"tcp_refusals"`
+}
+
+// limitsJSON is what is in force; zero means no limit.
+type limitsJSON struct {
+	MaxRooms        int `json:"max_rooms"`
+	MaxPlayerRooms  int `json:"max_player_rooms"`
+	MaxConnsPerAddr int `json:"max_conns_per_addr"`
+	MaxReqRate      int `json:"max_req_rate"`
+	MaxUDPRate      int `json:"max_udp_rate"`
+}
+
+// refusalsJSON counts TCP connections turned away since start.
+type refusalsJSON struct {
+	ConnsPerAddr uint64 `json:"conns_per_addr"`
+	ReqRate      uint64 `json:"req_rate"`
 }
 
 // boardStats lists the leaderboards, sorted by title and board. A store
@@ -94,6 +116,12 @@ func (s *Server) snapshot() statsJSON {
 		Rooms:       []roomJSON{},
 		Boards:      boards,
 		UDPDrops:    s.udpDrops.snapshot(),
+		Version:     version,
+		Relay:       s.relay,
+		RelayBytes:  atomic.LoadUint64(&s.relayed),
+		Limits: limitsJSON{MaxRooms: s.maxRooms, MaxPlayerRooms: s.maxPlayerRooms, MaxConnsPerAddr: s.maxPerAddr,
+			MaxReqRate: s.maxReqRate, MaxUDPRate: s.maxUDPRate},
+		TCPRefusals: refusalsJSON{ConnsPerAddr: atomic.LoadUint64(&s.refusedConns), ReqRate: atomic.LoadUint64(&s.refusedReqRate)},
 	}
 	for _, c := range s.clients {
 		if c.commID != "" && c.udpPort != 0 {

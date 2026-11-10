@@ -310,6 +310,16 @@ This is a separate listener, off unless `-http` names an address (for example
 | `/api/stats` | the same data as JSON, plus aggregate `udp_drops` counters; see [UDP guardrails](udp-guardrails.md#drop-counters) |
 | `/healthz` | data-free local TCP/UDP readiness: 200 when ready, 503 otherwise; GET/HEAD only |
 
+### Server state
+
+`/api/stats` also reports, for an operator watching a server: `version`, `relay` (whether `-relay` is on), `relay_bytes` (payload the
+relay has carried since start; not interface traffic, so it is not a bandwidth figure), `limits` (`max_rooms`, `max_player_rooms`,
+`max_conns_per_addr`, `max_req_rate`, `max_udp_rate`; 0 means no limit) and `tcp_refusals` (`conns_per_addr`, connections turned
+away for too many from one address; `req_rate`, connections closed for sending requests too fast). Counts are since start and reset
+when the server restarts. They are aggregate: no address and no player appears in these fields. Servers before this change do not
+send them, so a reader treats a missing field as "not reported". The page's access rules are unchanged: protected by `-http-token`
+when set.
+
 ### Verified players
 
 `/api/stats` has `verified_players` (connected players, in a room or not) and, on each room, `verified` (its members) counting
