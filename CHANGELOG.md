@@ -14,6 +14,10 @@ All notable changes to this project are documented here. The format follows
 - `/api/stats` and the status page count verified players: each public room has `verified` (members whose UDP probe the server
   has accepted on this connection) and the top level has `verified_players`. The page shows "(N verified)" after a room's
   member count when N is above zero. The protocol is unchanged.
+- `-relay-force` (`RE_PSN_RELAY_FORCE`, off by default, needs `-relay`): every stream goes through the relay, even between players
+  who could connect directly, so the relay can be tested from one network. The server logs a warning at start and refuses to
+  start with it and without `-relay`. It sets the existing ROUTE flag, so clients need no change; datagrams (UDP RELAY) are not
+  forced. For testing only: it uses the host's bandwidth.
 
 ### Added
 - The status page and `/api/stats` show known games by name: rooms and leaderboards carry a `label` such as

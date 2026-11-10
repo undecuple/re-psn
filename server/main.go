@@ -55,6 +55,7 @@ func main() {
 	proxyProto := toggle("proxy-protocol", false, "require a PROXY protocol v1/v2 header on the game TCP port from a trusted proxy (needs -trusted-proxies)")
 	udpAny := toggle("udp-any-source", false, "accept UDP probes and relay packets from an address other than the player's TCP address (for players whose UDP leaves from another address, such as some multi-WAN or carrier NAT setups; weakens the check against spoofed or stolen-token probes)")
 	relay := toggle("relay", false, "carry traffic between players who can't reach each other directly (uses this server's bandwidth)")
+	relayForce := toggle("relay-force", false, "send every stream through the relay, whether or not the players could connect directly (for testing the relay from one network; needs -relay; uses this server's bandwidth)")
 	db := flag.String("db", "off", "score storage: off or memory (both keep scores in memory; no database backend is built yet)")
 	dbFile := flag.String("db-file", "", "read the -db setting from this file instead (it may hold a password)")
 	replace := toggle("replace", false, "if the game port is already in use by an earlier instance of this server, ask it to stop, wait for the port, then start (Linux only)")
@@ -108,6 +109,13 @@ func main() {
 	s.log = logger
 	s.scores = scores
 	s.relay = *relay
+	if *relayForce && !*relay {
+		fatal(errors.New("-relay-force needs -relay"))
+	}
+	s.relayForce = *relayForce
+	if *relayForce {
+		logger.Warn("-relay-force: every stream goes through the relay; use it for testing only, it costs this server's bandwidth")
+	}
 	trusted, err := parseTrusted(*trustedList)
 	if err != nil {
 		fatal(err)

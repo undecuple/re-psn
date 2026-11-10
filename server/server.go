@@ -31,8 +31,9 @@ const (
 )
 
 type Server struct {
-	log   *slog.Logger
-	relay bool // -relay: carry traffic for players who can't reach each other (relay.go)
+	log        *slog.Logger
+	relay      bool // -relay: carry traffic for players who can't reach each other (relay.go)
+	relayForce bool // -relay-force: with relay, send every stream through it (a test aid)
 
 	httpToken string // -http-token: required by the status page when set (api.go)
 

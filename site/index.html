@@ -302,6 +302,7 @@
 <ul>
 <li>HEARTBEAT may carry the player&#x27;s own last round trip (<code>rtt_ms</code>, 2 bytes).</li>
 <li><code>/api/stats</code> and the status page count verified players: each public room has <code>verified</code> (members whose UDP probe the server has accepted on this connection) and the top level has <code>verified_players</code>.</li>
+<li><code>-relay-force</code> (<code>RE_PSN_RELAY_FORCE</code>, off by default, needs <code>-relay</code>): every stream goes through the relay, even between players who could connect directly, so the relay can be tested from one network.</li>
 <li>The status page and <code>/api/stats</code> show known games by name: rooms and leaderboards carry a <code>label</code> such as <code>[Killzone 3 (BCUS98234, BCES01007)]</code>, with <code>game</code> and <code>serials</code> fields, and are sorted by it.</li>
 </ul>
 <h4>Fixed</h4>
@@ -314,7 +315,7 @@
 </section>
 <section id="settings">
 <h2>Settings</h2>
-<p>Each of the 21 flags can also be set as a <code>RE_PSN_&lt;FLAG&gt;</code> variable. A flag on the command line wins, then the variable; a value that does not parse stops the server at start. It runs with no settings at all. <a href="https://github.com/undecuple/re-psn/blob/main/docs/running.md">docs/running.md</a> has the full text.</p>
+<p>Each of the 22 flags can also be set as a <code>RE_PSN_&lt;FLAG&gt;</code> variable. A flag on the command line wins, then the variable; a value that does not parse stops the server at start. It runs with no settings at all. <a href="https://github.com/undecuple/re-psn/blob/main/docs/running.md">docs/running.md</a> has the full text.</p>
 <table class="stack set">
 <thead><tr><th>Flag</th><th>Variable</th><th>Default</th><th>What it does</th></tr></thead>
 <tbody>
@@ -336,6 +337,7 @@
 <tr><td data-label="Flag"><code>-proxy-protocol</code></td><td data-label="Variable"><code>RE_PSN_PROXY_PROTOCOL</code></td><td data-label="Default"><code>off</code></td><td data-label="What it does">Require a PROXY v1/v2 header from a trusted proxy on the game TCP port</td></tr>
 <tr><td data-label="Flag"><code>-udp-any-source</code></td><td data-label="Variable"><code>RE_PSN_UDP_ANY_SOURCE</code></td><td data-label="Default"><code>off</code></td><td data-label="What it does">Accept UDP probes and relay packets from another address than the player&#x27;s TCP one</td></tr>
 <tr><td data-label="Flag"><code>-relay</code></td><td data-label="Variable"><code>RE_PSN_RELAY</code></td><td data-label="Default"><code>off</code></td><td data-label="What it does">Carry traffic for players who cannot reach each other (uses the host&#x27;s bandwidth)</td></tr>
+<tr><td data-label="Flag"><code>-relay-force</code></td><td data-label="Variable"><code>RE_PSN_RELAY_FORCE</code></td><td data-label="Default"><code>off</code></td><td data-label="What it does">With -relay, send every stream through the relay, even between players who could connect directly. For testing the relay from one network; uses the host&#x27;s bandwidth</td></tr>
 <tr><td data-label="Flag"><code>-db</code></td><td data-label="Variable"><code>RE_PSN_DB</code></td><td data-label="Default"><code>off</code></td><td data-label="What it does">Score storage: off or memory</td></tr>
 <tr><td data-label="Flag"><code>-db-file</code></td><td data-label="Variable"><code>RE_PSN_DB_FILE</code></td><td data-label="Default"><code>none</code></td><td data-label="What it does">Read the -db setting from this file instead</td></tr>
 <tr><td data-label="Flag"><code>-replace</code></td><td data-label="Variable"><code>RE_PSN_REPLACE</code></td><td data-label="Default"><code>off</code></td><td data-label="What it does">If an earlier re-psn of this user holds the game port, stop it (SIGTERM) and start in its place (Linux only)</td></tr>

@@ -374,6 +374,7 @@ Variables are upper case, with dashes as underscores. Defaults are those of `./r
 | `-proxy-protocol` | `RE_PSN_PROXY_PROTOCOL` | off | Require a PROXY v1/v2 header from a trusted proxy on the game TCP port |
 | `-udp-any-source` | `RE_PSN_UDP_ANY_SOURCE` | off | Accept UDP probes and relay packets from another address than the player's TCP one |
 | `-relay` | `RE_PSN_RELAY` | off | Carry traffic for players who cannot reach each other (uses the host's bandwidth) |
+| `-relay-force` | `RE_PSN_RELAY_FORCE` | off | With `-relay`, send every stream through the relay, even between players who could connect directly. For testing the relay from one network; uses the host's bandwidth |
 | `-db` | `RE_PSN_DB` | `off` | Score storage: `off` or `memory` |
 | `-db-file` | `RE_PSN_DB_FILE` | none | Read the `-db` setting from this file instead |
 | `-replace` | `RE_PSN_REPLACE` | off | If an earlier re-psn of this user holds the game port, stop it (SIGTERM) and start in its place (Linux only) |
