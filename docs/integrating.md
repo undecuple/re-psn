@@ -19,6 +19,9 @@ on 2026-11-07. The C example is compiled and run by this repository's required n
 below are source inspection at that pin, not an executed game-compatibility claim. Record your exact server, client,
 runtime and title-build revisions when testing; later versions can differ.
 
+The pin is older than `main`. Later changes (player-reported latency, the lobby view, `-relay-force` and server-side peer keys) are not
+covered by this guide's source inspection and are not in v0.4.0; see the [CHANGELOG](../CHANGELOG.md).
+
 ```mermaid
 flowchart LR
   game[Guest online calls] --> adapter[Runtime adapter and callback queue]
@@ -106,7 +109,9 @@ $env:PS3_NET_P2P_PORT = '3658'
 The inspected bridge checks whether variables are present: `PS3_NET_ONLINE=0` still enables its online path when
 `PSNR_SERVER` is set. Remove the online variables for an offline run, and restart the process after changing cached
 configuration. Use a valid online name starting with a letter, 3–16 letters/digits/`-`/`_`, and peer port 1–65535.
-The port parser does not validate that range for you. `PSNR_SERVER` is a host or IPv4 address with an optional port
+That name rule is the desktop app's and this guide's advice. The server itself only needs a non-empty communication ID (12 bytes
+at most) and takes a name of up to 16 bytes as sent, empty included. It compares names without regard to case, and the C client
+truncates longer values. The port parser does not validate that range for you. `PSNR_SERVER` is a host or IPv4 address with an optional port
 (default 36100), not an HTTP URL. The C transport uses IPv4; use a name resolving to IPv4 or an IPv4 literal.
 [Setup and enable checks](https://github.com/sp00nznet/ps3recomp/blob/de4f090328ea08bef6b2f15caec0b85e343a7ece/libs/network/np_psnr.c#L60-L100).
 

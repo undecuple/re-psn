@@ -152,7 +152,7 @@ Two test players meet in a room and connect directly, and the C client's test le
 Two test players meet in a room and connect directly. They are `lab/natcheck.c`, the NAT lab's player, which does what the
 runtime does for a game (HELLO, probe, room, punch, ping, a stream) without one. Built from a fresh clone with the commands shown.
 
-Captured from a local run on loopback: start the server with the defaults.
+Captured from a local run on loopback with an early build (the `version=` field shows 0.2.0; the current release is 0.4.0): start the server with the defaults.
 
 ```text
 $ ./re-psn
