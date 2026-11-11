@@ -232,7 +232,9 @@ int main(int argc, char** argv)
         uint32_t via;
         const uint8_t* payload = pkt;
         size_t plen = (size_t)n;
-        int relayed = psnr_relay_unwrap(pkt, (size_t)n, &via, &payload, &plen);
+        uint8_t from_ip[4];
+        memcpy(from_ip, &from.sin_addr.s_addr, 4);
+        int relayed = psnr_relay_unwrap_from(c, from_ip, ntohs(from.sin_port), pkt, (size_t)n, &via, &payload, &plen);
         if (!relayed) {
             if (psnr_is_control(pkt, (size_t)n)) {   /* a punch: the direct path works */
                 if (from.sin_addr.s_addr == g_peer.sin_addr.s_addr) heard = now();
