@@ -334,6 +334,9 @@
 <ul>
 <li>Experimental, read-only admin API, off by default: <code>-admin ADDR</code> (<code>RE_PSN_ADMIN</code>) opens a second listener with one route, <code>GET /admin/v1/state</code>, for a read token kept in a file (<code>-admin-read-token-file</code>; at least 32 ...</li>
 <li>C client: constants for <code>PEER_AUTH</code>, <code>SET_ROOM_ACCESS</code>, <code>JOIN_BY_CODE</code>, <code>GET_ROOM_ACCESS</code>, <code>ROOM_ACCESS</code> and <code>PEER_KEY</code>, and bounds-checked decoders for ROOM_JOINED, member entries, ROOM_LIST and RANKING ...</li>
+<li><code>psnr_connect_timeout(...)</code> (<code>client/psnr.h</code>): <code>psnr_connect</code> with a time limit.</li>
+<li><code>psnr_dead_reason(c)</code> and <code>psnr_last_os_error(c)</code>: why the C client&#x27;s connection was lost (peer closed, I/O error, out of memory, send timeout) and the OS error at that point.</li>
+<li><code>PSNR_SEND_TIMEOUT_MS</code> (5000, overridable before including <code>psnr.h</code>): the most time one write may wait for the socket to accept data, in total.</li>
 <li>CI compiles the C client (<code>client/psnr.c</code>, <code>client/examples/minimal.c</code>) with MSVC on Windows and does not run it there; the build instructions in <code>docs/integrating.md</code> give the MSVC command.</li>
 </ul>
 <h4>Fixed</h4>
@@ -346,6 +349,10 @@
 <li>The C client has <code>psnr_relay_unwrap_from</code>, which accepts a relayed datagram only from the server&#x27;s UDP address.</li>
 <li>Docs: a comment in <code>server/rooms.go</code> that pointed at the missing <code>docs/room-codes.md</code> now names the section of <code>docs/api.md</code> that holds the content; SECURITY.md states that players behind one address can take over each ...</li>
 <li>C client: the receive path checks its allocations (a failure now ends the connection instead of dereferencing NULL), a reply frame too short to hold its request id is dropped instead of being delivered as a push, and ...</li>
+</ul>
+<h4>Changed</h4>
+<ul>
+<li>The C client&#x27;s writes give up after <code>PSNR_SEND_TIMEOUT_MS</code> in total instead of waiting without a limit.</li>
 </ul>
 <h3>0.5.0 (2026-11-11)</h3>
 <p>15 under Added, 4 under Fixed.</p>

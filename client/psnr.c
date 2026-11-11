@@ -25,6 +25,7 @@
 #  define BAD_SOCK INVALID_SOCKET
 #  define sock_close closesocket
 #  define WOULD_BLOCK() (WSAGetLastError() == WSAEWOULDBLOCK)
+#  define CONNECT_PENDING() (WSAGetLastError() == WSAEWOULDBLOCK)   /* non-blocking connect in progress */
 #  define poll WSAPoll
    typedef WSAPOLLFD pollfd_t;
 #else
@@ -42,6 +43,7 @@
 #  define BAD_SOCK (-1)
 #  define sock_close close
 #  define WOULD_BLOCK() (errno == EAGAIN || errno == EWOULDBLOCK)
+#  define CONNECT_PENDING() (errno == EINPROGRESS)
    typedef struct pollfd pollfd_t;
 #endif
 
@@ -77,17 +79,43 @@ struct psnr_client {
     uint16_t rtt[RTT_SAMPLES];            /* round trips of recent psnr_call replies, in ms */
     int      rtt_n, rtt_next;
     int      report_rtt;                  /* send the smallest in HEARTBEAT; off until psnr_report_rtt(c, 1) */
+    int      dead_reason;                 /* enum psnr_dead_reason, set with dead */
+    int      dead_os_err;                 /* the OS error at that point, 0 if none */
 };
+
+static int os_error(void)
+{
+#ifdef _WIN32
+    return WSAGetLastError();
+#else
+    return errno;
+#endif
+}
+
+/* The first failure sticks: a client is dead once, with the reason of the first thing that broke. */
+static void mark_dead(psnr_client* c, int reason, int os_err)
+{
+    if (c->dead) return;
+    c->dead = 1;
+    c->dead_reason = reason;
+    c->dead_os_err = os_err;
+}
 
 static int send_all(psnr_client* c, const uint8_t* p, size_t n)
 {
+    uint64_t t0 = 0;   /* when the socket first refused data in this call */
     while (n) {
         int k = send(c->s, (const char*)p, (int)n, 0);
         if (k < 0) {
             pollfd_t pf;
-            if (!WOULD_BLOCK()) { c->dead = 1; return -1; }
+            uint64_t waited, rest;
+            if (!WOULD_BLOCK()) { mark_dead(c, PSNR_DEAD_IO_ERROR, os_error()); return -1; }
+            if (!t0) t0 = now_ms();
+            waited = now_ms() - t0;
+            if (waited >= PSNR_SEND_TIMEOUT_MS) { mark_dead(c, PSNR_DEAD_SEND_TIMEOUT, 0); return -1; }
+            rest = PSNR_SEND_TIMEOUT_MS - waited;
             pf.fd = c->s; pf.events = POLLOUT; pf.revents = 0;
-            poll(&pf, 1, 1000);
+            poll(&pf, 1, (int)(rest < 1000 ? rest : 1000));
             continue;
         }
         p += k;
@@ -116,13 +144,16 @@ static int pump(psnr_client* c)
         if (c->rx_cap - c->rx_len < 4096) {
             size_t cap = c->rx_cap ? c->rx_cap * 2 : 8192;
             uint8_t* grown = (uint8_t*)realloc(c->rx, cap);
-            if (!grown) { c->dead = 1; break; }
+            if (!grown) { mark_dead(c, PSNR_DEAD_NOMEM, os_error()); break; }
             c->rx = grown;
             c->rx_cap = cap;
         }
         int k = recv(c->s, (char*)c->rx + c->rx_len, (int)(c->rx_cap - c->rx_len), 0);
-        if (k == 0 || (k < 0 && !WOULD_BLOCK())) { c->dead = 1; break; }
-        if (k < 0) break;
+        if (k == 0) { mark_dead(c, PSNR_DEAD_PEER_CLOSED, 0); break; }
+        if (k < 0) {
+            if (!WOULD_BLOCK()) mark_dead(c, PSNR_DEAD_IO_ERROR, os_error());
+            break;
+        }
         c->rx_len += (size_t)k;
     }
 
@@ -140,12 +171,12 @@ static int pump(psnr_client* c)
             continue;
         }
         node* nd = (node*)calloc(1, sizeof(node));
-        if (!nd) { c->dead = 1; break; }
+        if (!nd) { mark_dead(c, PSNR_DEAD_NOMEM, os_error()); break; }
         if (has_req) { nd->m.req = psnr_get32(p); p += 4; n -= 4; }
         nd->m.type = type;
         nd->m.len = n;
         nd->m.data = (uint8_t*)malloc(n ? n : 1);
-        if (!nd->m.data) { free(nd); c->dead = 1; break; }
+        if (!nd->m.data) { mark_dead(c, PSNR_DEAD_NOMEM, os_error()); free(nd); break; }
         memcpy(nd->m.data, p, n);
         if (c->tail) c->tail->next = nd; else c->head = nd;
         c->tail = nd;
@@ -234,13 +265,49 @@ void psnr_msg_free(psnr_msg* m)
 
 static int s_connect_error;
 
-psnr_client* psnr_connect(const char* host, uint16_t port,
-                          const char* comm_id, const char* online_id, uint16_t p2p_port,
-                          uint32_t* out_user_id, uint8_t out_public_ip[4])
+static void set_nonblock(sock_t s)
+{
+#ifdef _WIN32
+    u_long nb = 1;
+    ioctlsocket(s, FIONBIO, &nb);
+#else
+    fcntl(s, F_SETFL, fcntl(s, F_GETFL, 0) | O_NONBLOCK);
+#endif
+}
+
+/* Milliseconds left until deadline, 0 once it has passed. */
+static int remaining_ms(uint64_t deadline)
+{
+    uint64_t now = now_ms();
+    return now < deadline ? (int)(deadline - now) : 0;
+}
+
+/* connect() that waits at most timeout_ms for the handshake. 0 when connected. The socket is
+ * left non-blocking. */
+static int connect_bounded(sock_t s, const struct addrinfo* ai, int timeout_ms)
+{
+    pollfd_t pf;
+    int err = 0;
+    socklen_t el = sizeof(err);
+    set_nonblock(s);
+    if (connect(s, ai->ai_addr, (int)ai->ai_addrlen) == 0) return 0;
+    if (!CONNECT_PENDING()) return -1;
+    pf.fd = s; pf.events = POLLOUT; pf.revents = 0;
+    if (poll(&pf, 1, timeout_ms) <= 0) return -1;
+    if (getsockopt(s, SOL_SOCKET, SO_ERROR, (char*)&err, &el) != 0 || err) return -1;
+    return 0;
+}
+
+/* timeout_ms < 0 is psnr_connect: the blocking connect it has always made, then the 5 s HELLO
+ * wait. Otherwise the connect and the HELLO wait share the one budget of timeout_ms. */
+static psnr_client* connect_impl(const char* host, uint16_t port,
+                                 const char* comm_id, const char* online_id, uint16_t p2p_port,
+                                 uint32_t* out_user_id, uint8_t out_public_ip[4], int timeout_ms)
 {
     struct addrinfo hints, *res = NULL, *ai;
     char portstr[8];
     sock_t s = BAD_SOCK;
+    uint64_t deadline = now_ms() + (uint64_t)(timeout_ms > 0 ? timeout_ms : 0);
 
     /* The wire fields are 12 and 16 bytes: refuse a longer name instead of cutting it. */
     if (!host || !comm_id || !online_id || strlen(comm_id) > PSNR_COMM_ID_MAX || strlen(online_id) > PSNR_ONLINE_ID_MAX) return NULL;
@@ -257,7 +324,8 @@ psnr_client* psnr_connect(const char* host, uint16_t port,
     for (ai = res; ai; ai = ai->ai_next) {
         s = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
         if (s == BAD_SOCK) continue;
-        if (connect(s, ai->ai_addr, (int)ai->ai_addrlen) == 0) break;
+        if (timeout_ms < 0 ? connect(s, ai->ai_addr, (int)ai->ai_addrlen) == 0
+                           : connect_bounded(s, ai, remaining_ms(deadline)) == 0) break;
         sock_close(s);
         s = BAD_SOCK;
     }
@@ -268,11 +336,7 @@ psnr_client* psnr_connect(const char* host, uint16_t port,
         int one = 1;
         setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (const char*)&one, sizeof(one));
     }
-#ifdef _WIN32
-    { u_long nb = 1; ioctlsocket(s, FIONBIO, &nb); }
-#else
-    fcntl(s, F_SETFL, fcntl(s, F_GETFL, 0) | O_NONBLOCK);
-#endif
+    set_nonblock(s);
 
     psnr_client* c = (psnr_client*)calloc(1, sizeof(psnr_client));
     if (!c) { sock_close(s); return NULL; }
@@ -297,7 +361,7 @@ psnr_client* psnr_connect(const char* host, uint16_t port,
     psnr_put16(hello + 28, p2p_port);
     psnr_msg ack;
     s_connect_error = 0;
-    if (psnr_call(c, PSNR_HELLO, hello, sizeof(hello), &ack, 5000) != 1) {
+    if (psnr_call(c, PSNR_HELLO, hello, sizeof(hello), &ack, timeout_ms < 0 ? 5000 : remaining_ms(deadline)) != 1) {
         psnr_close(c);
         return NULL;
     }
@@ -311,6 +375,21 @@ psnr_client* psnr_connect(const char* host, uint16_t port,
     psnr_msg_free(&ack);
     if (!ok) { psnr_close(c); return NULL; }
     return c;
+}
+
+psnr_client* psnr_connect(const char* host, uint16_t port,
+                          const char* comm_id, const char* online_id, uint16_t p2p_port,
+                          uint32_t* out_user_id, uint8_t out_public_ip[4])
+{
+    return connect_impl(host, port, comm_id, online_id, p2p_port, out_user_id, out_public_ip, -1);
+}
+
+psnr_client* psnr_connect_timeout(const char* host, uint16_t port,
+                                  const char* comm_id, const char* online_id, uint16_t p2p_port,
+                                  uint32_t* out_user_id, uint8_t out_public_ip[4], int timeout_ms)
+{
+    if (timeout_ms <= 0) return NULL;
+    return connect_impl(host, port, comm_id, online_id, p2p_port, out_user_id, out_public_ip, timeout_ms);
 }
 
 void psnr_server_addr(const psnr_client* c, uint8_t ip[4], uint16_t* port)
@@ -474,6 +553,16 @@ void psnr_close(psnr_client* c)
     while (take(c, &m, 0)) psnr_msg_free(&m);
     free(c->rx);
     free(c);
+}
+
+int psnr_dead_reason(const psnr_client* c)
+{
+    return c->dead ? c->dead_reason : PSNR_DEAD_NONE;
+}
+
+int psnr_last_os_error(const psnr_client* c)
+{
+    return c->dead_os_err;
 }
 
 /* LAN discovery (docs/api.md, "LAN discovery"). */
