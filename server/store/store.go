@@ -46,7 +46,9 @@ type Store interface {
 	// Put records e on board k, keeping the player's best: a worse score
 	// leaves the old entry (and its At) in place. ascending (lower is better)
 	// applies only when the Put creates the board. It returns the player's
-	// rank after the Put.
+	// rank after the Put. A backend with a limit on boards or players refuses
+	// a new player past it with ErrFull; a player already on the board is
+	// never refused for a limit.
 	Put(ctx context.Context, k Key, ascending bool, e Entry) (rank uint32, err error)
 
 	// Range returns the board's entry count and up to count entries in rank
@@ -68,6 +70,10 @@ type Store interface {
 
 	Close() error
 }
+
+// ErrFull is what Put returns when a board or player limit would be passed.
+// The score is not recorded.
+var ErrFull = errors.New("score store is full: a board or player limit is reached")
 
 // ErrUnknown is the error for a -db setting that names no backend. It holds
 // none of the setting's text.
