@@ -53,7 +53,7 @@ has short guides for players and hosts.
 | Players behind routers get connected, with an optional relay | tested in Docker by the [NAT lab](lab/README.md) |
 | The client is one C file | [client/psnr.c](client/psnr.c), tested against the server by `client/test_psnr.c` |
 | Hardened and checked | fuzz tests, race detector, vulnerability and secret scans in [CI](.github/workflows/ci.yml) |
-| A lobby you can read: games by name, verified player counts and player-reported latency | on `main`, not in v0.4.0: [features list](docs/features.md), [`/api/stats`](docs/api.md#http) |
+| A lobby you can read: games by name, verified player counts and player-reported latency | in v0.5.0: [features list](docs/features.md), [`/api/stats`](docs/api.md#http) |
 | Every feature says how far it got | [features list](docs/features.md) with status and evidence |
 
 ## Coming soon
@@ -85,9 +85,9 @@ client, a metrics endpoint, signed releases.
 re-psn is a fork of [psnr](https://github.com/sp00nznet/psnr) by sp00nz, who wrote the original server, the C client and the
 protocol; [LICENSE](LICENSE) keeps upstream's MIT licence and copyright line, and [NOTICE.md](NOTICE.md) credits the upstream work.
 This fork adds hardened CI and fuzz tests, invite-only rooms, limits, logging, reverse proxy support, a UDP source check, container
-files and release tooling; the [features list](docs/features.md) and [CHANGELOG.md](CHANGELOG.md) have the details. Since v0.4.0, `main`
-also has a lobby view with game names, verified player counts and player-reported latency, `-relay-force` for testing the relay from
-one network, and the server half of opt-in peer keys; these are on `main` and not in a release yet.
+files and release tooling; the [features list](docs/features.md) and [CHANGELOG.md](CHANGELOG.md) have the details. v0.5.0
+added a lobby view with game names, verified player counts and player-reported latency, `-relay-force` for testing the relay from
+one network, LAN discovery (`-discover`), the server half of opt-in peer keys, and archives of the desktop app.
 
 ## Overview
 
@@ -152,7 +152,7 @@ Two test players meet in a room and connect directly, and the C client's test le
 Two test players meet in a room and connect directly. They are `lab/natcheck.c`, the NAT lab's player, which does what the
 runtime does for a game (HELLO, probe, room, punch, ping, a stream) without one. Built from a fresh clone with the commands shown.
 
-Captured from a local run on loopback with an early build (the `version=` field shows 0.2.0; the current release is 0.4.0): start the server with the defaults.
+Captured from a local run on loopback with an early build (the `version=` field shows 0.2.0; the current release is 0.5.0): start the server with the defaults.
 
 ```text
 $ ./re-psn
@@ -218,9 +218,9 @@ Available on `main` today; [docs/features.md](docs/features.md) has every featur
 - **NAT traversal:** address probes and hole punching, an optional relay, and a UDP source address check.
 - **Hosting:** limits, log levels, a status page with an optional token, reverse proxy support, `RE_PSN_*` settings, Docker and
   Podman files, and deployment examples.
-- **Lobby view (on `main`, after v0.4.0):** the status page and `/api/stats` name known games, count verified players and show the
+- **Lobby view (v0.5.0):** the status page and `/api/stats` name known games, count verified players and show the
   round trip each player reports, labelled as reported and unverified.
-- **Peer keys (on `main`, after v0.4.0, server side only):** an opt-in way for the server to give each pair of players in a room a shared
+- **Peer keys (v0.5.0, server side only):** an opt-in way for the server to give each pair of players in a room a shared
   key for tagging their direct packets. No client uses it yet, and it gives no confidentiality ([docs/api.md](docs/api.md#peer-keys)).
 - **C client:** one file, no third-party libraries, no threads.
 - **Checks:** fuzz tests; CI with the race detector, vulnerability and secret scans, the NAT lab and code scanning.
@@ -287,7 +287,7 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -Version v0.4.0
 ```
 
 This installs the server only (`re-psn.exe` into `%LOCALAPPDATA%\re-psn\bin`, no administrator rights, no PATH change unless you add
-`-AddToPath`); there is no desktop app download yet. The script comes from a pinned repository revision, and the v0.4.0 release carries the same
+`-AddToPath`); `-App` installs the desktop app instead (v0.5.0 and later). The script comes from a pinned repository revision, and the v0.4.0 release carries the same
 `install.ps1` (identical SHA-256) as a release asset. It has been tested on PowerShell 7 only and, like the Windows binary, has not been run on Windows by us. See
 [docs/installing.md](docs/installing.md) for options.
 
@@ -337,7 +337,7 @@ Each release carries `re-psn-vX.Y.Z-windows-amd64.zip`, `re-psn-vX.Y.Z-linux-amd
 `re-psn-vX.Y.Z-linux-arm64.tar.gz` (built by [scripts/release-build.sh](scripts/release-build.sh)): a static `re-psn` binary
 (`re-psn.exe` on Windows), `LICENSE`, `NOTICE.md` and the deployment examples in `examples/`. From v0.4.0 it also carries the
 install scripts `install.sh` and `install.ps1` ([docs/installing.md](docs/installing.md)), seven assets in all (v0.3.0 has
-five, without the scripts). Releases after v0.4.0 add three archives of the desktop app, `re-psn-app-vX.Y.Z-<os>-<arch>` (same
+five, without the scripts). From v0.5.0 a release adds three archives of the desktop app, `re-psn-app-vX.Y.Z-<os>-<arch>` (same
 three platforms: the `re-psn-app` binary, `LICENSE`, `NOTICE.md` and the app's README), ten assets in all; the install scripts
 install the app only when asked (`install.sh --app`, `install.ps1 -App`). `SHA256SUMS` lists the archives and the AppImage, and from v0.4.0 the scripts. Check a download with `sha256sum -c SHA256SUMS --ignore-missing` on Linux, or compare the output of
 `Get-FileHash <archive>` with the line in `SHA256SUMS` on Windows.

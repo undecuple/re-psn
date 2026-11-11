@@ -41,7 +41,7 @@ and still unknown.
 
 ## Done
 
-Merged into main. Items are in v0.2.0, v0.3.0 or v0.4.0 unless a line says it is on main only.
+Merged into main. Items are in v0.2.0, v0.3.0, v0.4.0 or v0.5.0 unless a line says it is on main only.
 
 [Rooms and matchmaking](docs/features.md#rooms-and-matchmaking)
 - [rooms-basic] Create, search, join and leave rooms, with room messages, owner kicks and owner handoff.

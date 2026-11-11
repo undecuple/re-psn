@@ -21,7 +21,7 @@ below are source inspection at that pin, not an executed game-compatibility clai
 runtime and title-build revisions when testing; later versions can differ.
 
 The pin is older than `main`. Later changes (player-reported latency, the lobby view, `-relay-force` and server-side peer keys) are not
-covered by this guide's source inspection and are not in v0.4.0; see the [CHANGELOG](../CHANGELOG.md).
+covered by this guide's source inspection and are in v0.5.0, not v0.4.0; see the [CHANGELOG](../CHANGELOG.md).
 
 ```mermaid
 flowchart LR
