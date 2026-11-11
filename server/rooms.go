@@ -211,6 +211,11 @@ func (s *Server) createRoom(c *client, req uint32, rd *reader) (byte, []byte) {
 
 // ROOM_LIST: req | total u16 | count u16 | entries...
 // entry: room_id u64 | owner online_id [16] | cur u8 | max u8 | flags u32 | external blob
+//
+// The reply must fit one packet (maxPayload). Entries are added in order while they fit, and count is the number
+// written. total is still every open room in the title, so a caller that sees count < total asks again with
+// start = count. A room whose entry cannot fit even alone goes out with an empty external blob instead, so
+// the list always makes progress; the caller then sees that room's external data as empty.
 func (s *Server) searchRooms(c *client, req uint32, rd *reader) (byte, []byte) {
 	start, max := rd.u16(), rd.u16()
 	if rd.err != nil {
@@ -225,26 +230,45 @@ func (s *Server) searchRooms(c *client, req uint32, rd *reader) (byte, []byte) {
 	page := open[min(int(start), len(open)):]
 	page = page[:min(int(max), len(page))]
 
-	w := &writer{}
-	w.u32(req)
-	w.u16(uint16(len(open)))
-	w.u16(uint16(len(page)))
+	var entries writer
+	size := searchHeaderLen // req | total | count, as the reply is sent
+	count := 0
 	for _, r := range page {
-		w.u64(r.id)
+		ext := r.external
+		if size+roomEntryFixedLen+len(ext) > maxPayload {
+			if count > 0 {
+				break
+			}
+			ext = nil // alone it does not fit: send the room without its external data
+		}
+		size += roomEntryFixedLen + len(ext)
+		entries.u64(r.id)
 		owner := ""
 		for _, m := range r.members {
 			if m.id == r.owner {
 				owner = m.c.onlineID
 			}
 		}
-		w.str(owner, 16)
-		w.u8(uint8(len(r.members)))
-		w.u8(r.max)
-		w.u32(r.flags)
-		w.blob(r.external)
+		entries.str(owner, 16)
+		entries.u8(uint8(len(r.members)))
+		entries.u8(r.max)
+		entries.u32(r.flags)
+		entries.blob(ext)
+		count++
 	}
+
+	w := &writer{}
+	w.u32(req)
+	w.u16(uint16(len(open)))
+	w.u16(uint16(count))
+	w.bytes(entries.b)
 	return msgRoomList, w.b
 }
+
+const (
+	searchHeaderLen   = 4 + 2 + 2              // req u32 | total u16 | count u16
+	roomEntryFixedLen = 8 + 16 + 1 + 1 + 4 + 2 // room_id | owner [16] | cur | max | flags | external blob length
+)
 
 func (s *Server) joinRoom(c *client, req uint32, rd *reader) (byte, []byte, []push) {
 	id, mine := rd.u64(), rd.blob()

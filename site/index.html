@@ -334,6 +334,10 @@
 <ul>
 <li>Experimental, read-only admin API, off by default: <code>-admin ADDR</code> (<code>RE_PSN_ADMIN</code>) opens a second listener with one route, <code>GET /admin/v1/state</code>, for a read token kept in a file (<code>-admin-read-token-file</code>; at least 32 ...</li>
 </ul>
+<h4>Fixed</h4>
+<ul>
+<li>A search no longer disconnects the player when the rooms&#x27; data is large: the reply lists only as many rooms as fit in one packet, and the player pages on from there.</li>
+</ul>
 <h3>0.5.0 (2026-11-11)</h3>
 <p>15 under Added, 4 under Fixed.</p>
 <p>The full history is in <a href="https://github.com/undecuple/re-psn/blob/main/CHANGELOG.md">CHANGELOG.md</a>.</p>
