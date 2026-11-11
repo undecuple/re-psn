@@ -206,8 +206,9 @@ func TestJoinReplyLimitByCode(t *testing.T) {
 	capRefused(t, s, addr, room, late, rt, r, 15, members)
 }
 
-// A member who is already in the room asks for it again. Its reply can outgrow a packet after the room's
-// internal blob is set to 4096 bytes: that is error 6 too, and the member stays connected and in the room.
+// A member who is already in the room asks for it again after the room's state has outgrown a packet: error 6 too,
+// and the member stays connected and in the room. SET_ROOM_DATA no longer lets a client get there (see
+// TestSetRoomDataReplyLimit), so the state is set directly: this tests the check in joinMember, which stays as a guard.
 func TestJoinReplyLimitRejoin(t *testing.T) {
 	s, addr := capServer(t)
 	owner := dial(t, addr, "NPWR00001_00", "alice", 3658)
@@ -216,13 +217,9 @@ func TestJoinReplyLimitRejoin(t *testing.T) {
 		return c.call(msgJoinRoom, capJoinBody(room, data))
 	})
 
-	w := &writer{}
-	w.u64(room)
-	w.u8(1) // internal
-	w.blob(capData)
-	if rt, _ := owner.call(msgSetRoomData, w.b); rt != msgOK {
-		t.Fatalf("set internal data: got 0x%02X", rt)
-	}
+	s.mu.Lock()
+	s.rooms[room].internal = capData
+	s.mu.Unlock()
 	joiner := members[1]
 	rt, r := joiner.call(msgJoinRoom, capJoinBody(room, nil))
 	capRefused(t, s, addr, room, joiner, rt, r, 15, members)

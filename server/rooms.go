@@ -400,10 +400,19 @@ func (s *Server) leave(r *room, c *client) []push {
 	return out
 }
 
+// roomBlob is the room's external (which 0) or internal (which 1) data.
+func roomBlob(r *room, which byte) []byte {
+	if which == 0 {
+		return r.external
+	}
+	return r.internal
+}
+
 // SET_ROOM_DATA: room_id u64 | which u8 | blob. which 0 = external data,
 // 1 = internal data, 2 = flags (the blob is a u32; searchers see them in
 // ROOM_LIST, so a title can mark its room closed). Only the owner writes;
-// members get ROOM_DATA: room_id | which | blob.
+// members get ROOM_DATA: room_id | which | blob. A write that would make the room's ROOM_JOINED reply
+// larger than one packet is refused with error 6 and changes nothing.
 func (s *Server) setRoomData(c *client, req uint32, rd *reader) (byte, []byte, []push) {
 	r, ok := s.rooms[rd.u64()]
 	which, data := rd.u8(), rd.blob()
@@ -417,6 +426,10 @@ func (s *Server) setRoomData(c *client, req uint32, rd *reader) (byte, []byte, [
 		return msgError, errReply(req, errNotInRoom), nil
 	case r.memberOf(c).id != r.owner:
 		return msgError, errReply(req, errNotOwner), nil
+	case which < 2 && joinedSize(r, -1)-len(roomBlob(r, which))+len(data) > maxPayload:
+		// the room's own ROOM_JOINED reply (a member who asks again, or the next joiner) would no longer fit one packet
+		s.log.Debug("set room data refused: room state would not fit one reply", "room", r.id, "online_id", c.onlineID, "which", which)
+		return msgError, errReply(req, errLimitReached), nil
 	}
 	switch which {
 	case 0:
