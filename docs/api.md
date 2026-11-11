@@ -86,7 +86,7 @@ last eight; the default is off.
   old connection and accepts the new one.
 - `p2p_port` is the UDP port the title receives peer traffic on, or 0.
 
-HELLO must come first. Any other request before it gets ERROR 7.
+HELLO must come first. Any other request before it gets ERROR 7. A connection sends HELLO once; a second HELLO on the same connection gets ERROR 1 and changes nothing.
 
 **Limits:** every blob a client puts in a room (CREATE_ROOM, JOIN_ROOM, SET_ROOM_DATA,
 ROOM_MESSAGE) is at most 4096 bytes, else error 1. Game files do not go over the wire.

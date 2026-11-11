@@ -96,8 +96,9 @@ type client struct {
 	conn     net.Conn
 	commID   string // NP communication ID, e.g. NPWR00860_00: the title
 	onlineID string
-	ip       [4]byte // as the server sees it
-	p2pPort  uint16  // UDP port the title receives peer traffic on
+	ip       [4]byte    // as the server sees it; all zero unless IPv4 (HELLO_ACK, UDP)
+	addr     netip.Addr // the real remote address, IPv4 or IPv6, unmapped, zone stripped: what a name is held against
+	p2pPort  uint16     // UDP port the title receives peer traffic on
 
 	codeMisses int       // wrong or malformed room codes in the current window
 	codeWindow time.Time // start of that window
@@ -209,7 +210,7 @@ func (s *Server) admit(conn net.Conn) {
 	s.addrConns[host]++
 	s.nextID++
 	s.conns++
-	c := &client{id: s.nextID, conn: conn, rooms: map[uint64]*room{}}
+	c := &client{id: s.nextID, conn: conn, addr: real.Unmap().WithZone(""), rooms: map[uint64]*room{}}
 	s.log.Debug("connected", "client", c.id, "addr", host)
 	if real.Is4() {
 		c.ip = real.As4()
@@ -348,6 +349,9 @@ func (s *Server) handle(c *client, t byte, p []byte) {
 }
 
 func (s *Server) hello(c *client, req uint32, r *reader) (byte, []byte) {
+	if c.commID != "" { // HELLO is sent once per connection; a second one changes nothing
+		return msgError, errReply(req, errBadRequest)
+	}
 	commID, onlineID, port := r.str(12), r.str(16), r.u16()
 	if r.err != nil || commID == "" {
 		return msgError, errReply(req, errBadRequest)
@@ -360,8 +364,8 @@ func (s *Server) hello(c *client, req uint32, r *reader) (byte, []byte) {
 		if o == c || o.commID == "" || !strings.EqualFold(o.onlineID, onlineID) {
 			continue
 		}
-		if o.ip != c.ip {
-			s.log.Warn("hello refused", "client", c.id, "reason", "name taken", "online_id", onlineID, "addr", ipString(c.ip))
+		if !sameAddr(o.addr, c.addr) {
+			s.log.Warn("hello refused", "client", c.id, "reason", "name taken", "online_id", onlineID, "addr", c.addr.String())
 			return msgError, errReply(req, errNameTaken)
 		}
 		s.log.Info("reconnected", "client", c.id, "replaces", o.id, "online_id", onlineID)
@@ -372,7 +376,7 @@ func (s *Server) hello(c *client, req uint32, r *reader) (byte, []byte) {
 	var tok [4]byte
 	crand.Read(tok[:])
 	c.token = binary.BigEndian.Uint32(tok[:]) | 1 // never 0
-	s.log.Info("hello", "client", c.id, "comm_id", commID, "online_id", onlineID, "addr", ipString(c.ip), "p2p_port", port)
+	s.log.Info("hello", "client", c.id, "comm_id", commID, "online_id", onlineID, "addr", c.addr.String(), "p2p_port", port)
 	w := &writer{}
 	w.u32(req)
 	w.u32(c.id)
@@ -417,6 +421,13 @@ func okReply(req uint32) []byte {
 }
 
 func ipString(ip [4]byte) string { return net.IP(ip[:]).String() }
+
+// sameAddr reports whether a and b are the same known address. An invalid
+// address is never the same as anything, so a connection whose address is
+// unknown can never take over another player's name.
+func sameAddr(a, b netip.Addr) bool {
+	return a.IsValid() && a.Unmap().WithZone("") == b.Unmap().WithZone("")
+}
 
 // refused logs a request the server turned down for a limit.
 func (s *Server) refused(c *client, what, reason string) {

@@ -56,7 +56,7 @@ func (s *Server) relayStream(target, viewer *client) bool {
 	if s.relay && s.relayForce {
 		return true
 	}
-	return s.relay && target.udpPort != 0 && target.udpIP != target.localIP && viewer.ip != target.ip
+	return s.relay && target.udpPort != 0 && target.udpIP != target.localIP && !sameNetwork(viewer, target)
 }
 
 func (s *Server) routePush(r *room, about, to *client) push {
