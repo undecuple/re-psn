@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-11
+
 ### Added
 - The desktop app's Status screen has a read-only Server tab when a status URL is set: version, uptime, relay on or off, the limits in
   force (0 shown as none), TCP refusals and UDP drop counters, and the payload the relay has carried with a bytes-per-second rate
