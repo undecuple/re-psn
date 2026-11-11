@@ -235,7 +235,9 @@ whether the relay is on, how many players are connected, its name and its versio
 
 Limits: a broadcast does not cross subnets, and Wi-Fi networks with client isolation drop it. The server answers only
 senders on private (10/8, 172.16/12, 192.168/16), carrier-grade NAT (100.64/10), link-local or loopback addresses, never a
-public one. Requests share the [UDP rate limit](udp-guardrails.md). The ports in a reply are the ones the server is bound to, so behind a container port mapping or a router forward they may differ from the ones players reach. The server judges the address the packet arrives from, so behind Docker's userland proxy or any NAT that rewrites the source, a request from the internet can look private and be answered (with the same small reply the status page already shows); keep `-discover` off on a server that is reachable that way. There is no client helper for this yet.
+public one. Requests share the [UDP rate limit](udp-guardrails.md). The ports in a reply are the ones the server is bound to, so behind a container port mapping or a router forward they may differ from the ones players reach. The server judges the address the packet arrives from, so behind Docker's userland proxy or any NAT that rewrites the source, a request from the internet can look private and be answered (with the same small reply the status page already shows); keep `-discover` off on a server that is reachable that way. The C client's `psnr_discover` and the desktop app's Find on LAN list ask for it; keep a manual host:port path.
+
+The C client's Windows build sends its request only to 255.255.255.255, which may not reach every network adapter (for example a VPN or a virtual switch); the POSIX build also sends to each IPv4 interface's directed broadcast. A client waits about a second or two for answers, which is inside the few seconds Windows allows for replies to a sent broadcast.
 
 ## What has been tested
 

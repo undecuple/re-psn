@@ -93,9 +93,13 @@ psnr_client* psnr_connect(const char* host, uint16_t port,
 
 /* NAT traversal (docs/api.md, "UDP"). The caller owns the P2P socket; these
  * build and read the packets it exchanges. Every one starts with "PSNR".
- *   - Send a PROBE from the P2P socket to psnr_server_addr, now and then (a
- *     router forgets an idle mapping), until a probe reply comes back. The
- *     server then hands other players this socket's public endpoint.
+ *   - Send a PROBE from the title's own P2P socket to psnr_server_addr until a
+ *     probe reply comes back; the server then hands other players this
+ *     socket's public endpoint. Keep sending one about every 15 seconds while
+ *     the title is online: some home gateways drop an idle UDP mapping after
+ *     30 seconds (a 2010 measurement study of home gateways, Haetoenen et al.,
+ *     IMC 2010, reported a minimum near 30 seconds and a median near 3
+ *     minutes; RFC 4787 asks for at least 2 minutes).
  *   - Send a few PUNCHes to a peer when it appears, so this side's router
  *     lets the peer's packets in.
  *   - Drop anything psnr_is_control() matches before the title sees it. */

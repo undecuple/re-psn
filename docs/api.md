@@ -240,8 +240,9 @@ with the four bytes `PSNR` and a type byte.
 | 0x84 | DISCOVER_REPLY | server → client | `nonce u32` `tcp_port u16` `udp_port u16` `flags u8` `players u16` `name [24]` `version [12]` (52 bytes) |
 
 - **PROBE.** Sent from the P2P socket after HELLO, repeated until a
-  PROBE_REPLY arrives, and again now and then, because routers forget idle
-  mappings. `user_id` and `token` come from HELLO_ACK; a probe with the wrong
+  PROBE_REPLY arrives, and then about every 15 seconds while the title is online, because some home gateways drop an idle
+  UDP mapping after 30 seconds (a 2010 measurement study of home gateways, Haetoenen et al., IMC 2010, reported a minimum near 30 seconds and a median
+  near 3 minutes; RFC 4787 asks for at least 2 minutes). Send it from the title's own P2P socket. `user_id` and `token` come from HELLO_ACK; a probe with the wrong
   token is ignored, so nobody can move another player's endpoint. The probe
   must also come from the same IP address as the player's TCP connection; one
   from another address gets no PROBE_REPLY and changes nothing (the server's
@@ -334,7 +335,7 @@ when set.
 `/api/stats` has `verified_players` (connected players, in a room or not) and, on each room, `verified` (its members) counting
 players whose UDP PROBE the server has accepted on this connection: the token matched and, unless `-udp-any-source` is set, the
 probe came from the same address as the TCP connection. It shows that the player's UDP path was confirmed once, not that it works
-now: the client sends probes only until the reply comes back and then now and then, so there is no time window. A player that
+now: a title is advised to send probes about every 15 seconds, but the server does not require it, so there is no time window. A player that
 never probes, or probes with a wrong token, is not counted. The status page shows "(N verified)" after a room's member count when
 N is above zero.
 

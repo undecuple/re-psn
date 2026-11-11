@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"fmt"
 	"io"
 	"log"
 	"log/slog"
@@ -161,7 +160,7 @@ func main() {
 	}
 	s.tcpPort = uint16(ln.Addr().(*net.TCPAddr).Port)
 	if s.discover {
-		logger.Info("lan discovery on", "name", fmt.Sprintf("%q", s.name))
+		logDiscoveryOn(logger, s.name)
 	}
 	pidPath := writePidFile(logger, portOf(ln.Addr().String()), ln.Addr().String())
 
@@ -218,4 +217,10 @@ func stopSignals() []os.Signal {
 		return []os.Signal{os.Interrupt}
 	}
 	return []os.Signal{os.Interrupt, syscall.SIGTERM}
+}
+
+// logDiscoveryOn logs that LAN discovery is on. The name goes in as a plain
+// string; the log handler quotes and escapes it as its format needs.
+func logDiscoveryOn(logger *slog.Logger, name string) {
+	logger.Info("lan discovery on", "name", name)
 }
