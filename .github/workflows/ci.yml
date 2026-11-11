@@ -72,7 +72,13 @@ jobs:
         if: runner.os == 'Linux'
         run: node --test tools/terminal.test.js tools/status.test.js
       # The README art: with the pinned Pillow and the fonts checked against their pinned SHA-256, a fresh render must
-      # equal docs/img/*.png and tools/art/art.json byte for byte (tools/art/make_art.py).
+      # equal docs/img/*.png and tools/art/art.json byte for byte (tools/art/make_art.py). The Python is pinned too:
+      # ubuntu-latest moved between images with different system Pythons, and Pillow's wheel (so its zlib, which the
+      # check compares) depends on the Python version.
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        if: runner.os == 'Linux'
+        with:
+          python-version: '3.12'
       - name: art
         if: runner.os == 'Linux'
         run: |
