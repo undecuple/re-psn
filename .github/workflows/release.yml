@@ -62,7 +62,7 @@ jobs:
             echo "### Files"
             echo
             echo "Each archive holds one self-contained server binary (no installer, no runtime needed), LICENSE, NOTICE.md and an examples folder (settings file, systemd unit, proxy configs)."
-            echo "The \`re-psn-app\` archives hold the desktop app (one static binary, LICENSE, NOTICE.md and its README) for the same three platforms. They are not installed by \`install.sh\` or \`install.ps1\`; unpack one by hand."
+            echo "The \`re-psn-app\` archives hold the desktop app (one static binary, LICENSE, NOTICE.md and its README) for the same three platforms. \`install.sh --app\` and \`install.ps1 -App\` install the app from a release instead of the server; or unpack one by hand."
             echo "The x86_64 AppImage holds the same Linux binary and examples as one runnable file; it needs FUSE to mount, or run it with \`--appimage-extract-and-run\`. It is not signed."
             echo "\`install.sh\` (Linux) and \`install.ps1\` (Windows) are the install scripts from this tag, listed in SHA256SUMS too: download one with SHA256SUMS, check it, read it, then run it (see docs/installing.md)."
             echo "Check a download with \`sha256sum -c SHA256SUMS --ignore-missing\`."
