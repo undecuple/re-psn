@@ -341,6 +341,7 @@
 <li>A second HELLO on one connection gets error 1 and changes nothing, and a name is held by the player&#x27;s full IPv6 address: before, all IPv6 players shared one address, so any of them could take another&#x27;s name.</li>
 <li>A room whose members&#x27; data, with the room&#x27;s blobs, would make its join reply too big for one packet no longer breaks the joiner: JOIN_ROOM and JOIN_BY_CODE answer error 6 and the joiner is not added, instead of the ...</li>
 <li>A score server no longer slows down or grows without bound under many boards: the memory store keeps at most 1000 boards per title and 10000 players per board, and a score that would pass either gets ERROR 6 (an ...</li>
+<li>The C client has <code>psnr_relay_unwrap_from</code>, which accepts a relayed datagram only from the server&#x27;s UDP address.</li>
 </ul>
 <h3>0.5.0 (2026-11-11)</h3>
 <p>15 under Added, 4 under Fixed.</p>

@@ -367,6 +367,16 @@ int psnr_relay_unwrap(const void* buf, size_t len, uint32_t* from_user,
     return 1;
 }
 
+/* psnr_relay_unwrap for a datagram read from the P2P socket: 0 unless it came
+ * from the server's UDP address, so a room member can't send a forged sender. */
+int psnr_relay_unwrap_from(const psnr_client* c, const uint8_t src_ip[4], uint16_t src_port,
+                           const void* buf, size_t len, uint32_t* from_user,
+                           const uint8_t** payload, size_t* payload_len)
+{
+    if (!c || !src_ip || src_port != c->server_port || memcmp(src_ip, c->server_ip, 4) != 0) return 0;
+    return psnr_relay_unwrap(buf, len, from_user, payload, payload_len);
+}
+
 /* A relay leg: a fresh connection to the server whose first message is
  * STREAM_CONNECT or STREAM_ACCEPT, returned once the server says READY. */
 static int64_t stream_leg(const psnr_client* c, uint8_t type, const uint8_t* body, uint16_t len,

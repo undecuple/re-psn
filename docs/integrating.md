@@ -221,7 +221,11 @@ packets; your transport must schedule I/O, track peer routes and distinguish con
 On receive, recognize and validate relay datagrams from the expected server endpoint before applying a generic
 control-packet discard. Unwrap their sender/payload, consume probe replies and punch/control traffic, then deliver
 only gameplay bytes with the correct peer identity. Blindly discarding every `psnr_is_control` match first would
-discard relay datagrams too; the unwrapping helper alone does not authenticate the network sender.
+discard relay datagrams too. Unwrap with `psnr_relay_unwrap_from(c, src_ip, src_port, ...)` and pass the source address
+the UDP socket reports for each datagram: it returns 0 unless the datagram came from the server's UDP address
+(`psnr_server_addr`). A title must check the source address of every 0x03 datagram. Any room member knows every other
+member's endpoint and can send a relay-shaped datagram straight to the title's UDP port with any sender it names.
+`psnr_relay_unwrap` does not check the source: prefer `psnr_relay_unwrap_from`.
 
 The current C helpers assume IPv4 and derive the probe target from the connected server endpoint. Keep the server's
 game TCP/UDP address and port aligned as seen by the client for that path. A separate UDP endpoint needs explicit
