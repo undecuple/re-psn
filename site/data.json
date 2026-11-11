@@ -1174,12 +1174,13 @@
      "A second HELLO on one connection gets error 1 and changes nothing, and a name is held by the player's full IPv6 address: before, all IPv6 players shared one address, so any of them could take another's name.",
      "A room whose members' data, with the room's blobs, would make its join reply too big for one packet no longer breaks the joiner: JOIN_ROOM and JOIN_BY_CODE answer error 6 and the joiner is not added, instead of the ...",
      "A score server no longer slows down or grows without bound under many boards: the memory store keeps at most 1000 boards per title and 10000 players per board, and a score that would pass either gets ERROR 6 (an ...",
-     "The C client has `psnr_relay_unwrap_from`, which accepts a relayed datagram only from the server's UDP address."
+     "The C client has `psnr_relay_unwrap_from`, which accepts a relayed datagram only from the server's UDP address.",
+     "Docs: a comment in `server/rooms.go` that pointed at the missing `docs/room-codes.md` now names the section of `docs/api.md` that holds the content; SECURITY.md states that players behind one address can take over each ..."
     ]
    },
    "counts": {
     "Added": 1,
-    "Fixed": 6
+    "Fixed": 7
    }
   },
   "latest": {

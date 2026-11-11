@@ -18,6 +18,7 @@ All notable changes to this project are documented here. The format follows
 - The C client has `psnr_relay_unwrap_from`, which accepts a relayed datagram only from the server's UDP address. A title that
   reads relayed datagrams with `psnr_relay_unwrap` can be sent a forged sender by any room member; `psnr_relay_unwrap` is kept
   unchanged for compatibility and documented as not checking the source.
+- Docs: a comment in `server/rooms.go` that pointed at the missing `docs/room-codes.md` now names the section of `docs/api.md` that holds the content; SECURITY.md states that players behind one address can take over each other's names, and the docs say that `-max-req-rate` does not bound the in-memory score store (which has its own fixed limits per title and board), and that peer keys give no replay protection on their own.
 
 ## [0.5.0] - 2026-11-11
 

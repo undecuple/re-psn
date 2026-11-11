@@ -342,6 +342,7 @@
 <li>A room whose members&#x27; data, with the room&#x27;s blobs, would make its join reply too big for one packet no longer breaks the joiner: JOIN_ROOM and JOIN_BY_CODE answer error 6 and the joiner is not added, instead of the ...</li>
 <li>A score server no longer slows down or grows without bound under many boards: the memory store keeps at most 1000 boards per title and 10000 players per board, and a score that would pass either gets ERROR 6 (an ...</li>
 <li>The C client has <code>psnr_relay_unwrap_from</code>, which accepts a relayed datagram only from the server&#x27;s UDP address.</li>
+<li>Docs: a comment in <code>server/rooms.go</code> that pointed at the missing <code>docs/room-codes.md</code> now names the section of <code>docs/api.md</code> that holds the content; SECURITY.md states that players behind one address can take over each ...</li>
 </ul>
 <h3>0.5.0 (2026-11-11)</h3>
 <p>15 under Added, 4 under Fixed.</p>

@@ -17,6 +17,11 @@ address, the same as on real PSN P2P.
   in the same room. It can't tell what the traffic is, but it does see how
   much there is and between whom, and it uses the host's bandwidth.
 - **Nothing is stored on disk**, apart from the log if you set `-log-file`.
+- **Players behind one address share names.** Players who connect from the same public address (carrier-grade NAT, a
+  household NAT, or a TCP proxy used without `-proxy-protocol`) can take over each other's online IDs: a HELLO with a name
+  another connection holds from that address makes the server close the old connection and accept the new one
+  ([docs/api.md](docs/api.md), HELLO). Behind such a proxy, `-max-conns-per-addr` counts every player together, so the
+  limit applies to the whole server ([docs/running.md](docs/running.md#behind-a-reverse-proxy)).
 
 ## What this fork changes
 

@@ -200,6 +200,7 @@ Game datagrams between players who connect directly never pass through the serve
 - **The keys.** When two members who both asked are in a room together (when the second joins, or when the second asks), each gets a PEER_KEY push with the same new random 16-byte key about the other. A third member gets a different key for each of its own pairs. The key is new for every join and is not kept by the server or used for anything else.
 - **What it gives.** A key only two players and the server hold, so a member cannot forge a packet from another member to a third, and a sender outside the room cannot make one. What the tags look like on a game's packets is up to the client: the C client and the app's client add helpers for it in later releases.
 - **What it does not give.** The keys travel over the plain TCP connection like the HELLO token, so someone who can read a player's network traffic can read them: no confidentiality, and no protection from a path attacker. Direct TCP streams are not covered.
+- **Replay.** A key gives no replay protection by itself. The server issues one key per pair of players per join, and the protocol carries no counter, so nothing in the keys or the protocol tells a repeated packet from a new one. Recommendation (not part of the protocol): a title that tags packets with a key should put a sequence number or nonce inside the tagged data and drop any repeat.
 
 ## Leaderboards
 

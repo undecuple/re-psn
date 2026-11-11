@@ -262,6 +262,11 @@ backend is not built yet; anything else stops it as a bad setting. Because a con
 file's contents: errors name the variable, the scheme and the file's path only. If the score store fails, a score
 request gets ERROR 6 and the failure is logged at warn level.
 
+`-max-req-rate` only limits requests per second on each connection; it does not bound the in-memory score store. The
+store has its own fixed limits: at most 1000 boards per title and 10000 players per board. A score past either gets
+ERROR 6 (see [docs/api.md](api.md#leaderboards)). Across titles the store can still grow, because the number of titles
+is not limited.
+
 ## Stopping and replacing
 
 SIGINT (Ctrl-C) or SIGTERM stops the server: it logs `stopping`, closes the game ports and the status page and exits 0.

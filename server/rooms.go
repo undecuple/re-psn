@@ -114,7 +114,7 @@ func joinedSize(r *room, extraMemberData int) int {
 	return n
 }
 
-// Room access (docs/room-codes.md). A public room is listed in search; an invite-only room carries a code,
+// Room access (docs/api.md, Rooms: "Invite-only rooms"). A public room is listed in search; an invite-only room carries a code,
 // is listed nowhere (search, the status page) and is joined with JOIN_BY_CODE. The code is a bearer secret:
 // it is never logged.
 const (
