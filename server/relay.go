@@ -19,7 +19,7 @@ package main
 
 import (
 	"encoding/binary"
-	"io"
+	"errors"
 	"net"
 	"sync/atomic"
 	"time"
@@ -162,17 +162,50 @@ func (s *Server) streamLeg(conn net.Conn, t byte, p []byte) (handedOff bool) {
 	}
 	conn.SetDeadline(time.Time{})
 	other.SetDeadline(time.Time{})
-	go s.splice(other, conn)
 	s.splice(conn, other)
 	return false
 }
 
-// splice copies src to dst until either end closes, then closes both.
-func (s *Server) splice(dst, src net.Conn) {
-	n, _ := io.Copy(dst, src)
-	atomic.AddUint64(&s.relayed, uint64(n))
-	dst.Close()
-	src.Close()
+// relayWriteTimeout bounds one write of a relayed chunk to a leg: a peer that stops reading cannot hold the leg open.
+const relayWriteTimeout = 30 * time.Second
+
+// splice copies both ways between the two legs of a relay stream until either end closes, the stream has been idle for
+// s.relayIdle, or a write stalls; it then closes both. Idle means no byte in either direction: traffic one way keeps the
+// stream alive. s.relayIdle 0 leaves the stream without an idle limit.
+func (s *Server) splice(a, b net.Conn) {
+	var last atomic.Int64
+	last.Store(time.Now().UnixNano())
+	idle := s.relayIdle
+	copyOne := func(dst, src net.Conn) {
+		defer func() { dst.Close(); src.Close() }()
+		buf := make([]byte, 32*1024)
+		for {
+			if idle > 0 {
+				src.SetReadDeadline(time.Now().Add(idle))
+			}
+			n, err := src.Read(buf)
+			if n > 0 {
+				last.Store(time.Now().UnixNano())
+				dst.SetWriteDeadline(time.Now().Add(relayWriteTimeout))
+				w, werr := dst.Write(buf[:n])
+				atomic.AddUint64(&s.relayed, uint64(w))
+				if werr != nil {
+					return
+				}
+			}
+			if err != nil {
+				var ne net.Error
+				if idle > 0 && errors.As(err, &ne) && ne.Timeout() && time.Since(time.Unix(0, last.Load())) < idle {
+					continue // quiet this way, but the other way moved bytes within the idle time
+				}
+				return
+			}
+		}
+	}
+	done := make(chan struct{})
+	go func() { copyOne(a, b); close(done) }()
+	copyOne(b, a)
+	<-done
 }
 
 // relayUDP forwards a RELAY packet: "PSNR" 03 | from u32 | token u32 | to u32 |

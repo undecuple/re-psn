@@ -33,7 +33,9 @@ See [docs/running.md](docs/running.md) for the flags.
 - UDP admission defaults to 1000 packets/second per source IP with the same burst, shared by valid and invalid probes
   and relay datagrams. A bounded table holds at most 4096 sources and expires idle entries. Players behind one NAT
   share the allowance; `-max-udp-rate 0` disables it. Aggregate drop counters add no source labels. This does not
-  bound relay bytes/streams or protect a saturated network link; see [UDP guardrails](docs/udp-guardrails.md).
+  bound relay bytes or protect a saturated network link; see [UDP guardrails](docs/udp-guardrails.md). A relay
+  stream (TCP) is closed after `-relay-idle` seconds (default 600) with no bytes either way, and a write that a peer does
+  not read is dropped after 30 seconds; a stream that keeps moving bytes has no byte cap.
 - `-http-token` protects the status page and `/api/stats`.
 - A UDP probe or relayed datagram must come from the player's TCP address, so a stolen token or a forged source can't
   point other players' traffic at a third party. It can't stop someone who sends from the player's own address, and it

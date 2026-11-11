@@ -32,6 +32,9 @@ var writeTimeout = 10 * time.Second
 // defaultMaxConns is the default for -max-conns: a bound on file descriptors, high enough that a normal server never meets it.
 const defaultMaxConns = 4096
 
+// defaultRelayIdle is the default for -relay-idle, in seconds.
+const defaultRelayIdle = 10 * time.Minute
+
 // A reported round trip is shown while it is fresh, and values above maxReportedRTT (including 0xFFFF, "unknown")
 // clear it.
 const (
@@ -41,9 +44,10 @@ const (
 
 type Server struct {
 	log        *slog.Logger
-	relay      bool    // -relay: carry traffic for players who can't reach each other (relay.go)
-	relayForce bool    // -relay-force: with relay, send every stream through it (a test aid)
-	lanPublic  [4]byte // -lan-public-addr: address announced for LAN members to viewers outside the LAN (zero: off)
+	relay      bool          // -relay: carry traffic for players who can't reach each other (relay.go)
+	relayForce bool          // -relay-force: with relay, send every stream through it (a test aid)
+	relayIdle  time.Duration // -relay-idle: close a relay stream with no bytes either way for this long (0: never)
+	lanPublic  [4]byte       // -lan-public-addr: address announced for LAN members to viewers outside the LAN (zero: off)
 
 	httpToken string // -http-token: required by the status page when set (api.go)
 
@@ -141,6 +145,7 @@ func NewServer(maxRooms int, verbose bool) *Server {
 
 		maxPlayerRooms: 8,
 		maxConns:       defaultMaxConns,
+		relayIdle:      defaultRelayIdle,
 		maxPerAddr:     32,
 		maxReqRate:     200,
 		maxUDPRate:     defaultUDPRate,

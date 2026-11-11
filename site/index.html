@@ -332,6 +332,7 @@
 <h3>Unreleased</h3>
 <h4>Added</h4>
 <ul>
+<li>**Network:** <code>-relay-idle</code> (<code>RE_PSN_RELAY_IDLE</code>, default 600 seconds; 0 for never) closes a relay TCP stream that has carried no bytes in either direction for that long, and a write to a stream leg that the peer does ...</li>
 <li>**Docs and tooling:** <code>docs/integrating.md</code> has a &quot;Mapping the NP calls&quot; section: suggested NP call families to re-psn message tables, a list of what the protocol does not cover (world lists included), and a recommended ...</li>
 <li>**Server:** <code>-max-conns</code> (<code>RE_PSN_MAX_CONNS</code>, default 4096; 0 for no limit) caps the open TCP connections in total, players and relay legs together.</li>
 <li>Experimental, read-only admin API, off by default: <code>-admin ADDR</code> (<code>RE_PSN_ADMIN</code>) opens a second listener with one route, <code>GET /admin/v1/state</code>, for a read token kept in a file (<code>-admin-read-token-file</code>; at least 32 ...</li>
@@ -364,7 +365,7 @@
 </section>
 <section id="settings">
 <h2>Settings</h2>
-<p>Each of the 23 flags can also be set as a <code>RE_PSN_&lt;FLAG&gt;</code> variable. A flag on the command line wins, then the variable; a value that does not parse stops the server at start. It runs with no settings at all. <a href="https://github.com/undecuple/re-psn/blob/main/docs/running.md">docs/running.md</a> has the full text.</p>
+<p>Each of the 24 flags can also be set as a <code>RE_PSN_&lt;FLAG&gt;</code> variable. A flag on the command line wins, then the variable; a value that does not parse stops the server at start. It runs with no settings at all. <a href="https://github.com/undecuple/re-psn/blob/main/docs/running.md">docs/running.md</a> has the full text.</p>
 <table class="stack set">
 <thead><tr><th>Flag</th><th>Variable</th><th>Default</th><th>What it does</th></tr></thead>
 <tbody>
@@ -387,6 +388,7 @@
 <tr><td data-label="Flag"><code>-proxy-protocol</code></td><td data-label="Variable"><code>RE_PSN_PROXY_PROTOCOL</code></td><td data-label="Default"><code>off</code></td><td data-label="What it does">Require a PROXY v1/v2 header from a trusted proxy on the game TCP port</td></tr>
 <tr><td data-label="Flag"><code>-udp-any-source</code></td><td data-label="Variable"><code>RE_PSN_UDP_ANY_SOURCE</code></td><td data-label="Default"><code>off</code></td><td data-label="What it does">Accept UDP probes and relay packets from another address than the player&#x27;s TCP one</td></tr>
 <tr><td data-label="Flag"><code>-relay</code></td><td data-label="Variable"><code>RE_PSN_RELAY</code></td><td data-label="Default"><code>off</code></td><td data-label="What it does">Carry traffic for players who cannot reach each other (uses the host&#x27;s bandwidth)</td></tr>
+<tr><td data-label="Flag"><code>-relay-idle</code></td><td data-label="Variable"><code>RE_PSN_RELAY_IDLE</code></td><td data-label="Default"><code>600</code></td><td data-label="What it does">With -relay, close a relay stream after this many seconds with no bytes in either direction (0: never); not in v0.5.0</td></tr>
 <tr><td data-label="Flag"><code>-relay-force</code></td><td data-label="Variable"><code>RE_PSN_RELAY_FORCE</code></td><td data-label="Default"><code>off</code></td><td data-label="What it does">With -relay, send every stream through the relay, even between players who could connect directly. For testing the relay from one network; uses the host&#x27;s bandwidth</td></tr>
 <tr><td data-label="Flag"><code>-db</code></td><td data-label="Variable"><code>RE_PSN_DB</code></td><td data-label="Default"><code>off</code></td><td data-label="What it does">Score storage: off or memory</td></tr>
 <tr><td data-label="Flag"><code>-db-file</code></td><td data-label="Variable"><code>RE_PSN_DB_FILE</code></td><td data-label="Default"><code>none</code></td><td data-label="What it does">Read the -db setting from this file instead</td></tr>
