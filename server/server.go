@@ -24,6 +24,11 @@ import (
 
 const clientTimeout = 90 * time.Second // HELLO/HEARTBEAT keep a client alive
 
+// writeTimeout bounds one write to a client. A write is made while the
+// recipient's sendMu is held, so a member who stops reading must not hold it
+// for longer than this. A var so a test can shorten it.
+var writeTimeout = 10 * time.Second
+
 // A reported round trip is shown while it is fresh, and values above maxReportedRTT (including 0xFFFF, "unknown")
 // clear it.
 const (
@@ -392,8 +397,9 @@ func (s *Server) flush(out []push) {
 func (c *client) send(t byte, p []byte) {
 	c.sendMu.Lock()
 	defer c.sendMu.Unlock()
+	c.conn.SetWriteDeadline(time.Now().Add(writeTimeout))
 	if err := writePacket(c.conn, t, p); err != nil {
-		c.conn.Close() // the reader goroutine sees it and cleans up
+		c.conn.Close() // the reader goroutine sees it and cleans up (a timeout lands here too)
 	}
 }
 
