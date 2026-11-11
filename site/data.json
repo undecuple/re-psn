@@ -1167,10 +1167,14 @@
    "sections": {
     "Added": [
      "Experimental, read-only admin API, off by default: `-admin ADDR` (`RE_PSN_ADMIN`) opens a second listener with one route, `GET /admin/v1/state`, for a read token kept in a file (`-admin-read-token-file`; at least 32 ..."
+    ],
+    "Fixed": [
+     "A search no longer disconnects the player when the rooms' data is large: the reply lists only as many rooms as fit in one packet, and the player pages on from there."
     ]
    },
    "counts": {
-    "Added": 1
+    "Added": 1,
+    "Fixed": 1
    }
   },
   "latest": {
