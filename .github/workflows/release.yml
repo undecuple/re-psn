@@ -1,9 +1,9 @@
-# Release build for the fork. A pushed tag vMAJOR.MINOR.PATCH builds the archives and the x86_64 AppImage, copies the two
-# install scripts, and creates a DRAFT PRE-RELEASE with the seven assets for the maintainer to publish; this workflow
+# Release build for the fork. A pushed tag vMAJOR.MINOR.PATCH builds the server and desktop app archives and the x86_64 AppImage, copies the two
+# install scripts, and creates a DRAFT PRE-RELEASE with the ten assets for the maintainer to publish; this workflow
 # never publishes. A manual run (workflow_dispatch) only builds and keeps the files as a run artifact: the dry run.
 # Permissions: read at the top; write only on the job that creates the draft.
 # Checks here: on a tag, that the tag is v + VERSION and the version checks pass (scripts/check-release.sh --tag), before
-# anything is built; vet and tests, the tag shape, that dist/ holds exactly the seven assets with install.sh and
+# anything is built; vet and tests, the tag shape, that dist/ holds exactly the ten assets with install.sh and
 # install.ps1 equal to the tagged scripts (scripts/check-release.sh --assets, run by release-build.sh), SHA256SUMS
 # verified, and that no release for the tag exists yet.
 # Network fetch: appimagetool and the type-2 AppImage runtime, from their GitHub releases at fixed tags, checked against
@@ -62,6 +62,7 @@ jobs:
             echo "### Files"
             echo
             echo "Each archive holds one self-contained server binary (no installer, no runtime needed), LICENSE, NOTICE.md and an examples folder (settings file, systemd unit, proxy configs)."
+            echo "The \`re-psn-app\` archives hold the desktop app (one static binary, LICENSE, NOTICE.md and its README) for the same three platforms. They are not installed by \`install.sh\` or \`install.ps1\`; unpack one by hand."
             echo "The x86_64 AppImage holds the same Linux binary and examples as one runnable file; it needs FUSE to mount, or run it with \`--appimage-extract-and-run\`. It is not signed."
             echo "\`install.sh\` (Linux) and \`install.ps1\` (Windows) are the install scripts from this tag, listed in SHA256SUMS too: download one with SHA256SUMS, check it, read it, then run it (see docs/installing.md)."
             echo "Check a download with \`sha256sum -c SHA256SUMS --ignore-missing\`."
@@ -107,6 +108,9 @@ jobs:
             dist/re-psn-"$TAG"-windows-amd64.zip \
             dist/re-psn-"$TAG"-linux-amd64.tar.gz \
             dist/re-psn-"$TAG"-linux-arm64.tar.gz \
+            dist/re-psn-app-"$TAG"-windows-amd64.zip \
+            dist/re-psn-app-"$TAG"-linux-amd64.tar.gz \
+            dist/re-psn-app-"$TAG"-linux-arm64.tar.gz \
             dist/re-psn-"$TAG"-x86_64.AppImage \
             dist/install.sh \
             dist/install.ps1 \

@@ -393,10 +393,12 @@ func TestAppImagePinsAgree(t *testing.T) {
 	}
 }
 
-// releaseAssets is the seven release assets for a tag, sorted as the C locale sorts them.
+// releaseAssets is the ten release assets for a tag, sorted as the C locale sorts them.
 func releaseAssets(tag string) []string {
-	return []string{"SHA256SUMS", "install.ps1", "install.sh", "re-psn-" + tag + "-linux-amd64.tar.gz",
-		"re-psn-" + tag + "-linux-arm64.tar.gz", "re-psn-" + tag + "-windows-amd64.zip", "re-psn-" + tag + "-x86_64.AppImage"}
+	return []string{"SHA256SUMS", "install.ps1", "install.sh", "re-psn-app-" + tag + "-linux-amd64.tar.gz",
+		"re-psn-app-" + tag + "-linux-arm64.tar.gz", "re-psn-app-" + tag + "-windows-amd64.zip",
+		"re-psn-" + tag + "-linux-amd64.tar.gz", "re-psn-" + tag + "-linux-arm64.tar.gz",
+		"re-psn-" + tag + "-windows-amd64.zip", "re-psn-" + tag + "-x86_64.AppImage"}
 }
 
 // sumsLine is the SHA256SUMS line for data, in the format sha256sum writes.
@@ -405,7 +407,7 @@ func sumsLine(name string, data []byte) string {
 	return hex.EncodeToString(h[:]) + "  " + name + "\n"
 }
 
-// scripts/check-release.sh --assets passes a directory with the seven assets, whose SHA256SUMS lists the other six with
+// scripts/check-release.sh --assets passes a directory with the ten assets, whose SHA256SUMS lists the other nine with
 // their hashes and whose install scripts are the repository's; it fails on a missing or extra file, a script that is not
 // the repository's, a missing, repeated, wrong or malformed SHA256SUMS line, and a bad tag.
 func TestCheckReleaseAssets(t *testing.T) {
@@ -423,7 +425,7 @@ func TestCheckReleaseAssets(t *testing.T) {
 		}
 		return b
 	}
-	// assets returns the six files other than SHA256SUMS, with data replacing a file's contents and drop leaving one out.
+	// assets returns the nine files other than SHA256SUMS, with data replacing a file's contents and drop leaving one out.
 	assets := func(drop string, data map[string][]byte) []asset {
 		var as []asset
 		for _, name := range releaseAssets(tag) {
@@ -480,7 +482,7 @@ func TestCheckReleaseAssets(t *testing.T) {
 		}
 	}
 	if out, err := check(good, text); err != nil || !strings.Contains(out, "release assets passed for "+tag) {
-		t.Fatalf("seven good assets: want a pass, got %v %q", err, out)
+		t.Fatalf("ten good assets: want a pass, got %v %q", err, out)
 	}
 
 	appimage := "re-psn-" + tag + "-x86_64.AppImage"
@@ -493,11 +495,13 @@ func TestCheckReleaseAssets(t *testing.T) {
 		sums       string
 		extra      []string
 	}{
-		{"install.ps1 missing", "not the seven assets", assets("install.ps1", nil), sums(assets("install.ps1", nil)), nil},
-		{"install.sh missing", "not the seven assets", assets("install.sh", nil), sums(assets("install.sh", nil)), nil},
-		{"the AppImage missing", "not the seven assets", assets(appimage, nil), sums(assets(appimage, nil)), nil},
-		{"an extra file", "not the seven assets", good, text, []string{"notes.md"}},
-		{"an extra hidden file", "not the seven assets", good, text, []string{".x"}},
+		{"install.ps1 missing", "not the ten assets", assets("install.ps1", nil), sums(assets("install.ps1", nil)), nil},
+		{"install.sh missing", "not the ten assets", assets("install.sh", nil), sums(assets("install.sh", nil)), nil},
+		{"an app archive missing", "not the ten assets", assets("re-psn-app-"+tag+"-windows-amd64.zip", nil),
+			sums(assets("re-psn-app-"+tag+"-windows-amd64.zip", nil)), nil},
+		{"the AppImage missing", "not the ten assets", assets(appimage, nil), sums(assets(appimage, nil)), nil},
+		{"an extra file", "not the ten assets", good, text, []string{"notes.md"}},
+		{"an extra hidden file", "not the ten assets", good, text, []string{".x"}},
 		{"install.sh not the repository's", "install.sh differs from scripts/install.sh",
 			assets("", otherSh), sums(assets("", otherSh)), nil},
 		{"install.ps1 not the repository's", "install.ps1 differs from scripts/install.ps1",
@@ -530,7 +534,7 @@ func TestCheckReleaseAssets(t *testing.T) {
 	}
 }
 
-// The seven asset names are the same in scripts/check-release.sh, the draft upload in .github/workflows/release.yml and
+// The ten asset names are the same in scripts/check-release.sh, the draft upload in .github/workflows/release.yml and
 // the expected list in .github/workflows/release-check.yml.
 func TestReleaseAssetListsAgree(t *testing.T) {
 	read := func(rel string) string {
@@ -609,15 +613,18 @@ func TestReleaseCheckWorkflow(t *testing.T) {
 		t.Fatal("installer comparison must be conditional on the metadata result")
 	}
 	for _, c := range []struct {
-		name, tag, drop, tamper string
-		historical, extra, five bool
-		wantMetadata, wantCmp   bool
+		name, tag, drop, tamper        string
+		historical, extra, five, seven bool
+		wantMetadata, wantCmp          bool
 	}{
 		{name: "old v0.2.0", tag: "v0.2.0", historical: true, wantMetadata: true},
 		{name: "old v0.2.0 with the v0.3.0 list", tag: "v0.2.0", historical: true, five: true},
 		{name: "old v0.3.0", tag: "v0.3.0", historical: true, wantMetadata: true},
 		{name: "old unexpected installers", tag: "v0.3.0", wantMetadata: false},
-		{name: "new seven assets", tag: "v0.3.1", wantMetadata: true, wantCmp: true},
+		{name: "old v0.4.0 seven assets", tag: "v0.4.0", seven: true, wantMetadata: true, wantCmp: true},
+		{name: "v0.4.0 with the app archives", tag: "v0.4.0"},
+		{name: "new ten assets", tag: "v0.3.1", wantMetadata: true, wantCmp: true},
+		{name: "new missing app archive", tag: "v0.3.1", drop: "re-psn-app-v0.3.1-windows-amd64.zip"},
 		{name: "new missing sh", tag: "v0.3.1", drop: "install.sh"},
 		{name: "new missing ps1", tag: "v0.3.1", drop: "install.ps1"},
 		{name: "new extra asset", tag: "v0.3.1", extra: true},
@@ -646,7 +653,7 @@ func TestReleaseCheckWorkflow(t *testing.T) {
 				}
 			}
 			for _, name := range names {
-				if name == c.drop || (c.historical && (name == "install.sh" || name == "install.ps1")) {
+				if name == c.drop || ((c.seven || c.historical) && strings.HasPrefix(name, "re-psn-app-")) || (c.historical && (name == "install.sh" || name == "install.ps1")) {
 					continue
 				}
 				assets = append(assets, map[string]string{"name": name})

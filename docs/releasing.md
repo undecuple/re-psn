@@ -72,22 +72,23 @@ checked on the way. Pre-releases come often and on no schedule, whenever there i
 
 6. The tag starts [`.github/workflows/release.yml`](../.github/workflows/release.yml). It first runs
    `scripts/check-release.sh --tag <tag>`, which fails unless the tag is `v` + `VERSION` at the tagged commit and the
-   version checks pass; nothing is built after a failure. Then vet and tests, the archives for windows/amd64, linux/amd64
-   and linux/arm64 and the x86_64 [AppImage](#the-appimage), copies of `scripts/install.sh` and `scripts/install.ps1`
+   version checks pass; nothing is built after a failure. Then vet and tests, the server archives for windows/amd64, linux/amd64
+   and linux/arm64, the same three archives for the desktop app (`re-psn-app-vX.Y.Z-<os>-<arch>`, built from `app/`),
+   and the x86_64 [AppImage](#the-appimage), copies of `scripts/install.sh` and `scripts/install.ps1`
    (byte for byte, as `install.sh` and `install.ps1`; see [installing.md](installing.md)), and one `SHA256SUMS` listing
-   those six files (LF, no BOM); `scripts/check-release.sh --assets` then checks that exactly the seven assets are there.
+   those nine files (LF, no BOM); `scripts/check-release.sh --assets` then checks that exactly the ten assets are there.
    Then the notes, and a **draft** pre-release
    titled with the tag. The notes are `scripts/release-notes.sh` for `VERSION` (the CHANGELOG.md entries under that
    version's heading, which the bump filled) with the list of files, the checksums and the closing line
    `Next release: when ready` added. The job fails if a release for the tag exists already.
-7. Check the draft: the notes, the assets (three archives, the AppImage, `install.sh`, `install.ps1`, `SHA256SUMS`: seven
+7. Check the draft: the notes, the assets (three server archives, three app archives, the AppImage, `install.sh`, `install.ps1`, `SHA256SUMS`: ten
    in all), and a download checked with `sha256sum -c SHA256SUMS`. A bad draft is deleted before it is published; then re-run the workflow for the same
    tag, or, if the tagged commit is wrong, bump to the next version.
 8. Publishing is the maintainer's. Publishing starts
    [`.github/workflows/release-check.yml`](../.github/workflows/release-check.yml), which reads the release back.
 
 Manual `release-check` runs still accept the historical lists: nine assets for v0.2.0 (each download with a `.sha256` file,
-and `SHA256SUMS`) and five for v0.3.0. Later tags require all seven assets and compare both installer scripts with the
+and `SHA256SUMS`), five for v0.3.0 and seven for v0.4.0 (no app archives). Later tags require all ten assets and compare both installer scripts with the
 tagged source.
 9. Afterwards: CI is green on the tagged commit, and a fixed issue gets a comment naming the release.
 
@@ -98,7 +99,7 @@ tagged source.
 ## Before the first tag: the dry run
 
 Run the release workflow by hand (Actions, release, Run workflow). A manual run builds the archives and the AppImage for
-`v0.0.0`, copies the install scripts, checks the seven assets with `scripts/check-release.sh --assets`, and keeps them,
+`v0.0.0`, copies the install scripts, checks the ten assets with `scripts/check-release.sh --assets`, and keeps them,
 with `notes.md`, as a run artifact; it creates no release and has no write permission. The tag check is skipped (there
 is no tag), but `scripts/release-build.sh` still runs `scripts/check-release.sh`, and the notes are built the same way as on
 a tag, for the version in `VERSION`: what a tag at that commit would get. Before the first tag, check that artifact by hand: the sizes, the checksums
@@ -106,7 +107,7 @@ against `SHA256SUMS`, and that the Linux archive unpacks in an empty directory a
 build tools. The Windows and arm64 archives are cross-built; say in the notes which ones were not run.
 
 `scripts/release-build.sh v0.0.0` builds the same archives and copies the install scripts locally into `dist/` (ignored by
-git); without the AppImage that is six files, so the seven-asset check runs only with it. To build the AppImage too:
+git); without the AppImage that is nine files, so the ten-asset check runs only with it. To build the AppImage too:
 
 ```sh
 scripts/build-appimage.sh fetch /tmp/appimage-tools      # the only download; checked against the pins
@@ -188,19 +189,20 @@ How it is built ([`scripts/build-appimage.sh`](../scripts/build-appimage.sh), ru
 | The tag is `v` + `VERSION` at the tagged commit (`TestCheckReleaseTag` for the script) | `scripts/check-release.sh --tag`, first step of `release.yml` on a tag |
 | The deploy examples match the server's flags | `scripts/check-deploy.sh`, run by `scripts/release-build.sh` |
 | `SHA256SUMS` verifies | `scripts/release-build.sh`, `release.yml` (build and draft jobs), `release-check.yml` |
-| The build holds exactly the seven assets, `SHA256SUMS` has one `HASH  NAME` line (LF, no BOM) for each of the other six, and `install.sh` and `install.ps1` are the tree's scripts byte for byte (`TestCheckReleaseAssets`); the script and both workflows name the same seven (`TestReleaseAssetListsAgree`) | `scripts/check-release.sh --assets`, run by `scripts/release-build.sh` with the AppImage, in `release.yml`; the tests in `go test ./...` |
+| The build holds exactly the ten assets, `SHA256SUMS` has one `HASH  NAME` line (LF, no BOM) for each of the other nine, and `install.sh` and `install.ps1` are the tree's scripts byte for byte (`TestCheckReleaseAssets`); the script and both workflows name the same ten (`TestReleaseAssetListsAgree`) | `scripts/check-release.sh --assets`, run by `scripts/release-build.sh` with the AppImage, in `release.yml`; the tests in `go test ./...` |
 | appimagetool and the runtime match their SHA-256 pins; the script and the workflow pin the same files (`TestAppImagePinsAgree`); a wrong hash or tag is refused before anything runs (`TestBuildAppImageRefuses`) | `release.yml`, `scripts/build-appimage.sh`; the tests in `go test ./...` |
 | The AppImage holds the archive's binary, and its `-h` and version match | `scripts/build-appimage.sh` (smoke test), in `release.yml` |
 | No release exists for the tag yet | `release.yml` |
-| Published, titled with the tag, pre-release while 0.x, exactly the seven assets (the historical lists for v0.2.0, nine, and v0.3.0, five), checksums, and `install.sh` and `install.ps1` equal to the files at the tag; `TestReleaseCheckWorkflow` exercises metadata and script comparison with local API responses | `release-check.yml` |
+| Published, titled with the tag, pre-release while 0.x, exactly the ten assets (the historical lists for v0.2.0, nine, v0.3.0, five, and v0.4.0, seven), checksums, and `install.sh` and `install.ps1` equal to the files at the tag; `TestReleaseCheckWorkflow` exercises metadata and script comparison with local API responses | `release-check.yml` |
 
 ## Not checked yet
 
 - That the Windows and arm64 binaries run; they are cross-built. The exe, the AppImage and `SHA256SUMS` are unsigned.
 - The AppImage on other distributions: it was built and run (with FUSE and with `--appimage-extract-and-run`) on one
   x86_64 Linux machine only.
-- The seven-asset release: v0.3.0 carries five assets and v0.2.0 nine, none with the install scripts. The upload of `install.sh`
-  and `install.ps1` to a draft, and `release-check.yml` reading seven assets back and comparing the scripts with the tag
-  through the contents API, run for the first time on the next tag. A manual run of the release workflow builds and checks
-  the seven files but creates no draft.
+- The ten-asset release: v0.4.0 carries seven assets, v0.3.0 five and v0.2.0 nine. The upload of the three app archives to a
+  draft, and `release-check.yml` reading ten assets back and comparing the scripts with the tag
+  through the contents API, run for the first time on the next tag. The app archives have never been built by the release
+  workflow, and the Windows and arm64 app binaries have not been run. A manual run of the release workflow builds and checks
+  the ten files but creates no draft.
 - Sample log output in the README and `docs/running.md` (`version=0.1.0`) is an example and is not changed by the bump.

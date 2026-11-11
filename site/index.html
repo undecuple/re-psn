@@ -34,7 +34,7 @@
 <h2>Overview</h2>
 <p>re-psn answers the matchmaking and leaderboard calls of a statically recompiled PS3 game, for a group running its own server: a LAN, a VPN, or friends connecting to one person&#x27;s machine. The server keeps rooms and leaderboards and tells each player where the others are. Game traffic goes directly between players, and through the server only when two players cannot reach each other and the host has turned the relay on.</p>
 <p>It is a fork of <a href="https://github.com/sp00nznet/psnr">psnr</a> by sp00nz: a Go server and a one-file C client, with no accounts and no public instance.</p>
-<p class="status-line">Version 0.4.0 (pre-release). 75 features: 39 available, 3 not yet verified, 8 partial, 15 planned, 9 later, 1 declined.</p>
+<p class="status-line">Version 0.4.0 (pre-release). 76 features: 40 available, 3 not yet verified, 8 partial, 15 planned, 9 later, 1 declined.</p>
 <p class="notice">Unofficial; not affiliated with Sony. No game files, keys or firmware are in the repository or needed from it. Play only games you own.</p>
 </section>
 <section id="features">
@@ -212,6 +212,7 @@
 <tr id="f-install-script"><td data-label="Feature"><strong>Install scripts</strong> <code>install-script</code><br><code>scripts/install.sh</code> (Linux amd64 and arm64, POSIX sh) and <code>scripts/install.ps1</code> (Windows amd64; written for PowerShell 5.1 and 7, tested on 7 only) install the server for the current user from a GitHub release, newest or pinned, after checking the download against SHA256SUMS. No sudo or administrator rights, no profile edits; <code>--dry-run</code>, <code>--dir</code>, <code>--appimage</code>, <code>-AddToPath</code>.<br><span class="note">Partial: release assets (<code>install.sh</code>, <code>install.ps1</code>, listed in SHA256SUMS) since v0.4.0; v0.3.0 does not carry them. The Linux tests run under dash, bash and BusyBox ash with a fake release, and the published v0.4.0 <code>install.sh</code> installed that release on Linux amd64 into a temporary directory; <code>install.ps1</code> has not installed from a published release. The PowerShell fake-release tests have passed under PowerShell 7 on Linux and Windows CI; PowerShell 5.1 remains untested. No macOS builds, so no macOS support.</span></td><td data-label="Status"><span class="tag warn">partial</span></td><td data-label="Since">0.4.0</td></tr>
 <tr id="f-release-process"><td data-label="Feature"><strong>Release process</strong> <code>release-process</code><br>Written steps for cutting a release (tag, notes from CHANGELOG.md, checking the draft, publishing), a check that the version in the code and in CHANGELOG.md agree, and a dry run of the release workflow before the first tag.<br><span class="note">VERSION, the version check (TestVersionAgrees), scripts/bump-version.sh and scripts/release-notes.sh are built and docs/releasing.md has the steps; the release workflow builds its notes with the notes script and checks that a tag is v + VERSION, and the first tag, v0.2.0 (2026-11-06), ran the whole path: the dry run, the tag step and the draft job passed, and the draft was published by hand after its assets were read back. No fixed release day: while things are worked out, pre-releases (v0.x, marked pre-release) come whenever there is something worth trying.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">0.2.0</td></tr>
 <tr id="f-release-signing"><td data-label="Feature"><strong>Signed releases</strong> <code>release-signing</code><br>Sign <code>re-psn.exe</code> so Windows does not warn about an unsigned program, and sign the checksums.<br><span class="note">The exe and SHA256SUMS are unsigned today.</span></td><td data-label="Status"><span class="tag dim">later</span></td><td data-label="Since">not released</td></tr>
+<tr id="f-app-archives"><td data-label="Feature"><strong>Desktop app archives</strong> <code>app-archives</code><br>The release build makes <code>re-psn-app-vX.Y.Z-linux-amd64.tar.gz</code>, <code>-linux-arm64.tar.gz</code> and <code>-windows-amd64.zip</code> from <code>app/</code> (static, no cgo, version set from the tag), each with <code>LICENSE</code>, <code>NOTICE.md</code> and the app README, listed in <code>SHA256SUMS</code>. A release has ten assets.<br><span class="note">Not in v0.4.0, no installer support yet. The release workflow has not built them on a tag; the Windows and arm64 binaries are cross-built and not run.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
 </tbody>
 </table>
 <h3 id="area-documentation">Documentation</h3>
@@ -234,7 +235,7 @@
 <h2>Roadmap</h2>
 <p>The same list grouped by status. No dates are promised; <a href="https://github.com/undecuple/re-psn/blob/main/ROADMAP.md">ROADMAP.md</a> has the order and the scope.</p>
 <div class="cols">
-<div><h3>Done <span class="count">(50)</span></h3>
+<div><h3>Done <span class="count">(51)</span></h3>
 <ul>
 <li><a href="#f-rooms-basic">Rooms and search</a></li>
 <li><a href="#f-rooms-data">Room and member data</a></li>
@@ -286,6 +287,7 @@
 <li><a href="#f-net-lan-discover">LAN discovery (server side)</a></li>
 <li><a href="#f-client-lan-discover">LAN discovery in the C client</a></li>
 <li><a href="#f-app-server-view">Server view in Status</a></li>
+<li><a href="#f-app-archives">Desktop app archives</a></li>
 </ul></div>
 <div><h3>Next <span class="count">(15)</span></h3>
 <ul>
@@ -329,6 +331,7 @@
 <h4>Added</h4>
 <ul>
 <li>The desktop app&#x27;s Status screen has a read-only Server tab when a status URL is set: version, uptime, relay on or off, the limits in force (0 shown as none), TCP refusals and UDP drop counters, and the payload the relay ...</li>
+<li>The release build also makes three archives of the desktop app, <code>re-psn-app-vX.Y.Z-linux-amd64.tar.gz</code>, <code>-linux-arm64.tar.gz</code> and <code>-windows-amd64.zip</code>, each with the static <code>re-psn-app</code> binary (no cgo, version set from ...</li>
 <li><code>-lan-public-addr IP</code> (<code>RE_PSN_LAN_PUBLIC_ADDR</code>, off by default, IPv4): when a player connected from a private, carrier-grade NAT or link-local address, players on public addresses are given IP and that player&#x27;s P2P ...</li>
 <li>LAN discovery on the server, opt-in: <code>-discover</code> (<code>RE_PSN_DISCOVER</code>, off by default) answers a 64-byte DISCOVER sent to the game UDP port with a 52-byte DISCOVER_REPLY (TCP and UDP ports, relay flag, player count, name, ...</li>
 <li>The C client can find servers on the local network: <code>psnr_discover(port, timeout_ms, out, max)</code> (<code>client/psnr.h</code>) broadcasts one UDP request from its own temporary socket (never a title socket) and returns each server ...</li>
