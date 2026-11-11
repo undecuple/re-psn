@@ -44,6 +44,18 @@ make_release() { # TAG
     tar -C "$T/build" -czf "$F/$1/$n.tar.gz" "$n"
   done
   printf 'appimage %s\n' "$1" > "$F/$1/re-psn-$1-x86_64.AppImage"
+  case "$1" in v0.4.0|v0.3.0) ;; *)   # the app archives start after v0.4.0
+    for arch in amd64 arm64; do
+      n="re-psn-app-$1-linux-$arch"
+      mkdir -p "$T/build/$n"
+      printf '#!/bin/sh\necho "re-psn-app %s %s"\n' "$1" "$arch" > "$T/build/$n/re-psn-app"
+      chmod 0755 "$T/build/$n/re-psn-app"
+      echo license > "$T/build/$n/LICENSE"
+      echo notice > "$T/build/$n/NOTICE.md"
+      echo 'app readme' > "$T/build/$n/README.md"
+      tar -C "$T/build" -czf "$F/$1/$n.tar.gz" "$n"
+    done ;;
+  esac
   (cd "$F/$1" && sha256sum ./*.tar.gz ./*.AppImage | sed 's# \./# #' > SHA256SUMS)
 }
 make_release v0.4.0
@@ -201,6 +213,34 @@ check "second install: examples kept as edited" \
 run Linux x86_64 1000 --appimage
 check "--appimage: installs re-psn.AppImage" test "$rc" = 0 -a "$(cat "$bin/re-psn.AppImage")" = "appimage v0.4.0"
 check "--appimage: mode 0755" test -x "$bin/re-psn.AppImage"
+
+# --app: the desktop app instead of the server. v0.8.0 is a release with the app archives.
+make_release v0.8.0
+run Linux x86_64 1000 --app --version v0.8.0
+check "--app: installs re-psn-app, not the server" \
+  test "$rc" = 0 -a "$("$bin/re-psn-app")" = "re-psn-app v0.8.0 amd64" -a ! -e "$bin/re-psn"
+check "--app: mode 0755" test -n "$(find "$bin/re-psn-app" -perm 0755)"
+check "--app: LICENSE, NOTICE.md and README.md copied" \
+  test -f "$T/home/.local/share/re-psn-app/v0.8.0/README.md" -a -f "$T/home/.local/share/re-psn-app/v0.8.0/NOTICE.md"
+check "--app: no server folder created" test ! -e "$T/home/.local/share/re-psn"
+check "--app: only the app archive and SHA256SUMS fetched" test "$(cat "$F/calls")" = "https://github.com/undecuple/re-psn/releases/download/v0.8.0/SHA256SUMS
+https://github.com/undecuple/re-psn/releases/download/v0.8.0/re-psn-app-v0.8.0-linux-amd64.tar.gz"
+check "--app: says how to start it" has "Start the app:"
+check "--app: no server hints" test "$(grep -c 'status page' "$T/out")" = 0
+check "--app: temporary directory removed" empty "$T/tmp"
+run Linux aarch64 1000 --app --version v0.8.0
+check "--app on arm64: installs the arm64 app" test "$rc" = 0 -a "$("$bin/re-psn-app")" = "re-psn-app v0.8.0 arm64"
+run Linux x86_64 1000 --app --version v0.4.0
+check "--app on a release without app archives: refused, nothing installed" \
+  test "$rc" != 0 -a -z "$(ls -A "$T/home")"
+check "--app on an old release: says the app archives start after v0.4.0" has "start after v0.4.0"
+run Linux x86_64 1000 --app --appimage
+check "--app with --appimage: refused before any download" test "$rc" = 1 -a ! -e "$F/calls"
+run Linux x86_64 1000 --app --dry-run --version v0.8.0
+check "--app dry run: exits 0, no download, nothing written" test "$rc" = 0 -a ! -e "$F/calls"
+check "--app dry run: nothing written" nothing_written
+check "--app dry run: app asset URL" has "re-psn-app-v0.8.0-linux-amd64.tar.gz"
+check "--app dry run: install path" has "$bin/re-psn-app"
 run Linux aarch64 1000 --appimage
 check "--appimage on arm64: refused" test "$rc" = 1 -a -z "$(ls -A "$T/home")"
 

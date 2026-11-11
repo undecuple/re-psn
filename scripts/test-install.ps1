@@ -44,6 +44,19 @@ try {
         if ($tag -ne 'v0.6.0') { $lines += "$h  $n.zip" }
         [IO.File]::WriteAllText((Join-Path $F "$tag\SHA256SUMS"), (($lines -join "`n") + "`n"))
     }
+    # v0.8.0 carries the app archive (the app archives start after v0.4.0).
+    $an = 're-psn-app-v0.8.0-windows-amd64'
+    $ab = Join-Path $T "build\app\$an"
+    New-Item -ItemType Directory -Path $ab | Out-Null
+    Set-Content -LiteralPath (Join-Path $ab 're-psn-app.exe') -Value 'app v0.8.0'
+    Set-Content -LiteralPath (Join-Path $ab 'LICENSE') -Value 'license'
+    Set-Content -LiteralPath (Join-Path $ab 'NOTICE.md') -Value 'notice'
+    Set-Content -LiteralPath (Join-Path $ab 'README.md') -Value 'app readme'
+    New-Item -ItemType Directory -Path (Join-Path $F 'v0.8.0') | Out-Null
+    $azip = Join-Path $F "v0.8.0\$an.zip"
+    Compress-Archive -Path $ab -DestinationPath $azip
+    $ah = (Get-FileHash -Algorithm SHA256 -LiteralPath $azip).Hash.ToLowerInvariant()
+    [IO.File]::WriteAllText((Join-Path $F 'v0.8.0\SHA256SUMS'), "$ah  $an.zip`n")
     $script:releases = '[{"tag_name":"v9.9.9","draft":true},{"tag_name":"v0.4.0","draft":false,"prerelease":true},{"tag_name":"v0.3.0","draft":false}]' | ConvertFrom-Json
     $script:calls = @()
     $script:userPathValue = 'C:\Other'
@@ -105,6 +118,23 @@ try {
     $local = Reset
     $null = Install-RePsn -Version '' -Dir (Join-Path $local 'custom') -AddToPath $false -DryRun $false
     Check '-Dir: installed there' (Test-Path -LiteralPath (Join-Path $local 'custom\re-psn.exe'))
+
+    # -App: the desktop app instead of the server.
+    $local = Reset
+    $out = Install-RePsn -Version 'v0.8.0' -Dir '' -AddToPath $false -DryRun $false -App $true
+    Check '-App: installs re-psn-app.exe, not the server' ((Get-Content -LiteralPath (Join-Path $bin 're-psn-app.exe')) -eq 'app v0.8.0' -and -not (Test-Path -LiteralPath (Join-Path $bin 're-psn.exe')))
+    Check '-App: only the app zip and SHA256SUMS fetched' (($script:calls -join ' ') -eq 'https://github.com/undecuple/re-psn/releases/download/v0.8.0/SHA256SUMS https://github.com/undecuple/re-psn/releases/download/v0.8.0/re-psn-app-v0.8.0-windows-amd64.zip')
+    Check '-App: README.md and NOTICE.md copied' ((Test-Path -LiteralPath (Join-Path $local 're-psn-app\v0.8.0\README.md')) -and (Test-Path -LiteralPath (Join-Path $local 're-psn-app\v0.8.0\NOTICE.md')))
+    Check '-App: no server folder created' (-not (Test-Path -LiteralPath (Join-Path $local 're-psn\v0.8.0')))
+    Check '-App: no temporary file left' (@(Get-ChildItem -LiteralPath $bin -Force).Count -eq 1)
+    Check '-App: says how to start it, no server hints' ((@($out) -join "`n") -like '*Start the app:*' -and (@($out) -join "`n") -notlike '*status page*')
+    $local = Reset
+    Check '-App on a release without app archives refused' (Fails { Install-RePsn -Version 'v0.4.0' -Dir '' -AddToPath $false -DryRun $false -App $true } 'start after v0.4.0')
+    Check '-App on an old release: nothing installed' (Empty $local)
+    $local = Reset
+    $out = Install-RePsn -Version 'v0.8.0' -Dir '' -AddToPath $false -DryRun $true -App $true
+    Check '-App dry run: no download, nothing written' ($script:calls.Count -eq 0 -and (Empty $local))
+    Check '-App dry run: app zip URL and path' ((@($out) -join "`n") -like '*re-psn-app-v0.8.0-windows-amd64.zip*re-psn-app.exe*')
 
     $onWindows = ($PSVersionTable.PSEdition -eq 'Desktop') -or ((Test-Path variable:IsWindows) -and $IsWindows)
     if (-not $onWindows) {

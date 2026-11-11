@@ -921,7 +921,7 @@
    "status": "available",
    "since": "main",
    "evidence": "scripts/release-build.sh, scripts/check-release.sh, TestCheckReleaseAssets, TestReleaseAssetListsAgree, TestReleaseCheckWorkflow",
-   "note": "Not in v0.4.0, no installer support yet. The release workflow has not built them on a tag; the Windows and arm64 binaries are cross-built and not run.",
+   "note": "Not in v0.4.0. `install.sh --app` and `install.ps1 -App` install it (tested against a fake release only). The release workflow has not built them on a tag; the Windows and arm64 binaries are cross-built and not run.",
    "status_label": "available",
    "status_class": "ok"
   }
@@ -1155,6 +1155,7 @@
     "Added": [
      "The desktop app's Status screen has a read-only Server tab when a status URL is set: version, uptime, relay on or off, the limits in force (0 shown as none), TCP refusals and UDP drop counters, and the payload the relay ...",
      "The release build also makes three archives of the desktop app, `re-psn-app-vX.Y.Z-linux-amd64.tar.gz`, `-linux-arm64.tar.gz` and `-windows-amd64.zip`, each with the static `re-psn-app` binary (no cgo, version set from ...",
+     "`install.sh --app` and `install.ps1 -App` install the desktop app (`re-psn-app`) from a release instead of the server, with the same checksum check, no sudo and no profile edits.",
      "`-lan-public-addr IP` (`RE_PSN_LAN_PUBLIC_ADDR`, off by default, IPv4): when a player connected from a private, carrier-grade NAT or link-local address, players on public addresses are given IP and that player's P2P ...",
      "LAN discovery on the server, opt-in: `-discover` (`RE_PSN_DISCOVER`, off by default) answers a 64-byte DISCOVER sent to the game UDP port with a 52-byte DISCOVER_REPLY (TCP and UDP ports, relay flag, player count, name, ...",
      "The C client can find servers on the local network: `psnr_discover(port, timeout_ms, out, max)` (`client/psnr.h`) broadcasts one UDP request from its own temporary socket (never a title socket) and returns each server ...",
@@ -1176,7 +1177,7 @@
     ]
    },
    "counts": {
-    "Added": 14,
+    "Added": 15,
     "Fixed": 4
    }
   },

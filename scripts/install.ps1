@@ -1,8 +1,8 @@
 <#
-Install the re-psn server on Windows (amd64) from a GitHub release of undecuple/re-psn, for the current user only.
+Install the re-psn server (or, with -App, the desktop app) on Windows (amd64) from a GitHub release of undecuple/re-psn, for the current user only.
 Written for Windows PowerShell 5.1 and PowerShell 7; tested on PowerShell 7 only. No administrator rights needed.
 
-usage: powershell -ExecutionPolicy Bypass -File install.ps1 [-Version vX.Y.Z] [-Dir DIR] [-AddToPath] [-DryRun] [-Help]
+usage: powershell -ExecutionPolicy Bypass -File install.ps1 [-Version vX.Y.Z] [-Dir DIR] [-AddToPath] [-App] [-DryRun] [-Help]
 
 What it does, in order:
   1. Checks the system: Windows on amd64. There is no Windows ARM64 build; on Linux use install.sh, and macOS has
@@ -10,14 +10,16 @@ What it does, in order:
   2. Picks the release: -Version or RE_PSN_VERSION, else the newest release that is not a draft, pre-releases
      included (every release is a pre-release for now). That one lookup reads
      https://api.github.com/repos/undecuple/re-psn/releases; with a pinned version it is skipped.
-  3. Downloads re-psn-vX.Y.Z-windows-amd64.zip and SHA256SUMS from
+  3. Downloads re-psn-vX.Y.Z-windows-amd64.zip (with -App, re-psn-app-vX.Y.Z-windows-amd64.zip, which releases
+     after v0.4.0 carry) and SHA256SUMS from
      https://github.com/undecuple/re-psn/releases/download/vX.Y.Z/ into a temporary folder, over HTTPS with
      TLS 1.2 or newer. No other host is named here; GitHub redirects the download to its own file servers.
   4. Checks the zip with Get-FileHash against its line in SHA256SUMS. A missing line or a different hash stops it
      before anything is written outside the temporary folder.
   5. Installs re-psn.exe into DIR (default $env:LOCALAPPDATA\re-psn\bin): copied to a temporary name in DIR, then
      moved over the old file in one step. The zip's LICENSE, NOTICE.md and examples\ go to
-     $env:LOCALAPPDATA\re-psn\vX.Y.Z\ unless that folder is already there.
+     $env:LOCALAPPDATA\re-psn\vX.Y.Z\ unless that folder is already there. With -App it installs re-psn-app.exe
+     and copies LICENSE, NOTICE.md and README.md to $env:LOCALAPPDATA\re-psn-app\vX.Y.Z\ instead.
   6. Says what it did and how to start the server. It changes PATH only with -AddToPath, and then only the
      user PATH; otherwise it prints the command that would add DIR.
 
@@ -31,6 +33,7 @@ param(
     [string]$Version = $env:RE_PSN_VERSION,
     [string]$Dir = '',
     [switch]$AddToPath,
+    [switch]$App,
     [switch]$DryRun,
     [switch]$Help
 )
@@ -44,7 +47,7 @@ $Dl = "https://github.com/$Repo/releases/download"
 
 function Show-Usage {
     @'
-usage: install.ps1 [-Version vX.Y.Z] [-Dir DIR] [-AddToPath] [-DryRun] [-Help]
+usage: install.ps1 [-Version vX.Y.Z] [-Dir DIR] [-AddToPath] [-App] [-DryRun] [-Help]
 
 Installs the re-psn server for the current user from a GitHub release (Windows amd64).
 
@@ -52,6 +55,7 @@ Installs the re-psn server for the current user from a GitHub release (Windows a
                    pre-releases included
   -Dir DIR         install into DIR; default: $env:LOCALAPPDATA\re-psn\bin
   -AddToPath       add DIR to the user PATH (nothing else changes PATH)
+  -App             install the desktop app (re-psn-app.exe) instead of the server; needs a release after v0.4.0
   -DryRun          print the steps and stop; download and write nothing
   -Help            show this help
 
@@ -118,27 +122,29 @@ function Get-ExpectedHash([string]$sumsFile, [string]$name) {
     return $found[0].ToLowerInvariant()
 }
 
-function Install-RePsn([string]$Version, [string]$Dir, [bool]$AddToPath, [bool]$DryRun) {
+function Install-RePsn([string]$Version, [string]$Dir, [bool]$AddToPath, [bool]$DryRun, [bool]$App = $false) {
     Test-Platform
+    $pkg = if ($App) { 're-psn-app' } else { 're-psn' }
     $tag = Get-Tag $Version
     if (-not $env:LOCALAPPDATA) { throw 'LOCALAPPDATA is not set.' }
-    $base = Join-Path $env:LOCALAPPDATA 're-psn'
-    if (-not $Dir) { $Dir = Join-Path $base 'bin' }
+    $base = Join-Path $env:LOCALAPPDATA $pkg
+    if (-not $Dir) { $Dir = Join-Path (Join-Path $env:LOCALAPPDATA 're-psn') 'bin' }
     $Dir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Dir).TrimEnd('\', '/')
     $userPath = Get-UserPath
     $onPath = @("$userPath;$env:Path" -split ';' | ForEach-Object { $_.TrimEnd('\', '/') }) -contains $Dir
 
     if ($DryRun) {
         $v = if ($tag) { $tag } else { '<newest release>' }
-        $zip = "re-psn-$v-windows-amd64.zip"
+        $zip = "$pkg-$v-windows-amd64.zip"
         Write-Output 'Dry run: nothing is downloaded or written.'
         Write-Output '  system:   Windows amd64'
         if ($tag) { Write-Output "  release:  $tag (pinned)" } else { Write-Output "  release:  the newest non-draft release, read from $Api" }
         Write-Output "  download: $Dl/$v/$zip"
         Write-Output "            $Dl/$v/SHA256SUMS"
         Write-Output "  check:    Get-FileHash of $zip against its line in SHA256SUMS; stop on a mismatch or no line"
-        Write-Output "  install:  $(Join-Path $Dir 're-psn.exe') (moved into place)"
-        Write-Output "  examples: $(Join-Path $base "$v\examples")"
+        Write-Output "  install:  $(Join-Path $Dir "$pkg.exe") (moved into place)"
+        if ($App) { Write-Output "  extras:   $(Join-Path $base $v) (LICENSE, NOTICE.md, README.md)" }
+        else { Write-Output "  examples: $(Join-Path $base "$v\examples")" }
         if (-not $onPath) {
             if ($AddToPath) { Write-Output "  PATH:     $Dir would be added to the user PATH" }
             else { Write-Output "  PATH:     $Dir is not on PATH; the command to add it would be printed" }
@@ -157,12 +163,15 @@ function Install-RePsn([string]$Version, [string]$Dir, [bool]$AddToPath, [bool]$
         } else {
             Write-Output "Release: $tag"
         }
-        $zip = "re-psn-$tag-windows-amd64.zip"
+        $zip = "$pkg-$tag-windows-amd64.zip"
         Write-Output "Downloading $Dl/$tag/$zip"
         $sums = Join-Path $tmp 'SHA256SUMS'
         $zipPath = Join-Path $tmp $zip
         try { Get-Https "$Dl/$tag/SHA256SUMS" $sums } catch { throw "could not download SHA256SUMS for ${tag}: $($_.Exception.Message)" }
-        try { Get-Https "$Dl/$tag/$zip" $zipPath } catch { throw "could not download ${zip}: $($_.Exception.Message)" }
+        try { Get-Https "$Dl/$tag/$zip" $zipPath } catch {
+            $hint = if ($App) { ' (the app archives start after v0.4.0)' } else { '' }
+            throw "could not download ${zip}${hint}: $($_.Exception.Message)"
+        }
 
         $want = Get-ExpectedHash $sums $zip
         $got = (Get-FileHash -Algorithm SHA256 -LiteralPath $zipPath).Hash.ToLowerInvariant()
@@ -171,18 +180,18 @@ function Install-RePsn([string]$Version, [string]$Dir, [bool]$AddToPath, [bool]$
 
         $x = Join-Path $tmp 'x'
         Expand-Archive -LiteralPath $zipPath -DestinationPath $x
-        $extras = Join-Path $x "re-psn-$tag-windows-amd64"
-        $src = Join-Path $extras 're-psn.exe'
-        if (-not (Test-Path -LiteralPath $src -PathType Leaf)) { throw 'the zip has no re-psn.exe where expected; nothing was installed.' }
+        $extras = Join-Path $x "$pkg-$tag-windows-amd64"
+        $src = Join-Path $extras "$pkg.exe"
+        if (-not (Test-Path -LiteralPath $src -PathType Leaf)) { throw "the zip has no $pkg.exe where expected; nothing was installed." }
 
         # A temporary name in the same folder, then one move over the old file.
         New-Item -ItemType Directory -Force -Path $Dir | Out-Null
-        $target = Join-Path $Dir 're-psn.exe'
-        $part = Join-Path $Dir ".re-psn.exe.part.$PID"
+        $target = Join-Path $Dir "$pkg.exe"
+        $part = Join-Path $Dir ".$pkg.exe.part.$PID"
         Copy-Item -LiteralPath $src -Destination $part
         if (Test-Path -LiteralPath $target) {
             try { [IO.File]::Replace($part, $target, [NullString]::Value) }
-            catch { throw "could not replace $target (stop a running re-psn first): $($_.Exception.Message)" }
+            catch { throw "could not replace $target (stop a running $pkg first): $($_.Exception.Message)" }
         } else {
             [IO.File]::Move($part, $target)
         }
@@ -191,32 +200,40 @@ function Install-RePsn([string]$Version, [string]$Dir, [bool]$AddToPath, [bool]$
 
         $shared = Join-Path $base $tag
         if (Test-Path -LiteralPath $shared) {
-            Write-Output "Kept $shared as it was (examples for $tag are already there)"
+            Write-Output "Kept $shared as it was (the files for $tag are already there)"
         } else {
             $stage = Join-Path $tmp 'share'
             New-Item -ItemType Directory -Path $stage | Out-Null
-            foreach ($f in 'LICENSE', 'NOTICE.md', 'examples') {
+            $files = if ($App) { 'LICENSE', 'NOTICE.md', 'README.md' } else { 'LICENSE', 'NOTICE.md', 'examples' }
+            foreach ($f in $files) {
                 $p = Join-Path $extras $f
                 if (Test-Path -LiteralPath $p) { Copy-Item -LiteralPath $p -Destination $stage -Recurse }
             }
             New-Item -ItemType Directory -Force -Path $base | Out-Null
             Move-Item -LiteralPath $stage -Destination $shared
-            Write-Output "Copied LICENSE, NOTICE.md and examples\ to $shared"
+            if ($App) { Write-Output "Copied LICENSE, NOTICE.md and README.md to $shared" }
+            else { Write-Output "Copied LICENSE, NOTICE.md and examples\ to $shared" }
         }
 
         Write-Output ''
+        $what = if ($App) { 'Start the app:          ' } else { 'Start the server:       ' }
         if ($onPath) {
-            Write-Output 'Start the server:       re-psn'
+            Write-Output "$what$pkg"
         } elseif ($AddToPath) {
             $new = if ($userPath) { "$($userPath.TrimEnd(';'));$Dir" } else { $Dir }
             Set-UserPath $new
             $env:Path = "$env:Path;$Dir"
             Write-Output "Added $Dir to the user PATH (new terminals see it)."
-            Write-Output 'Start the server:       re-psn'
+            Write-Output "$what$pkg"
         } else {
             Write-Output "$Dir is not on your PATH. To add it to the user PATH, run this once (or rerun with -AddToPath):"
             Write-Output "  [Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvironmentVariable('Path', 'User') + ';$Dir', 'User')"
-            Write-Output "Start the server:       & '$target'"
+            Write-Output "$what& '$target'"
+        }
+        if ($App) {
+            Write-Output 'The app is a terminal program; run it in a terminal (Windows Terminal or PowerShell).'
+            Write-Output "Its README:              $(Join-Path $shared 'README.md')"
+            return
         }
         Write-Output 'With the status page:   add -http 127.0.0.1:36101 and open http://127.0.0.1:36101/'
         Write-Output 'All flags:              re-psn -h'
@@ -232,7 +249,7 @@ if ($MyInvocation.InvocationName -eq '.') { return }
 
 if ($Help) { Show-Usage; exit 0 }
 try {
-    Install-RePsn -Version $Version -Dir $Dir -AddToPath $AddToPath.IsPresent -DryRun $DryRun.IsPresent
+    Install-RePsn -Version $Version -Dir $Dir -AddToPath $AddToPath.IsPresent -DryRun $DryRun.IsPresent -App $App.IsPresent
 } catch {
     [Console]::Error.WriteLine("re-psn install: $($_.Exception.Message)")
     exit 1
