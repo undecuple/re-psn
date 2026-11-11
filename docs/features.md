@@ -8,12 +8,12 @@ What re-psn does today and what is planned, one row per feature. Each status res
 |---|---|---|
 | available | merged, with a test or a recorded run | 40 |
 | not yet verified | merged, but nothing in the repository checks it | 3 |
-| partial | merged in part, or with known gaps | 8 |
+| partial | merged in part, or with known gaps | 9 |
 | in progress | an open pull request or branch | 0 |
 | planned | wanted and intended, not started | 15 |
 | later | after the planned items, or after a decision | 9 |
 | declined | will not be done | 1 |
-| all | | 76 |
+| all | | 77 |
 
 ## Rooms and matchmaking
 
@@ -59,6 +59,7 @@ What re-psn does today and what is planned, one row per feature. Each status res
 | `status-verified` | **Verified player count**: Each public room has `verified` (members whose UDP probe the server accepted on this connection) and the top level has `verified_players`; the page shows '(N verified)' beside a room's member count. The protocol is unchanged. | available | main | [`server/api.go`](../server/api.go), [`TestVerifiedPlayerCount`](../server/verified_test.go) | Not in v0.4.0. A count of probes the server accepted, not a check of who the players are. |
 | `status-server-state` | **Server state in /api/stats**: `/api/stats` reports the version, whether the relay is on, the payload the relay has carried, the limits in force and the TCP connections refused (per address, request rate). Aggregate only; no address or player. The protocol is unchanged. | available | main | [`server/api.go`](../server/api.go), [`TestStatsReportServerState`](../server/stats_server_test.go) | Not in v0.4.0. Counts are since start. `relay_bytes` is payload, not interface traffic. |
 | `status-latency` | **Player-reported latency**: HEARTBEAT may carry the player's own last round trip (`rtt_ms`, 2 bytes); the server shows it next to each member as reported by the player. The C client and the app's Go client send it once a title opts in (recommended, off by default). | available | main | [`server/api.go`](../server/api.go), [`TestHeartbeatReportsRTT`](../server/rtt_test.go), [`TestReportedRTTGoesStale`](../server/rtt_test.go), [`TestCClientReportsRTT`](../server/rtt_client_test.go), [`TestConformanceHeartbeatReportsRTT`](../app/internal/client/rtt_test.go) | Not in v0.4.0. Reported by the player and not verified; display only. The round trip includes the server's own time. |
+| `admin-api` | **Experimental admin API, read-only part**: An opt-in listener of its own (`-admin`, `-admin-read-token-file`, TLS for a non-loopback address) with one route, `GET /admin/v1/state`, for a read token: version, uptime, relay, limits, TCP and UDP refusal counts and the ban count (always 0 for now), no address or player. Failed requests get a growing capped delay and one fail2ban-shaped log line; the token file is read again on SIGHUP. | partial | main | [`server/admin.go`](../server/admin.go), [`server/admin_test.go`](../server/admin_test.go), [`docs/admin-api.md`](admin-api.md) | Experimental and not in a release. Read-only: no action, no ban, no limit change, and no app view yet; those are separate changes. Not run against a reverse proxy, on Windows, or on a container secret mount. |
 
 ## Metrics
 
