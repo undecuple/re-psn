@@ -166,6 +166,13 @@ func endpoint(m, viewer *client) ([4]byte, uint16) {
 	return (*Server)(nil).endpoint(m, viewer)
 }
 
+// sameNetwork reports whether a and b are known to share a public address. A
+// player with no IPv4 address (c.ip is all zero, as for IPv6) is never on the
+// same network as anyone, so two such players are not treated as on one LAN.
+func sameNetwork(a, b *client) bool {
+	return a.ip != ([4]byte{}) && a.ip == b.ip
+}
+
 // isLANAddr reports whether ip is private (10/8, 172.16/12, 192.168/16),
 // carrier-grade NAT (100.64/10) or link-local (169.254/16): an address a
 // player on the internet cannot reach.
@@ -198,7 +205,7 @@ func (s *Server) endpoint(m, viewer *client) ([4]byte, uint16) {
 	if s != nil && s.lanPublic != ([4]byte{}) && isLANAddr(m.ip) && !isLANAddr(viewer.ip) {
 		return s.lanPublic, m.p2pPort
 	}
-	if m.udpPort != 0 && m.ip != viewer.ip {
+	if m.udpPort != 0 && !sameNetwork(m, viewer) {
 		return m.udpIP, m.udpPort
 	}
 	if m.localIP != ([4]byte{}) {

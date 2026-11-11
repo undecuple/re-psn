@@ -12,6 +12,7 @@ All notable changes to this project are documented here. The format follows
 ### Fixed
 - A search no longer disconnects the player when the rooms' data is large: the reply lists only as many rooms as fit in one packet, and the player pages on from there.
 - A player whose connection stops reading no longer freezes the other players in its room: the server drops it after 10 seconds of a stuck write (`writeTimeout`), so its room mates' requests get their replies and the stuck player is removed from the room.
+- A second HELLO on one connection gets error 1 and changes nothing, and a name is held by the player's full IPv6 address: before, all IPv6 players shared one address, so any of them could take another's name.
 
 ## [0.5.0] - 2026-11-11
 
