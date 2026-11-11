@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #ifdef _WIN32
 #  include <winsock2.h>
 #  include <windows.h>
@@ -25,6 +26,18 @@
 #endif
 
 #define COMM "NPWR00001_00"
+
+/* Wall clock in ms, for the timing checks. */
+static uint64_t mono_ms(void)
+{
+#ifdef _WIN32
+    return GetTickCount64();
+#else
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000u + (uint64_t)ts.tv_nsec / 1000000u;
+#endif
+}
 
 /* A UDP socket, as a title's P2P socket would be, probes the server and gets
  * back the address the server saw it at. */
@@ -310,6 +323,43 @@ static void name_limit_tests(const char* host, uint16_t port)
     psnr_close(ok);
 }
 
+/* A listener that never answers HELLO: the kernel completes the TCP handshake from its backlog,
+ * nothing calls accept, so the connect succeeds and the wait for HELLO_ACK is what must give up. */
+static void connect_timeout_test(void)
+{
+    struct sockaddr_in a;
+    socklen_t n = sizeof(a);
+    uint16_t port;
+    uint64_t t0;
+    int ls;
+    psnr_client* c;
+#ifdef _WIN32
+    WSADATA w;
+    WSAStartup(MAKEWORD(2, 2), &w);
+#endif
+    ls = (int)socket(AF_INET, SOCK_STREAM, 0);
+    memset(&a, 0, sizeof(a));
+    a.sin_family = AF_INET;
+    a.sin_addr.s_addr = htonl(0x7f000001u);
+    assert(ls >= 0 && bind(ls, (struct sockaddr*)&a, sizeof(a)) == 0 && listen(ls, 4) == 0);
+    assert(getsockname(ls, (struct sockaddr*)&a, &n) == 0);
+    port = ntohs(a.sin_port);
+
+    t0 = mono_ms();
+    c = psnr_connect_timeout("127.0.0.1", port, COMM, "silent", 0, NULL, NULL, 300);
+    assert(c == NULL);
+    {
+        uint64_t took = mono_ms() - t0;
+        assert(took >= 200 && took < 3000);   /* waited for the budget, then gave up */
+    }
+    assert(psnr_connect_timeout("127.0.0.1", port, COMM, "silent", 0, NULL, NULL, 0) == NULL);
+#ifdef _WIN32
+    closesocket(ls);
+#else
+    close(ls);
+#endif
+}
+
 int main(int argc, char** argv)
 {
     const char* host = argc > 1 ? argv[1] : "127.0.0.1";
@@ -320,9 +370,11 @@ int main(int argc, char** argv)
     decoder_tests();
     name_limit_tests(host, port);
     discover_tests();
+    connect_timeout_test();
     psnr_client* a = psnr_connect(host, port, COMM, "alice", 3658, &ida, ip);
-    psnr_client* b = psnr_connect(host, port, COMM, "bob", 3659, &idb, ip);
+    psnr_client* b = psnr_connect_timeout(host, port, COMM, "bob", 3659, &idb, ip, 5000);
     assert(a && b && ida != idb);
+    assert(psnr_dead_reason(a) == PSNR_DEAD_NONE && psnr_dead_reason(b) == PSNR_DEAD_NONE);
     assert(ip[0] != 0);   /* the address the server sees us at */
     probe(a);
     {   /* a punch is a control packet; a title's own data isn't */
@@ -431,6 +483,23 @@ int main(int argc, char** argv)
     psnr_close(b);
     m = wait_push(a, PSNR_MEMBER_LEFT);
     psnr_msg_free(&m);
+
+    {   /* a second HELLO with alice's name from this IP replaces a's connection (docs/api.md): the server
+         * closes a's socket, so a's next poll finds the peer closed, and says so */
+        psnr_client* a2 = psnr_connect(host, port, COMM, "alice", 3658, NULL, NULL);
+        int r = 0, i;
+        assert(a2 && psnr_dead_reason(a) == PSNR_DEAD_NONE);
+        for (i = 0; i < 400; i++) {   /* ~2 s */
+            r = psnr_poll(a, &m);
+            if (r == 1) { psnr_msg_free(&m); continue; }   /* anything queued before the close */
+            if (r == -1) break;
+            sleep_ms(5);
+        }
+        assert(r == -1);
+        assert(psnr_dead_reason(a) == PSNR_DEAD_PEER_CLOSED);
+        assert(psnr_last_os_error(a) == 0);
+        psnr_close(a2);
+    }
     psnr_close(a);
 
     printf("test_psnr: all passed\n");
