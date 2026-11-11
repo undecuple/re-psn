@@ -62,6 +62,14 @@ synthetic communication ID `RE-PSN-DEMO`, advertises peer port zero and has no p
 on a fresh server. It demonstrates blocking setup and reply ownership, not an engine frame loop or multiplayer gameplay.
 It reads no game data and connects only to the HOST you give it.
 
+On Windows, from a Developer Command Prompt (Visual Studio C++ tools), the same example builds with MSVC:
+
+```bat
+cl /W4 /std:c11 /Iclient client\psnr.c client\examples\minimal.c ws2_32.lib
+```
+
+CI compiles and links the client with MSVC on Windows but does not run it there.
+
 For an automated check that builds its own temporary loopback server and fails if native execution skips:
 
 ```sh

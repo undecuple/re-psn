@@ -2,7 +2,8 @@
 # against the server), known vulnerabilities in the Go module and its standard library, secrets in the full history,
 # the NAT lab in Docker, that docs/features.md matches docs/features.tsv, that the README art in docs/img/ matches a
 # fresh render, and that site/ matches what tools/site.py builds and its script tests pass. The desktop app module in app/
-# has its own job. It does not check Windows beyond the tests, or the C client outside Linux.
+# has its own job. It does not check Windows beyond the tests. The C client is run only on Linux; on Windows it is
+# compiled and linked with MSVC and not run.
 name: CI
 on:
   push:
@@ -48,6 +49,17 @@ jobs:
       - name: test (Windows)
         if: runner.os == 'Windows'
         run: go test -v ./...
+      # The C client with MSVC: compiled and linked only, never run. vcvars64.bat comes from the Visual Studio install that
+      # vswhere.exe reports; each command ends the step if it fails (cmd keeps only the last exit code otherwise).
+      - name: C client (MSVC compile only)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          for /f "usebackq delims=" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do set "VSINSTALL=%%i"
+          if not defined VSINSTALL exit /b 1
+          call "%VSINSTALL%\VC\Auxiliary\Build\vcvars64.bat" || exit /b 1
+          cl /nologo /W4 /std:c11 /Iclient /c client\psnr.c || exit /b 1
+          cl /nologo /W4 /std:c11 /Iclient client\psnr.c client\examples\minimal.c /Fe:minimal.exe ws2_32.lib || exit /b 1
       # The install scripts against a fake release (no network): the shell script under dash and bash, the PowerShell script
       # under PowerShell 7 on both systems.
       - name: install script tests (sh)

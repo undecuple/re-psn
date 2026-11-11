@@ -13,6 +13,7 @@ All notable changes to this project are documented here. The format follows
 - `psnr_connect_timeout(...)` (`client/psnr.h`): `psnr_connect` with a time limit. The TCP connect is non-blocking and the wait for HELLO_ACK is bounded, both by one `timeout_ms` budget; a stalled server gives NULL instead of blocking the caller. DNS is still blocking and not covered. `psnr_connect` is unchanged.
 - `psnr_dead_reason(c)` and `psnr_last_os_error(c)`: why the C client's connection was lost (peer closed, I/O error, out of memory, send timeout) and the OS error at that point. The first failure is kept.
 - `PSNR_SEND_TIMEOUT_MS` (5000, overridable before including `psnr.h`): the most time one write may wait for the socket to accept data, in total.
+- CI compiles the C client (`client/psnr.c`, `client/examples/minimal.c`) with MSVC on Windows and does not run it there; the build instructions in `docs/integrating.md` give the MSVC command.
 
 ### Fixed
 - A search no longer disconnects the player when the rooms' data is large: the reply lists only as many rooms as fit in one packet, and the player pages on from there.

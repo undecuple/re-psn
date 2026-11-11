@@ -897,7 +897,7 @@
    "status": "available",
    "since": "main",
    "evidence": "client/psnr.c, client/test_psnr.c",
-   "note": "Not in v0.4.0. Finds only servers started with -discover. Tested against a fake responder and, by hand, against a real server on loopback; not a real broadcast across a network. Does not cross subnets or client-isolated Wi-Fi. The Windows build broadcasts to 255.255.255.255 only and is untested.",
+   "note": "Not in v0.4.0. Finds only servers started with -discover. Tested against a fake responder and, by hand, against a real server on loopback; not a real broadcast across a network. Does not cross subnets or client-isolated Wi-Fi. The Windows build broadcasts to 255.255.255.255 only; CI compiles the client with MSVC but does not run it on Windows.",
    "status_label": "available",
    "status_class": "ok"
   },
@@ -1170,7 +1170,8 @@
      "C client: constants for `PEER_AUTH`, `SET_ROOM_ACCESS`, `JOIN_BY_CODE`, `GET_ROOM_ACCESS`, `ROOM_ACCESS` and `PEER_KEY`, and bounds-checked decoders for ROOM_JOINED, member entries, ROOM_LIST and RANKING ...",
      "`psnr_connect_timeout(...)` (`client/psnr.h`): `psnr_connect` with a time limit.",
      "`psnr_dead_reason(c)` and `psnr_last_os_error(c)`: why the C client's connection was lost (peer closed, I/O error, out of memory, send timeout) and the OS error at that point.",
-     "`PSNR_SEND_TIMEOUT_MS` (5000, overridable before including `psnr.h`): the most time one write may wait for the socket to accept data, in total."
+     "`PSNR_SEND_TIMEOUT_MS` (5000, overridable before including `psnr.h`): the most time one write may wait for the socket to accept data, in total.",
+     "CI compiles the C client (`client/psnr.c`, `client/examples/minimal.c`) with MSVC on Windows and does not run it there; the build instructions in `docs/integrating.md` give the MSVC command."
     ],
     "Fixed": [
      "A search no longer disconnects the player when the rooms' data is large: the reply lists only as many rooms as fit in one packet, and the player pages on from there.",
@@ -1187,7 +1188,7 @@
     ]
    },
    "counts": {
-    "Added": 5,
+    "Added": 6,
     "Fixed": 8,
     "Changed": 1
    }
