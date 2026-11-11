@@ -7,7 +7,7 @@ Two optional scripts install the re-psn server from a GitHub release for the cur
 no macOS builds, and the Linux script says so and stops.
 
 > [!NOTE]
-> Releases built after v0.4.0 also carry the desktop app as separate archives (`re-psn-app-vX.Y.Z-linux-amd64.tar.gz`,
+> Releases from v0.5.0 on also carry the desktop app as separate archives (`re-psn-app-vX.Y.Z-linux-amd64.tar.gz`,
 > `-linux-arm64.tar.gz` and `-windows-amd64.zip`, listed in `SHA256SUMS`). The scripts install the server unless asked: add
 > `--app` (Linux) or `-App` (Windows) to install the app instead. Neither works on v0.4.0 or earlier, which have no app archives.
 
@@ -61,7 +61,7 @@ sh install.sh                     # the newest release, pre-releases included, i
 sh install.sh --version v0.4.0    # a pinned release (or RE_PSN_VERSION=v0.4.0)
 sh install.sh --dir ~/bin         # another folder (or RE_PSN_INSTALL_DIR)
 sh install.sh --appimage          # re-psn.AppImage instead of the binary (x86_64 only)
-sh install.sh --app               # the desktop app (re-psn-app) instead of the server; a release after v0.4.0
+sh install.sh --app               # the desktop app (re-psn-app) instead of the server; v0.5.0 or later
 sh install.sh --dry-run           # print the steps; download and write nothing
 ```
 
@@ -87,7 +87,7 @@ With `--app` the script installs `re-psn-app` (from `re-psn-app-vX.Y.Z-linux-<ar
 checks and the same folder, and copies the archive's `LICENSE`, `NOTICE.md` and `README.md` to `~/.local/share/re-psn-app/vX.Y.Z/`.
 It installs the app *instead of* the server (run it twice for both), and cannot be combined with `--appimage`. The app is a terminal
 program: start it with `re-psn-app` in a terminal. If the release has no app archive the download fails and the script says the app
-archives start after v0.4.0; nothing is installed.
+archives start with v0.5.0; nothing is installed.
 
 ## Windows
 
@@ -107,7 +107,7 @@ command that would add the folder to the user PATH. `-AddToPath` rewrites the us
 
 With `-App` the script installs `re-psn-app.exe` (from `re-psn-app-vX.Y.Z-windows-amd64.zip`) the same way, into the same folder,
 and copies `LICENSE`, `NOTICE.md` and `README.md` to `%LOCALAPPDATA%\re-psn-app\vX.Y.Z\`. It installs the app instead of the server and
-needs a release after v0.4.0. The app is a terminal program: run it in Windows Terminal or PowerShell. The app is not code-signed,
+needs v0.5.0 or later. The app is a terminal program: run it in Windows Terminal or PowerShell. The app is not code-signed,
 so Windows SmartScreen may warn about a downloaded `.exe`; the script checks the zip against `SHA256SUMS` first.
 
 ## What the scripts never do

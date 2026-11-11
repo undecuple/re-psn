@@ -158,7 +158,7 @@ not network bandwidth or interface traffic. If any counter is lower than at the 
 restarted and starts the rate again from that refresh. The tab changes nothing on the server, and the token is never shown.
 
 A server that predates these fields leaves them out. The tab then says `not reported by this server` for each missing value
-and never shows it as 0 or off. This needs a server newer than v0.4.0.
+and never shows it as 0 or off. This needs a server of v0.5.0 or newer.
 
 Leave title/board filters empty to show all shared entries, or use the existing `e`/`b` controls to filter. Up to 100
 matching rows are displayed with a count. Room IDs, connection totals and scores retain their full integer precision.
