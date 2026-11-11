@@ -1,7 +1,7 @@
 {
  "format": 1,
  "generator": "tools/art/make_art.py",
- "generator_sha256": "3c1026915e8cd2c0eb5e645b80d5cb6c51c3814c8fd0b47b8f6f874faffac524",
+ "generator_sha256": "cb575224288b088b8357fda3abb2466d8548a7fc85b7671d653f98d31ffbde42",
  "pillow": "12.3.0",
  "freetype": "2.14.3",
  "zlib": "1.3",
