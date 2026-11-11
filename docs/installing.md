@@ -6,6 +6,11 @@ Two optional scripts install the re-psn server from a GitHub release for the cur
 `SHA256SUMS`, check the one against the other, and put the binary in a folder of your own. macOS is not supported: there are
 no macOS builds, and the Linux script says so and stops.
 
+> [!NOTE]
+> Releases built after v0.4.0 also carry the desktop app as separate archives (`re-psn-app-vX.Y.Z-linux-amd64.tar.gz`,
+> `-linux-arm64.tar.gz` and `-windows-amd64.zip`, listed in `SHA256SUMS`). These scripts do not install them yet: unpack an
+> app archive by hand.
+
 ## Contents
 
 - [Get the script, then read it](#get-the-script-then-read-it)

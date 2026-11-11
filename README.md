@@ -337,7 +337,9 @@ Each release carries `re-psn-vX.Y.Z-windows-amd64.zip`, `re-psn-vX.Y.Z-linux-amd
 `re-psn-vX.Y.Z-linux-arm64.tar.gz` (built by [scripts/release-build.sh](scripts/release-build.sh)): a static `re-psn` binary
 (`re-psn.exe` on Windows), `LICENSE`, `NOTICE.md` and the deployment examples in `examples/`. From v0.4.0 it also carries the
 install scripts `install.sh` and `install.ps1` ([docs/installing.md](docs/installing.md)), seven assets in all (v0.3.0 has
-five, without the scripts). `SHA256SUMS` lists the archives and the AppImage, and from v0.4.0 the scripts. Check a download with `sha256sum -c SHA256SUMS --ignore-missing` on Linux, or compare the output of
+five, without the scripts). Releases after v0.4.0 add three archives of the desktop app, `re-psn-app-vX.Y.Z-<os>-<arch>` (same
+three platforms: the `re-psn-app` binary, `LICENSE`, `NOTICE.md` and the app's README), ten assets in all; the install scripts
+do not install them yet. `SHA256SUMS` lists the archives and the AppImage, and from v0.4.0 the scripts. Check a download with `sha256sum -c SHA256SUMS --ignore-missing` on Linux, or compare the output of
 `Get-FileHash <archive>` with the line in `SHA256SUMS` on Windows.
 
 Linux x86_64 also gets `re-psn-vX.Y.Z-x86_64.AppImage`, the same binary as one runnable file (unsigned): check it with

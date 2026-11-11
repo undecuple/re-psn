@@ -1,10 +1,10 @@
 # Read-only check of a published release: fails when the release and its files disagree. Triggers: a published release, and a
 # manual run (input: tag). Nothing is written. Checks: tag shape, published as a pre-release while the version is 0.x,
-# title equals the tag, the assets are exactly the seven (the three archives, the x86_64 AppImage, install.sh, install.ps1
-# and SHA256SUMS), that sha256sum -c passes on the downloaded files, and that install.sh and install.ps1 are byte for byte
+# title equals the tag, the assets are exactly the ten (the three server archives, the three desktop app archives, the x86_64 AppImage,
+# install.sh, install.ps1 and SHA256SUMS), that sha256sum -c passes on the downloaded files, and that install.sh and install.ps1 are byte for byte
 # the files at the tag (read through the contents API).
 # The historical releases keep their own lists and have no install scripts to compare: v0.2.0 has nine assets (each
-# download with its own .sha256 file, and SHA256SUMS), v0.3.0 has five.
+# download with its own .sha256 file, and SHA256SUMS), v0.3.0 has five, v0.4.0 has seven (no app archives).
 name: release-check
 on:
   release:
@@ -40,13 +40,14 @@ jobs:
             (.draft | not) and .name == $tag and ((.prerelease) or (.tag_name | startswith("v0") | not))' \
             "$RUNNER_TEMP/release.json" >/dev/null \
             || { echo "::error::release must be published, titled $TAG, and a pre-release while 0.x"; exit 1; }
-          want="re-psn-$TAG-linux-amd64.tar.gz re-psn-$TAG-linux-arm64.tar.gz re-psn-$TAG-windows-amd64.zip re-psn-$TAG-x86_64.AppImage install.sh install.ps1 SHA256SUMS"
+          want="re-psn-$TAG-linux-amd64.tar.gz re-psn-$TAG-linux-arm64.tar.gz re-psn-$TAG-windows-amd64.zip re-psn-app-$TAG-linux-amd64.tar.gz re-psn-app-$TAG-linux-arm64.tar.gz re-psn-app-$TAG-windows-amd64.zip re-psn-$TAG-x86_64.AppImage install.sh install.ps1 SHA256SUMS"
           INSTALLER_ASSETS=true
           case "$TAG" in
             v0.2.0)
               INSTALLER_ASSETS=false
               want="re-psn-$TAG-linux-amd64.tar.gz re-psn-$TAG-linux-amd64.tar.gz.sha256 re-psn-$TAG-linux-arm64.tar.gz re-psn-$TAG-linux-arm64.tar.gz.sha256 re-psn-$TAG-windows-amd64.zip re-psn-$TAG-windows-amd64.zip.sha256 re-psn-$TAG-x86_64.AppImage re-psn-$TAG-x86_64.AppImage.sha256 SHA256SUMS" ;;
-            v0.3.0) INSTALLER_ASSETS=false; want="${want/ install.sh install.ps1/}" ;;
+            v0.3.0) INSTALLER_ASSETS=false; want="$(printf '%s' "$want" | sed 's/ re-psn-app-[^ ]*//g; s/ install.sh install.ps1//')" ;;
+            v0.4.0) want="$(printf '%s' "$want" | sed 's/ re-psn-app-[^ ]*//g')" ;;
           esac
           echo "INSTALLER_ASSETS=$INSTALLER_ASSETS" >> "$GITHUB_ENV"
           got="$(jq -r '.assets[].name' "$RUNNER_TEMP/release.json" | sort | tr '\n' ' ' | sed 's/ $//')"

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Build the release into dist/: archives of static server binaries (no cgo) for the three targets, copies of
+# Build the release into dist/: archives of static server binaries (no cgo) for the three targets, archives of the desktop
+# app (app/, a Go module of its own, also no cgo) for the same three targets, copies of
 # scripts/install.sh and scripts/install.ps1 (byte for byte, under those names), and one SHA256SUMS (LF, no BOM) listing
 # them. With --appimage-tools DIR it also builds re-psn-vX.Y.Z-x86_64.AppImage with scripts/build-appimage.sh (DIR holds
 # the pinned files from `scripts/build-appimage.sh fetch DIR`), SHA256SUMS lists it too, and
-# `scripts/check-release.sh --assets` then checks that dist/ holds exactly the seven release assets.
+# `scripts/check-release.sh --assets` then checks that dist/ holds exactly the ten release assets.
 # Used by .github/workflows/release.yml and runnable locally.
 # usage: scripts/release-build.sh vX.Y.Z [--appimage-tools DIR]
 set -euo pipefail
@@ -37,6 +38,23 @@ for target in windows/amd64 linux/amd64 linux/arm64; do
     go build -trimpath -ldflags "-s -w -X main.version=$version" -o "$d/$exe" ./server)
   cp "$root/LICENSE" "$root/NOTICE.md" "$d/"
   cp -r "$root/deploy" "$d/examples"
+  if [ "$os" = windows ]; then
+    (cd "$stage" && zip -qrX "$dist/$name.zip" "$name")
+  else
+    tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -C "$stage" -czf "$dist/$name.tar.gz" "$name"
+  fi
+done
+
+# The desktop app: re-psn-app-vX.Y.Z-OS-ARCH, with the app's own module and version variable.
+for target in windows/amd64 linux/amd64 linux/arm64; do
+  os="${target%/*}"; arch="${target#*/}"
+  exe=re-psn-app; [ "$os" = windows ] && exe=re-psn-app.exe
+  name="re-psn-app-$tag-$os-$arch"
+  d="$stage/$name"; mkdir -p "$d"
+  (cd "$root/app" && CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" \
+    go build -mod=readonly -trimpath -ldflags "-s -w -X main.version=$version" -o "$d/$exe" ./cmd/re-psn-app)
+  cp "$root/LICENSE" "$root/NOTICE.md" "$d/"
+  cp "$root/app/README.md" "$d/README.md"
   if [ "$os" = windows ]; then
     (cd "$stage" && zip -qrX "$dist/$name.zip" "$name")
   else
