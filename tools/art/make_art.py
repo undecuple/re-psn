@@ -18,7 +18,8 @@ is for the repository's social preview. It is uploaded by hand in the repository
 preview) and is not used by any page.
 Every image is palette-quantised and keeps its text and marks at least MARGIN px from the edge.
 tools/art/art.json lists the fonts (source and SHA-256), the inputs, the outputs, and the Pillow, FreeType and zlib
-versions. Deterministic: the same script, inputs, fonts and Pillow give the same bytes, which --check relies on.
+versions. Deterministic: the same script, inputs, fonts and Pillow give the same bytes, which --check relies on. The
+Pillow and FreeType versions must equal the manifest's; zlib may be any of ZLIB_ACCEPTED (1.3.1 provisionally, see there).
 Needs Pillow (pinned in .github/workflows/ci.yml).
 
 Adapted from Project Helghast (MIT, Copyright (c) 2026 undecuple): tools/release/installer_art.py (fitting text,
@@ -38,6 +39,12 @@ PALETTE = "docs/art/palette.json"
 TRANSCRIPTS = "docs/art/transcripts"
 OUT = "docs/img"
 MANIFEST = "tools/art/art.json"
+# zlib versions --check accepts. The committed PNGs were made with 1.3; ubuntu-latest now maps to images whose system
+# zlib is 1.3 or 1.3.1. 1.3.1 is listed provisionally: no run on it has shown the images come out byte for byte the same
+# yet. The first CI run on it does (--check compares every byte); if that run fails on a PNG difference, 1.3.1 comes out
+# of this list. The manifest records ZLIB_REFERENCE, the version the files were made with.
+ZLIB_ACCEPTED = ("1.3", "1.3.1")
+ZLIB_REFERENCE = "1.3"
 FONTS = ROOT / "work" / "art" / "fonts"
 
 FONT_RELEASE = {
@@ -387,7 +394,12 @@ def versions():
     import PIL
     from PIL import features
     return {"pillow": PIL.__version__, "freetype": features.version("freetype2") or "-",
-            "zlib": features.version("zlib") or "-"}
+            "zlib": ZLIB_REFERENCE}
+
+
+def zlib_version():
+    from PIL import features
+    return features.version("zlib") or "-"
 
 
 def manifest(files, root=ROOT):
@@ -418,9 +430,13 @@ def check(fonts, root=ROOT):
     pinned = root / MANIFEST
     if pinned.is_file():
         old = json.loads(pinned.read_text(encoding="utf-8"))
-        want = {k: old.get(k) for k in versions()}
-        if want != versions():
-            return [f"Pillow/FreeType/zlib {versions()} differ from {MANIFEST}'s {want}; install the pinned Pillow"]
+        want = {k: old.get(k) for k in versions() if k != "zlib"}
+        have = {k: v for k, v in versions().items() if k != "zlib"}
+        if want != have:
+            return [f"Pillow/FreeType {have} differ from {MANIFEST}'s {want}; install the pinned Pillow"]
+        if zlib_version() not in ZLIB_ACCEPTED:
+            return [f"zlib {zlib_version()} is not one of {', '.join(ZLIB_ACCEPTED)}, the versions the art is known to "
+                    "render identically with"]
     files, probs = render(fonts, root)
     for name, data in files.items():
         p = root / OUT / name
