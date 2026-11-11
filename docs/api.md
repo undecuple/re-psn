@@ -114,7 +114,7 @@ client's `psnr_poll` sends a HEARTBEAT every 20 seconds.
 | 3 | room full |
 | 4 | not the room owner |
 | 5 | not in that room |
-| 6 | limit reached: the server's room limit, or the player is already in `-max-player-rooms` rooms; for a score request, the server's score store failed |
+| 6 | limit reached: the server's room limit, or the player is already in `-max-player-rooms` rooms; for a score request, the server's score store failed; for JOIN_ROOM or JOIN_BY_CODE, the room's state would not fit one ROOM_JOINED reply (see Rooms) |
 | 7 | no HELLO yet |
 | 8 | name taken (HELLO): another player on this server has it |
 | 9 | no relay (STREAM_*): the server runs without `-relay` |
@@ -163,6 +163,13 @@ These are modelled on sceNpMatching2 rooms.
   miss on the connection, and 5 misses in 60 seconds close it. The code is never logged or shown on the status page.
 - **JOIN_ROOM** on a room the caller is already in returns the room again
   instead of an error.
+- **Reply size:** a ROOM_JOINED reply must fit one packet of 65535 bytes. It is
+  26 bytes plus the room's external and internal blobs plus, per member, 31 bytes
+  and the member's data. A join (JOIN_ROOM or JOIN_BY_CODE) that would make the
+  reply too big is refused with error 6 and the joiner is not added, so the
+  other members hear nothing. A member who asks again (JOIN_ROOM) gets error 6
+  when the reply has grown too big. With 4096-byte member data a room holds 15
+  members; with a full 4096-byte internal blob, fewer. The connection stays open.
 
 **Replies:**
 

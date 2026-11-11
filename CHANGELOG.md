@@ -13,6 +13,7 @@ All notable changes to this project are documented here. The format follows
 - A search no longer disconnects the player when the rooms' data is large: the reply lists only as many rooms as fit in one packet, and the player pages on from there.
 - A player whose connection stops reading no longer freezes the other players in its room: the server drops it after 10 seconds of a stuck write (`writeTimeout`), so its room mates' requests get their replies and the stuck player is removed from the room.
 - A second HELLO on one connection gets error 1 and changes nothing, and a name is held by the player's full IPv6 address: before, all IPv6 players shared one address, so any of them could take another's name.
+- A room whose members' data, with the room's blobs, would make its join reply too big for one packet no longer breaks the joiner: JOIN_ROOM and JOIN_BY_CODE answer error 6 and the joiner is not added, instead of the connection being closed after the other members were told of it.
 
 ## [0.5.0] - 2026-11-11
 

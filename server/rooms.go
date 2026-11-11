@@ -95,6 +95,25 @@ func (r *room) joinedReply(req uint32, me *member) []byte {
 	return w.b
 }
 
+// Sizes of the ROOM_JOINED reply, kept in step with joinedReply and putMember.
+const (
+	joinedFixed = 4 + 8 + 2 + 2 + 1 + 4 + 2 + 2 + 1 // req, room_id, my_member, owner, max, flags, two blob lengths, count
+	memberFixed = 2 + 4 + 16 + 4 + 2 + 1 + 2        // member entry without its data: id, user, online_id, ip, port, owner, data length
+)
+
+// joinedSize is the length joinedReply would return for r. extraMemberData is the data length of a joiner who is
+// not in r yet (its entry is added to the count); pass -1 when the caller is already a member.
+func joinedSize(r *room, extraMemberData int) int {
+	n := joinedFixed + len(r.external) + len(r.internal)
+	for _, m := range r.members {
+		n += memberFixed + len(m.data)
+	}
+	if extraMemberData >= 0 {
+		n += memberFixed + extraMemberData
+	}
+	return n
+}
+
 // Room access (docs/room-codes.md). A public room is listed in search; an invite-only room carries a code,
 // is listed nowhere (search, the status page) and is joined with JOIN_BY_CODE. The code is a bearer secret:
 // it is never logged.
@@ -288,14 +307,23 @@ func (s *Server) joinRoom(c *client, req uint32, rd *reader) (byte, []byte, []pu
 }
 
 // joinMember adds c to r, or says why not. The caller has checked the room exists, is c's title and may be joined.
+// A ROOM_JOINED reply must fit one packet. When the room's state would not, the join is refused before the joiner is
+// added, so no other member hears of it; error 6 then means the room cannot be joined.
 func (s *Server) joinMember(c *client, req uint32, r *room, mine []byte) (byte, []byte, []push) {
 	switch {
 	case r.memberOf(c) != nil:
+		if n := joinedSize(r, -1); n > maxPayload {
+			s.log.Debug("join refused: room state does not fit one reply", "room", r.id, "online_id", c.onlineID, "size", n)
+			return msgError, errReply(req, errLimitReached), nil
+		}
 		return msgRoomJoined, r.joinedReply(req, r.memberOf(c)), nil
 	case len(r.members) >= int(r.max):
 		return msgError, errReply(req, errRoomFull), nil
 	case s.maxPlayerRooms > 0 && len(c.rooms) >= s.maxPlayerRooms:
 		s.refused(c, "join room", "room limit")
+		return msgError, errReply(req, errLimitReached), nil
+	case joinedSize(r, len(mine)) > maxPayload:
+		s.log.Debug("join refused: room state does not fit one reply", "room", r.id, "online_id", c.onlineID, "size", joinedSize(r, len(mine)))
 		return msgError, errReply(req, errLimitReached), nil
 	}
 	me := s.addMember(r, c, mine)
