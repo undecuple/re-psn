@@ -4,7 +4,7 @@
  "repository": "https://github.com/undecuple/re-psn",
  "go": "1.22",
  "status_counts": {
-  "available": 38,
+  "available": 39,
   "unverified": 3,
   "partial": 8,
   "in-progress": 0,
@@ -900,6 +900,18 @@
    "note": "Not in v0.4.0. Finds only servers started with -discover. Tested against a fake responder and, by hand, against a real server on loopback; not a real broadcast across a network. Does not cross subnets or client-isolated Wi-Fi. The Windows build broadcasts to 255.255.255.255 only and is untested.",
    "status_label": "available",
    "status_class": "ok"
+  },
+  {
+   "id": "app-server-view",
+   "area": "Desktop app",
+   "feature": "Server view in Status",
+   "detail": "With a status URL set, the Status screen has a read-only Server tab (Tab cycles Rooms, Leaderboards, Server): version, uptime, relay on or off, the limits in force (0 shown as none), TCP refusals and UDP drop counters, and the payload carried by the relay with a bytes-per-second rate computed between two refreshes. A counter that goes down is shown as server restarted and the rate baseline starts again. Fields an older server omits are shown as not reported by this server, never as 0 or off. Nothing is changed on the server and the token is never shown.",
+   "status": "available",
+   "since": "main",
+   "evidence": "app/internal/tui/server_stats.go, app/internal/tui/server_view.go, app/internal/tui/server_view_test.go, TestDecodeServerStatsAllFields, TestDecodeServerStatsOldServer, TestDecodeServerStatsPartial, TestServerTrackRate, TestServerTrackCounterWentDown, TestServerViewNewServer, TestServerViewOldServer, TestServerViewRestart, TestServerViewNoToken, TestServerTabOnlyWithStatusURL",
+   "note": "Not in v0.4.0. Needs a server that reports the fields (newer than v0.4.0); older servers show not reported. Relay bytes and the rate are payload carried by the relay, not network bandwidth. Checked by hand against a real server on loopback.",
+   "status_label": "available",
+   "status_class": "ok"
   }
  ],
  "roadmap": {
@@ -952,7 +964,8 @@
    "net-peer-keys",
    "net-lan-public-addr",
    "net-lan-discover",
-   "client-lan-discover"
+   "client-lan-discover",
+   "app-server-view"
   ],
   "Now": [],
   "Next": [
@@ -1127,6 +1140,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "The desktop app's Status screen has a read-only Server tab when a status URL is set: version, uptime, relay on or off, the limits in force (0 shown as none), TCP refusals and UDP drop counters, and the payload the relay ...",
      "`-lan-public-addr IP` (`RE_PSN_LAN_PUBLIC_ADDR`, off by default, IPv4): when a player connected from a private, carrier-grade NAT or link-local address, players on public addresses are given IP and that player's P2P ...",
      "LAN discovery on the server, opt-in: `-discover` (`RE_PSN_DISCOVER`, off by default) answers a 64-byte DISCOVER sent to the game UDP port with a 52-byte DISCOVER_REPLY (TCP and UDP ports, relay flag, player count, name, ...",
      "The C client can find servers on the local network: `psnr_discover(port, timeout_ms, out, max)` (`client/psnr.h`) broadcasts one UDP request from its own temporary socket (never a title socket) and returns each server ...",
@@ -1147,7 +1161,7 @@
     ]
    },
    "counts": {
-    "Added": 12,
+    "Added": 13,
     "Fixed": 3
    }
   },

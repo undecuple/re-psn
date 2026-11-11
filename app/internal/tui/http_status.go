@@ -44,6 +44,7 @@ type HTTPStats struct {
 	Unlisted    int
 	Rooms       []HTTPRoom
 	Boards      []HTTPBoard
+	Server      ServerStats
 }
 
 var errHTTPStatus = errors.New("HTTP status unavailable")
@@ -177,6 +178,6 @@ func decodeHTTPStatus(b []byte) (*HTTPStats, error) {
 			return nil, errHTTPStatus
 		}
 	}
-	return &HTTPStats{Uptime: *w.Uptime, Clients: *w.Clients, Connections: *w.Connections, Unlisted: *w.Unlisted, Rooms: *w.Rooms, Boards: *w.Boards}, nil
+	return &HTTPStats{Uptime: *w.Uptime, Clients: *w.Clients, Connections: *w.Connections, Unlisted: *w.Unlisted, Rooms: *w.Rooms, Boards: *w.Boards, Server: decodeServerStats(b)}, nil
 }
 func statusText(s string, limit int) bool { return len(s) <= limit }

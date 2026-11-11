@@ -7,6 +7,10 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- The desktop app's Status screen has a read-only Server tab when a status URL is set: version, uptime, relay on or off, the limits in
+  force (0 shown as none), TCP refusals and UDP drop counters, and the payload the relay has carried with a bytes-per-second rate
+  between two refreshes (not network bandwidth). A counter going down is shown as a server restart. A server that omits the fields
+  shows each as not reported, never as 0. It changes nothing on the server.
 - `-lan-public-addr IP` (`RE_PSN_LAN_PUBLIC_ADDR`, off by default, IPv4): when a player connected from a private, carrier-grade NAT or
   link-local address, players on public addresses are given IP and that player's P2P port instead of the unreachable LAN address
   (the host must forward that port). Players on private addresses and players with public addresses are unaffected.

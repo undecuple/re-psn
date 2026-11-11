@@ -47,6 +47,8 @@ const (
 	paneBoards
 	paneSettings
 	paneHelp
+	// paneServer is not in the menu: it is the third tab of Status, reached with tab when a status URL is set.
+	paneServer
 )
 
 var paneNames = []string{"Overview", "Rooms", "Leaderboards", "Settings", "Help"}
@@ -96,6 +98,7 @@ type Model struct {
 	snapQuery Query
 	fetchErr  error
 	fetchedAt time.Time
+	track     serverTrack // the previous status refresh, for the Server tab's rate and restart check
 
 	lan lanState
 
@@ -190,6 +193,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.seq == m.seq {
 			m.loading = false
 			m.snap, m.fetchErr, m.fetchedAt = &msg.snap, msg.err, msg.at
+			if h := m.httpStats(); h != nil {
+				m.track = m.track.next(h.Server, msg.at)
+			}
 		}
 	case savedMsg:
 		return m.saved(msg)
@@ -353,14 +359,17 @@ func (m Model) homeKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.toggleTheme()
 		return m, nil
 	case "r":
-		if m.menu <= paneBoards {
+		if m.menu <= paneBoards || m.menu == paneServer {
 			return m, m.refresh()
 		}
 	case "tab", "shift+tab":
-		switch m.menu {
-		case paneRooms:
+		withServer := m.content && m.set.StatusURL != ""
+		switch {
+		case m.menu == paneRooms:
 			m.menu = paneBoards
-		case paneBoards:
+		case m.menu == paneBoards && withServer:
+			m.menu = paneServer
+		case m.menu == paneBoards, m.menu == paneServer:
 			m.menu = paneRooms
 		}
 		return m, nil
@@ -382,6 +391,9 @@ func (m Model) homeKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch key {
 	case "esc", "left", "h":
 		m.content = false
+		if m.menu == paneServer {
+			m.menu = paneRooms
+		}
 		return m, nil
 	}
 	switch m.menu {
@@ -470,6 +482,7 @@ func (m Model) editKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.set = s
 			m.snap, m.fetchErr, m.loading = nil, nil, false
 			m.seq++
+			m.track = serverTrack{}
 		}
 	}
 	if err != nil {

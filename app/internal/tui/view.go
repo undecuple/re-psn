@@ -41,6 +41,14 @@ func (m Model) render() string {
 	return lipgloss.NewStyle().MaxWidth(m.w).MaxHeight(m.h).Render(body)
 }
 
+// paneTitle is the heading of the content pane when the menu is hidden; the Server tab belongs to Status.
+func (m Model) paneTitle() string {
+	if m.menu == paneServer {
+		return "Status: Server"
+	}
+	return paneNames[m.menu]
+}
+
 func (m Model) themeName() string {
 	if m.light {
 		return "light"
@@ -126,7 +134,7 @@ func (m Model) renderHome() string {
 	var body string
 	if m.w < narrowWidth {
 		if m.content {
-			body = m.box(m.st.heading.Render(paneNames[m.menu])+"\n\n"+m.renderContent(m.w-4), m.w, bodyH, true)
+			body = m.box(m.st.heading.Render(m.paneTitle())+"\n\n"+m.renderContent(m.w-4), m.w, bodyH, true)
 		} else {
 			body = m.box(m.renderMenu(), m.w, bodyH, true)
 		}
@@ -171,8 +179,12 @@ func (m Model) box(s string, w, h int, focus bool) string {
 
 func (m Model) renderMenu() string {
 	var b []string
+	cur := m.menu
+	if cur == paneServer {
+		cur = paneRooms // the Server tab belongs to Status
+	}
 	for i, n := range paneNames {
-		if pane(i) == m.menu {
+		if pane(i) == cur {
 			b = append(b, m.st.selected.Render("> "+n))
 		} else {
 			b = append(b, m.st.text.Render("  "+n))
@@ -191,10 +203,16 @@ func (m Model) hintBar() string {
 		return m.hints("enter", "done", "esc", "cancel", "ctrl+u", "clear")
 	case !m.content:
 		return m.hints("↑/↓", "move", "enter", "open", "r", "refresh", "t", "theme", "q", "quit")
+	case m.menu == paneServer:
+		return m.hints("tab", "rooms", "r", "refresh", "esc", "menu", "t", "theme", "q", "quit")
 	case m.menu == paneRooms:
 		return m.hints("tab", "leaderboards", "e", "title", "r", "refresh", "esc", "menu", "t", "theme", "q", "quit")
 	case m.menu == paneBoards:
-		return m.hints("tab", "rooms", "e", "title", "b", "board", "r", "refresh", "esc", "menu", "q", "quit")
+		next := "rooms"
+		if m.set.StatusURL != "" {
+			next = "server"
+		}
+		return m.hints("tab", next, "e", "title", "b", "board", "r", "refresh", "esc", "menu", "q", "quit")
 	case m.menu == paneSettings:
 		return m.hints("↑/↓", "move", "enter", "change", "f", "find on LAN", "s", "save", "esc", "menu", "t", "theme", "q", "quit")
 	case m.menu == paneOverview:
@@ -210,6 +228,8 @@ func (m Model) renderContent(w int) string {
 		lines = m.renderOverview()
 	case paneRooms, paneBoards:
 		lines = m.renderStatus()
+	case paneServer:
+		lines = m.serverLines()
 	case paneSettings:
 		lines = m.renderSettings()
 	case paneHelp:
@@ -240,7 +260,7 @@ func (m Model) renderOverview() []string {
 	}
 	b = append(b, m.connection()...)
 	if h := m.httpStats(); h != nil {
-		b = append(b, "", m.row("Version", "not shared by HTTP status"), m.row("Uptime", httpText(h.Uptime)), m.row("Clients", fmt.Sprint(h.Clients)), m.row("Connections", fmt.Sprint(h.Connections)))
+		b = append(b, "", m.row("Version", httpVersion(h)), m.row("Uptime", httpText(h.Uptime)), m.row("Clients", fmt.Sprint(h.Clients)), m.row("Connections", fmt.Sprint(h.Connections)))
 	} else {
 		b = append(b, "",
 			m.row("Version", notOverProtocol),
@@ -295,11 +315,17 @@ func (m Model) connectionLines() []string {
 
 func (m Model) tabs() string {
 	on, off := m.st.tabOn, m.st.tabOff
-	rooms, boards := off.Render(" Rooms "), off.Render(" Leaderboards ")
-	if m.menu == paneRooms {
+	rooms, boards, server := off.Render(" Rooms "), off.Render(" Leaderboards "), off.Render(" Server ")
+	switch m.menu {
+	case paneRooms:
 		rooms = on.Render("[Rooms]")
-	} else {
+	case paneServer:
+		server = on.Render("[Server]")
+	default:
 		boards = on.Render("[Leaderboards]")
+	}
+	if m.set.StatusURL != "" {
+		return rooms + " " + boards + " " + server
 	}
 	return rooms + " " + boards
 }
@@ -326,7 +352,7 @@ func (m Model) renderStatus() []string {
 	b = append(b, "")
 	b = append(b, m.connection()...)
 	if h := m.httpStats(); h != nil {
-		b = append(b, m.st.text.Render(fmt.Sprintf("Up %s · %d clients · %d connections total", httpText(h.Uptime), h.Clients, h.Connections)), m.st.muted.Render("Version is not shared by HTTP status."), "")
+		b = append(b, m.st.text.Render(fmt.Sprintf("Up %s · %d clients · %d connections total", httpText(h.Uptime), h.Clients, h.Connections)), m.st.muted.Render("Version: "+httpVersion(h)+"."), "")
 	} else {
 		b = append(b, m.st.muted.Render("Uptime, connections and server version: "+notOverProtocol+"."), "")
 	}
@@ -445,7 +471,7 @@ func (m Model) renderHelp() []string {
 		{"↑/↓ or k/j", "move in the menu or a list"},
 		{"enter", "open the item, or change a setting"},
 		{"esc", "back to the menu; cancel an edit"},
-		{"tab", "switch between Rooms and Leaderboards"},
+		{"tab", "switch between Rooms, Leaderboards and (with a status URL) Server"},
 		{"e / b", "type the title / the board id"},
 		{"r", "ask the server again"},
 		{"f", "find servers on the LAN (Settings)"},
@@ -501,4 +527,12 @@ func (m Model) lanLines() []string {
 		}
 	}
 	return b
+}
+
+// httpVersion is the version a status page reports, or says that this server does not.
+func httpVersion(h *HTTPStats) string {
+	if h.Server.Version == nil {
+		return notReported
+	}
+	return httpText(*h.Server.Version)
 }

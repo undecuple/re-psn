@@ -34,7 +34,7 @@
 <h2>Overview</h2>
 <p>re-psn answers the matchmaking and leaderboard calls of a statically recompiled PS3 game, for a group running its own server: a LAN, a VPN, or friends connecting to one person&#x27;s machine. The server keeps rooms and leaderboards and tells each player where the others are. Game traffic goes directly between players, and through the server only when two players cannot reach each other and the host has turned the relay on.</p>
 <p>It is a fork of <a href="https://github.com/sp00nznet/psnr">psnr</a> by sp00nz: a Go server and a one-file C client, with no accounts and no public instance.</p>
-<p class="status-line">Version 0.4.0 (pre-release). 74 features: 38 available, 3 not yet verified, 8 partial, 15 planned, 9 later, 1 declined.</p>
+<p class="status-line">Version 0.4.0 (pre-release). 75 features: 39 available, 3 not yet verified, 8 partial, 15 planned, 9 later, 1 declined.</p>
 <p class="notice">Unofficial; not affiliated with Sony. No game files, keys or firmware are in the repository or needed from it. Play only games you own.</p>
 </section>
 <section id="features">
@@ -191,6 +191,7 @@
 <thead><tr><th>Feature</th><th>Status</th><th>Since</th></tr></thead>
 <tbody>
 <tr id="f-app-lan-discover"><td data-label="Feature"><strong>Find servers on the LAN</strong> <code>app-lan-discover</code><br>Find on LAN in the desktop app (<code>f</code> in Settings, Ctrl+F while typing the server): the Go client broadcasts one 64-byte UDP request from a temporary socket, collects the 52-byte replies for about 1.5 s, drops anything with the wrong length, type or nonce, and lists name, address:port, players, relay and version; the chosen address fills the server field. Typing host:port still works.<br><span class="note">Not in v0.4.0. Finds only servers started with -discover. Tested against a fake responder and, by hand, against a real server on loopback; not a real broadcast across a network. IPv4 and the local subnet only. <code>server = auto</code> in re-psn.ini is not supported.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
+<tr id="f-app-server-view"><td data-label="Feature"><strong>Server view in Status</strong> <code>app-server-view</code><br>With a status URL set, the Status screen has a read-only Server tab (Tab cycles Rooms, Leaderboards, Server): version, uptime, relay on or off, the limits in force (0 shown as none), TCP refusals and UDP drop counters, and the payload carried by the relay with a bytes-per-second rate computed between two refreshes. A counter that goes down is shown as server restarted and the rate baseline starts again. Fields an older server omits are shown as not reported by this server, never as 0 or off. Nothing is changed on the server and the token is never shown.<br><span class="note">Not in v0.4.0. Needs a server that reports the fields (newer than v0.4.0); older servers show not reported. Relay bytes and the rate are payload carried by the relay, not network bandwidth. Checked by hand against a real server on loopback.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
 </tbody>
 </table>
 <h3 id="area-testing-and-ci">Testing and CI</h3>
@@ -233,7 +234,7 @@
 <h2>Roadmap</h2>
 <p>The same list grouped by status. No dates are promised; <a href="https://github.com/undecuple/re-psn/blob/main/ROADMAP.md">ROADMAP.md</a> has the order and the scope.</p>
 <div class="cols">
-<div><h3>Done <span class="count">(49)</span></h3>
+<div><h3>Done <span class="count">(50)</span></h3>
 <ul>
 <li><a href="#f-rooms-basic">Rooms and search</a></li>
 <li><a href="#f-rooms-data">Room and member data</a></li>
@@ -284,6 +285,7 @@
 <li><a href="#f-net-lan-public-addr">Public address for LAN players</a></li>
 <li><a href="#f-net-lan-discover">LAN discovery (server side)</a></li>
 <li><a href="#f-client-lan-discover">LAN discovery in the C client</a></li>
+<li><a href="#f-app-server-view">Server view in Status</a></li>
 </ul></div>
 <div><h3>Next <span class="count">(15)</span></h3>
 <ul>
@@ -326,6 +328,7 @@
 <h3>Unreleased</h3>
 <h4>Added</h4>
 <ul>
+<li>The desktop app&#x27;s Status screen has a read-only Server tab when a status URL is set: version, uptime, relay on or off, the limits in force (0 shown as none), TCP refusals and UDP drop counters, and the payload the relay ...</li>
 <li><code>-lan-public-addr IP</code> (<code>RE_PSN_LAN_PUBLIC_ADDR</code>, off by default, IPv4): when a player connected from a private, carrier-grade NAT or link-local address, players on public addresses are given IP and that player&#x27;s P2P ...</li>
 <li>LAN discovery on the server, opt-in: <code>-discover</code> (<code>RE_PSN_DISCOVER</code>, off by default) answers a 64-byte DISCOVER sent to the game UDP port with a 52-byte DISCOVER_REPLY (TCP and UDP ports, relay flag, player count, name, ...</li>
 <li>The C client can find servers on the local network: <code>psnr_discover(port, timeout_ms, out, max)</code> (<code>client/psnr.h</code>) broadcasts one UDP request from its own temporary socket (never a title socket) and returns each server ...</li>
