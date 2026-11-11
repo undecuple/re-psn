@@ -90,6 +90,12 @@ static psnr_msg wait_push(psnr_client* c, uint8_t type)
 int psnr_discover_to(uint16_t port, int timeout_ms, psnr_found* out, int max,
                      const uint32_t* dests, int ndests);
 
+/* Fake responder on loopback. Each call runs it in a forked child that waits
+ * for one request and answers according to mode, so psnr_discover_to can
+ * block in the parent. POSIX only; the Windows build skips these checks. */
+#ifndef _WIN32
+#  include <sys/wait.h>
+
 static void disc_reply(uint8_t* r, uint32_t nonce, uint16_t tcp, const char* name)
 {
     memset(r, 0, 52);
@@ -103,12 +109,6 @@ static void disc_reply(uint8_t* r, uint32_t nonce, uint16_t tcp, const char* nam
     memcpy(r + 16, name, strlen(name) < 24 ? strlen(name) : 24);
     memcpy(r + 40, "1.2.3", 5);
 }
-
-/* Fake responder on loopback. Each call runs it in a forked child that waits
- * for one request and answers according to mode, so psnr_discover_to can
- * block in the parent. POSIX only; the Windows build skips these checks. */
-#ifndef _WIN32
-#  include <sys/wait.h>
 
 static void disc_serve(int sock, int mode)
 {
