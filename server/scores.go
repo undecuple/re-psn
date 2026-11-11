@@ -12,6 +12,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/sp00nznet/psnr/server/store"
@@ -62,6 +63,11 @@ func (s *Server) recordScore(c *client, who scorer, req uint32, rd *reader) (byt
 	defer cancel()
 	e := store.Entry{OnlineID: who.onlineID, Score: score, Comment: comment, At: time.Now()}
 	rank, err := s.scores.Put(ctx, store.Key{Title: who.commID, Board: id}, order == 1, e)
+	if errors.Is(err, store.ErrFull) {
+		// a limit, not a failure: the player can keep scoring on boards that have room
+		s.log.Debug("score refused", "client", c.id, "online_id", who.onlineID, "reason", "board limit", "err", err)
+		return msgError, errReply(req, errStoreFailed)
+	}
 	if err != nil {
 		return s.storeFailed(c, who, "record score", req, err)
 	}
@@ -118,11 +124,14 @@ func (s *Server) getRanking(c *client, who scorer, req uint32, rd *reader) (byte
 // GET_RANKING_BY_ID: board u32 | n u16 | online_id [16] * n (friends' ranks)
 func (s *Server) getRankingByID(c *client, who scorer, req uint32, rd *reader) (byte, []byte) {
 	id, n := rd.u32(), rd.u16()
+	if rd.err != nil || n > 100 {
+		return msgError, errReply(req, errBadRequest)
+	}
 	ids := make([]string, n)
 	for i := range ids {
 		ids[i] = rd.str(16)
 	}
-	if rd.err != nil || n > 100 {
+	if rd.err != nil {
 		return msgError, errReply(req, errBadRequest)
 	}
 	ctx, cancel := storeCtx()
