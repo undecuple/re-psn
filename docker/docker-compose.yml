@@ -15,8 +15,15 @@ services:
       # Relay is off by default. Turn it on to carry traffic between players who can't reach each
       # other directly; it uses this server's bandwidth:
       #   RE_PSN_RELAY: "true"
+      # Medius compatibility is off. No Medius protocol is implemented yet (docs/medius-scope.md): turned on, the
+      # server opens the Medius port and closes every connection. Inside the container it must listen on 0.0.0.0;
+      # publish the port below on this machine only, or on a private address:
+      #   RE_PSN_MEDIUS: "true"
+      #   RE_PSN_MEDIUS_ADDR: "0.0.0.0"
+      #   RE_PSN_MEDIUS_PORT: "10071"
     # Players behind a container runtime that rewrites source addresses: see docker-compose.host.yml.
     ports:
       - "36100:36100"             # game clients
       - "36100:36100/udp"         # their P2P sockets' address probes
       # - "127.0.0.1:36101:36101" # status page: this machine only (needs RE_PSN_HTTP above)
+      # - "127.0.0.1:10071:10071" # Medius port: this machine only (needs RE_PSN_MEDIUS above)

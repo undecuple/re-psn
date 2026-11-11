@@ -36,3 +36,9 @@ services:
       # Relay is off by default; it carries traffic between players who can't reach each other
       # directly and uses this server's bandwidth:
       #   RE_PSN_RELAY: "true"
+      # Medius compatibility is off. No Medius protocol is implemented yet (docs/medius-scope.md): turned on, the
+      # server opens the Medius port and closes every connection. On the host network the address is this machine's
+      # own: keep 127.0.0.1, or give a private LAN address; the firewall must not open the port to the internet.
+      #   RE_PSN_MEDIUS: "true"
+      #   RE_PSN_MEDIUS_ADDR: "127.0.0.1"
+      #   RE_PSN_MEDIUS_PORT: "10071"
