@@ -1172,6 +1172,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "**Docs and tooling:** `docs/integrating.md` has a \"Mapping the NP calls\" section: suggested NP call families to re-psn message tables, a list of what the protocol does not cover (world lists included), and a recommended ...",
      "**Server:** `-max-conns` (`RE_PSN_MAX_CONNS`, default 4096; 0 for no limit) caps the open TCP connections in total, players and relay legs together.",
      "Experimental, read-only admin API, off by default: `-admin ADDR` (`RE_PSN_ADMIN`) opens a second listener with one route, `GET /admin/v1/state`, for a read token kept in a file (`-admin-read-token-file`; at least 32 ...",
      "Medius compatibility switch, off by default: `-medius` (`RE_PSN_MEDIUS`), `-medius-port` (default 10071) and `-medius-addr` (default `127.0.0.1`; a loopback, private or link-local address, or `0.0.0.0`/`::` in a ...",
@@ -1197,7 +1198,7 @@
     ]
    },
    "counts": {
-    "Added": 8,
+    "Added": 9,
     "Fixed": 9,
     "Changed": 1
    }
