@@ -48,6 +48,7 @@ All notable changes to this project are documented here. The format follows
   `title` field is unchanged. The protocol is unchanged.
 
 ### Fixed
+- `deploy/re-psn.env.example` now lists `RE_PSN_DISCOVER`, `RE_PSN_NAME` and `RE_PSN_LAN_PUBLIC_ADDR`, and the old names of those and of `-relay-force`, so `scripts/check-deploy.sh` (run by the release build) passes again. A test now runs that check, so a flag added without its example line fails in CI.
 - The start log line for LAN discovery ("lan discovery on") no longer shows the server name quoted twice; the name is logged as a plain
   attribute, quoted once by the log format. A test checks it in text and JSON.
 - The advice for the UDP PROBE (`client/psnr.h`, `docs/api.md`) is now concrete: send one about every 15 seconds while the title is
