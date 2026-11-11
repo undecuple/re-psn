@@ -248,6 +248,78 @@ Never blindly retry side-effecting requests (CREATE_ROOM, JOIN_ROOM, SET_ROOM_DA
 player or the game's own logic whether to repeat them, and check the state first. A `psnr_send` that returns 0 has already
 marked the connection dead, so go straight to step 2.
 
+### Mapping the NP calls
+
+This section says which re-psn messages a title's NP calls would map onto. It names API families, not individual
+functions. No NP function name was confirmed against this repository or a public SDK reference, so the exact `sce*`
+names and `SCE_NP_*` constants must come from the title's own SDK headers and the port's bridge code. The
+[existing ps3recomp bridge](#existing-ps3recomp-ports) at the inspected pin is the reference for what a port already does.
+
+Every row below is **suggested, not tested in a title**. Neither this file nor [features.md](features.md) records a title
+run of this mapping. The room and score rows are covered by server tests, which test the server, not a title.
+
+#### NP call -> re-psn message -> notes
+
+| NP call family | re-psn message | Notes | Status | Source |
+|---|---|---|---|---|
+| Matching2 context start; Score title-context creation (connection start) | HELLO (0x01) -> HELLO_ACK (0x81) | Sends the 12-byte communication ID and the 16-byte online ID. A name held by another player gets ERROR 8. HELLO_ACK grants no identity proof or PSN ticket. | suggested, not tested in a title | [api.md](api.md), Session; this file, Direct C/C++ integration |
+| Matching2 create room | CREATE_ROOM (0x10) -> ROOM_JOINED (0x90) | Creator becomes owner. Each external, internal and member-data blob is at most 4096 bytes (else ERROR 1). | suggested, not tested in a title | [api.md](api.md), Rooms|
+| Matching2 search room | SEARCH_ROOMS (0x11) -> ROOM_LIST (0x91) | Lists the title's rooms that are not full and not invite-only, oldest first; `start` is 0-based. A reply holds as many rooms as fit one packet: when `count` is below `total`, ask again with `start` = the rooms already read. A room can fill or disappear before the join. | suggested, not tested in a title | [api.md](api.md), Rooms; this file, Direct C/C++ integration|
+| Matching2 join room | JOIN_ROOM (0x12) -> ROOM_JOINED (0x90) | Joining a room the caller is already in returns the room again. An invite-only room cannot be joined by ID (ERROR 2). | suggested, not tested in a title | [api.md](api.md), Rooms|
+| Matching2 leave room | LEAVE_ROOM (0x13) -> OK (0x93) | The room closes when the last member leaves or disconnects. Disconnecting removes live membership; it is not restored on reconnect. | suggested, not tested in a title | [api.md](api.md), Rooms; this file, Direct C/C++ integration|
+| Matching2 set room data (external, internal) | SET_ROOM_DATA (0x14) -> OK (0x93) | Owner only. `which` 0 = external, 1 = internal, 2 = flags (4-byte u32). Searchers see external data and flags. | suggested, not tested in a title | [api.md](api.md), Rooms|
+| Matching2 send room message | ROOM_MESSAGE (0x15) -> OK (0x93) | `to` is a member ID, or 0 for everyone except the sender. Recipients get ROOM_MSG (0xA4). | suggested, not tested in a title | [api.md](api.md), Rooms|
+| Matching2 kick member | KICK_MEMBER (0x16) -> OK (0x93) | Owner only. The kicked member gets KICKED (0xA5). A kicked member can rejoin: `KICK_MEMBER` does not block it. | suggested, not tested in a title | [api.md](api.md), Rooms; [features.md](features.md) `rooms-basic` |
+| Matching2 callbacks for room events | Pushes MEMBER_JOINED (0xA1), MEMBER_LEFT (0xA2), ROOM_DATA (0xA3), ROOM_MSG (0xA4), KICKED (0xA5) | Pushes carry `req` 0 and go to every member except the one who acted; KICKED goes to the kicked member only. The adapter queues them for the guest callback thread. Member entries carry the `ip` and `p2p_port` to use for that peer. | suggested, not tested in a title | [api.md](api.md), Rooms; this file, Direct C/C++ integration|
+| Score record score | RECORD_SCORE (0x20) -> SCORE_RECORDED (0xB0) | Keeps each player's best score; a tie goes to the earlier score. `order` 0 = higher is better, 1 = lower is better. The first record on a board sets its order, so the title must send it. `comment` is at most 64 bytes. Boards are in memory and a restart empties them; a title has at most 1000 boards and a board 10000 players, and a record past either gets ERROR 6. | suggested, not tested in a title | [api.md](api.md), Leaderboards; [features.md](features.md) `scores-boards` |
+| Score ranking by range | GET_RANKING (0x21) -> RANKING (0xB1) | `start` is a 1-based rank; `count` is at most 100. | suggested, not tested in a title | [api.md](api.md), Leaderboards|
+| Score ranking by online ID | GET_RANKING_BY_ID (0x22) -> RANKING (0xB1) | One row per requested ID, in request order, at most 100 IDs. An ID with no score gets rank 0 and score 0. | suggested, not tested in a title | [api.md](api.md), Leaderboards|
+
+#### Not covered
+
+These are not offered by the protocol. A bridge must not claim them, and a title that needs them has to use another
+service or stay offline for them.
+
+- **Friends, presence, invites, join-a-friend, player history and block list** (the sceNpBasic family): planned, not in the
+  server. [features.md](features.md) `players-friends`; [ROADMAP.md](../ROADMAP.md).
+- **Optional accounts and sign-in**: later. The default is still one name per player. [features.md](features.md) `players-accounts`.
+- **Tickets and real PSN authentication**: HELLO grants no identity proof or PSN ticket, and the server issues none.
+  this file, Direct C/C++ integration; [architecture.md](architecture.md), Medius.
+- **Lobbies and profile-specific sessions, transport and data paths** (`medius-*`): planned or later, not implemented.
+  [features.md](features.md) `medius-transport`, `medius-lobby`, `medius-data`, `medius-multititle`; [ROADMAP.md](../ROADMAP.md), Medius.
+- **World lists** (and Medius worlds): the protocol has no world list and no message for one. [architecture.md](architecture.md) and
+  [medius-scope.md](medius-scope.md) say Medius worlds, parties and memberships are not assumed to be equivalent to rooms. Not offered.
+- **Matching2 room passwords, private slots and join by room ID as a private room**: planned. [features.md](features.md) `rooms-private`.
+- **Invite codes through a Matching2 bridge**: the server has SET_ROOM_ACCESS, JOIN_BY_CODE and GET_ROOM_ACCESS (0x17-0x19,
+  [api.md](api.md), Rooms), but this file says no Matching2 bridge API exposes them at the inspected pin (see Existing ps3recomp ports). NP room
+  flags or passwords do not become invite codes.
+- **Signaling beyond the UDP helpers**: connection checks and UPnP are planned or later ([features.md](features.md) `net-checks`,
+  `net-upnp`). Peer keys are on the server, but no client uses them yet and nothing is tagged on the wire
+  ([features.md](features.md) `net-peer-keys`). Relay streams need the server's `-relay` option and a real relay path
+  ([api.md](api.md), Relay).
+- **Durable rooms and scores**: in memory only; the SQLite option is planned ([features.md](features.md) `store-sqlite`).
+- **Live room handover after a server loss**: declined ([features.md](features.md) `ha-handover`).
+- **Voice audio, rollback or synchronization, and a publisher's backend**: not offered (this file, Direct C/C++ integration).
+
+#### Error codes for a bridge
+
+The codes below are the protocol's `PSNR_E_*` values in [psnr.h](../client/psnr.h) (meanings in [api.md](api.md), Session,
+error table). The right-hand column is a **recommendation**, with the reason for it: a category of NP error to return to
+the title. The exact `SCE_NP_*` constants must be taken from the title's SDK headers; none is named here, and none was
+checked against a header in this repository.
+
+| Code | Protocol meaning | Recommended NP error category | Reason | Source |
+|---|---|---|---|---|
+| 1 `PSNR_E_BAD_REQUEST` | malformed, or a value out of range | invalid argument | The caller passed bad data. Retrying the same call fails the same way. | [api.md](api.md), Session, error table; [psnr.h](../client/psnr.h) |
+| 2 `PSNR_E_NOT_FOUND` | not found | not found (room or ID) | The room or ID is gone, or the room is invite-only and was joined by ID. Searching again is the useful next step. | [api.md](api.md), Session, error table|
+| 3 `PSNR_E_ROOM_FULL` | room full | capacity or room-full | The room has no free slot. Retry only after a new search. | [api.md](api.md), Session, error table; [psnr.h](../client/psnr.h) |
+| 4 `PSNR_E_NOT_OWNER` | not the room owner | not allowed (permission) | Only the owner may set data or kick. A retry without ownership changes nothing. | [api.md](api.md), Session, error table|
+| 5 `PSNR_E_NOT_IN_ROOM` | not in that room | invalid state (not a room member) | The call assumed membership that the server no longer has, often after a disconnect. Rebuild the room state before retrying. | [api.md](api.md), Session, error table; this file, Direct C/C++ integration |
+| 6 `PSNR_E_LIMIT` | room limit, or the player is in too many rooms, or (JOIN_ROOM, JOIN_BY_CODE, SET_ROOM_DATA) the room's state would not fit one ROOM_JOINED reply; for a score request, the score store failed, or a board or player limit was reached | resource limit for rooms; for scores, a service or internal failure (store failed) or a resource limit (board or player limit) | The same code covers several cases. Use the request type to choose the category. A store failure may succeed later; a room, join, board or player limit does not clear by itself. | [api.md](api.md), Session, error table; [psnr.h](../client/psnr.h) |
+| 7 `PSNR_E_NO_HELLO` | no HELLO yet | not connected (session not set up) | Normally a bridge bug or a dropped session. Connect and sign in again before retrying. | [api.md](api.md), Session, error table|
+| 8 `PSNR_E_NAME_TAKEN` | another player on the server has the name | sign-in refused, name in use | The title should show a sign-in failure. Retrying with the same name is refused again. | [api.md](api.md), Session, error table; [psnr.h](../client/psnr.h) |
+| 9 `PSNR_E_NO_RELAY` | the server runs without `-relay` | transport unavailable or not supported | Only relay streams fail. Fall back to a direct path, or report the stream as unavailable. | [api.md](api.md), Relay; [psnr.h](../client/psnr.h) |
+
 ## Peer sockets, NAT and relay
 
 The adapter owns the actual game-facing peer sockets. Send `psnr_probe_packet` from the **same UDP socket** that will

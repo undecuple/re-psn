@@ -332,6 +332,7 @@
 <h3>Unreleased</h3>
 <h4>Added</h4>
 <ul>
+<li>**Docs and tooling:** <code>docs/integrating.md</code> has a &quot;Mapping the NP calls&quot; section: suggested NP call families to re-psn message tables, a list of what the protocol does not cover (world lists included), and a recommended ...</li>
 <li>**Server:** <code>-max-conns</code> (<code>RE_PSN_MAX_CONNS</code>, default 4096; 0 for no limit) caps the open TCP connections in total, players and relay legs together.</li>
 <li>Experimental, read-only admin API, off by default: <code>-admin ADDR</code> (<code>RE_PSN_ADMIN</code>) opens a second listener with one route, <code>GET /admin/v1/state</code>, for a read token kept in a file (<code>-admin-read-token-file</code>; at least 32 ...</li>
 <li>Medius compatibility switch, off by default: <code>-medius</code> (<code>RE_PSN_MEDIUS</code>), <code>-medius-port</code> (default 10071) and <code>-medius-addr</code> (default <code>127.0.0.1</code>; a loopback, private or link-local address, or <code>0.0.0.0</code>/<code>::</code> in a ...</li>
