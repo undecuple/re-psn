@@ -99,6 +99,28 @@ class RenderTest(unittest.TestCase):
         self.assertTrue(make_art.margin_problems("x.png", (200, 100), (40, 40, 161, 60)))
 
 
+@unittest.skipUnless(HAVE_PIL, "needs Pillow")
+class VersionCheckTest(unittest.TestCase):
+    """--check accepts the listed zlib versions and refuses others before it renders anything."""
+
+    def problems(self, zlib):
+        saved = make_art.zlib_version
+        make_art.zlib_version = lambda: zlib
+        try:
+            return make_art.check(fonts())
+        finally:
+            make_art.zlib_version = saved
+
+    def test_unlisted_zlib_refused(self):
+        p = self.problems("1.2.13")
+        self.assertEqual(len(p), 1)
+        self.assertIn("zlib 1.2.13", p[0])
+
+    def test_listed_zlib_not_a_problem(self):
+        for z in ("1.3", "1.3.1"):
+            self.assertFalse([x for x in self.problems(z) if "zlib" in x], z)
+
+
 class FetchTest(unittest.TestCase):
     """The fetch refuses a download or a member whose SHA-256 is not the pinned one."""
 

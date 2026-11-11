@@ -222,6 +222,24 @@ The direct C library does not restore membership. Client disconnect removes live
 in-memory rooms and scores. Do not promise persistence, authenticated accounts, voice audio, rollback/synchronization,
 or a publisher's backend merely because rooms work.
 
+### When the connection drops
+
+`psnr_poll` returns -1 once the queued messages have drained, and the library never reconnects by itself. The recipe:
+
+1. Treat every pending request ID as unanswered. Its outcome is unknown: the server may have applied it before the drop.
+2. Call `psnr_dead_reason(c)`. `PSNR_DEAD_PEER_CLOSED` means the server closed the connection (a restart, or a second HELLO
+   with the same name from the same IP, which replaces it). `PSNR_DEAD_IO_ERROR` means a read or write failed, and
+   `psnr_last_os_error(c)` gives the OS error. `PSNR_DEAD_SEND_TIMEOUT` means a write waited `PSNR_SEND_TIMEOUT_MS` (5 s)
+   for the socket to accept data. `PSNR_DEAD_NOMEM` means an allocation failed.
+3. Call `psnr_close(c)`.
+4. Connect again with `psnr_connect_timeout`, with the same name or a new one. Use a timeout here so the UI thread is not held.
+5. Rebuild the session state. The new connection is in no room, and the old room membership, member IDs and pending request
+   IDs are gone. Rejoin or recreate rooms from the replies you get, not from what you remember.
+
+Never blindly retry side-effecting requests (CREATE_ROOM, JOIN_ROOM, SET_ROOM_DATA, ROOM_MESSAGE, RECORD_SCORE). Ask the
+player or the game's own logic whether to repeat them, and check the state first. A `psnr_send` that returns 0 has already
+marked the connection dead, so go straight to step 2.
+
 ## Peer sockets, NAT and relay
 
 The adapter owns the actual game-facing peer sockets. Send `psnr_probe_packet` from the **same UDP socket** that will

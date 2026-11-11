@@ -4,7 +4,8 @@
  *
  * No threads. psnr_send() transmits a request and returns its id; the reply and
  * any server pushes come back out of psnr_poll(). Its receive path does not
- * wait for new data, but automatic heartbeat writes may wait for writability, with no time limit.
+ * wait for new data. A write may wait for writability, but no longer than
+ * PSNR_SEND_TIMEOUT_MS in total; then the connection is dead (psnr_dead_reason).
  * An adapter owns transport calls serially and delivers completions through
  * the title's guest callback queue. Keep potentially blocking transport work
  * away from timing-sensitive guest execution. psnr_call() is the blocking
@@ -90,13 +91,22 @@ typedef struct {
 #define PSNR_ONLINE_ID_MAX 16
 
 /* Blocking connect and HELLO setup (DNS/connect/send are not bounded by a
- * caller deadline). comm_id is the title's NP communication ID
+ * caller deadline; psnr_connect_timeout bounds the connect and HELLO). comm_id is the title's NP communication ID
  * ("NPWR00860_00"), online_id the player's name, p2p_port the UDP port the
  * title takes peer traffic on (0 if none). Fills the id the server assigned
  * and the address it sees this client at. NULL on failure. */
 psnr_client* psnr_connect(const char* host, uint16_t port,
                           const char* comm_id, const char* online_id, uint16_t p2p_port,
                           uint32_t* out_user_id, uint8_t out_public_ip[4]);
+
+/* psnr_connect with a time limit. The TCP connect is non-blocking and waits at most timeout_ms,
+ * and so does the wait for HELLO_ACK: timeout_ms is one budget for both, the HELLO wait gets what
+ * the connect left. timeout_ms <= 0 gives NULL. Otherwise the same as psnr_connect, which keeps its
+ * blocking connect. DNS (getaddrinfo) is still blocking and is NOT covered by timeout_ms; a numeric
+ * IPv4 host avoids it. NULL on failure, and on timeout. */
+psnr_client* psnr_connect_timeout(const char* host, uint16_t port,
+                                  const char* comm_id, const char* online_id, uint16_t p2p_port,
+                                  uint32_t* out_user_id, uint8_t out_public_ip[4], int timeout_ms);
 
 /* NAT traversal (docs/api.md, "UDP"). The caller owns the P2P socket; these
  * build and read the packets it exchanges. Every one starts with "PSNR".
@@ -181,8 +191,27 @@ int psnr_discover(uint16_t port, int timeout_ms, psnr_found* out, int max);
 int psnr_connect_error(void);
 void psnr_close(psnr_client* c);
 
-/* Transmit a request synchronously; may wait for socket writability, with no
- * time limit. body excludes the request id. Returns the id, or 0 on failure;
+/* Why the connection was lost. PSNR_DEAD_NONE while it is up. Set once, at the first failure:
+ *   PEER_CLOSED  the server closed the connection (a read returned end of stream)
+ *   IO_ERROR     a read or write failed; psnr_last_os_error says why
+ *   NOMEM        an allocation failed
+ *   SEND_TIMEOUT a write waited PSNR_SEND_TIMEOUT_MS for writability in total */
+enum psnr_dead_reason {
+    PSNR_DEAD_NONE = 0, PSNR_DEAD_PEER_CLOSED, PSNR_DEAD_IO_ERROR, PSNR_DEAD_NOMEM, PSNR_DEAD_SEND_TIMEOUT
+};
+int psnr_dead_reason(const psnr_client* c);
+/* errno (POSIX) or WSAGetLastError() (Windows), captured when the connection was marked dead;
+ * 0 if there was none (a peer close, a timeout). */
+int psnr_last_os_error(const psnr_client* c);
+
+/* How long one write may wait for writability in total before the connection is marked dead
+ * (PSNR_DEAD_SEND_TIMEOUT). Define it before including this header to change it. */
+#ifndef PSNR_SEND_TIMEOUT_MS
+#  define PSNR_SEND_TIMEOUT_MS 5000
+#endif
+
+/* Transmit a request synchronously; may wait for socket writability, for at most
+ * PSNR_SEND_TIMEOUT_MS in total. body excludes the request id. Returns the id, or 0 on failure;
  * after a failed write the connection is unusable. */
 uint32_t psnr_send(psnr_client* c, uint8_t type, const void* body, uint32_t len);
 
@@ -200,7 +229,8 @@ void     psnr_report_rtt(psnr_client* c, int on);
 uint32_t psnr_heartbeat(psnr_client* c);
 
 /* 1: *out holds the next reply or push. 0: nothing yet. -1: disconnected after
- * queued messages drain. Automatic heartbeat sends may wait for writability. */
+ * queued messages drain (psnr_dead_reason says why). Automatic heartbeat sends may wait for
+ * writability, as psnr_send does. */
 int psnr_poll(psnr_client* c, psnr_msg* out);
 
 /* Send, then wait up to timeout_ms for that request's reply (not a full-operation
