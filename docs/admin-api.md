@@ -21,9 +21,11 @@ re-psn -admin 127.0.0.1:36102 -admin-read-token-file /etc/re-psn/admin-read.toke
 | `-admin-read-token-file FILE` (`RE_PSN_ADMIN_READ_TOKEN_FILE`) | The read token. Required: no token, no admin listener. |
 | `-admin-tls-cert`, `-admin-tls-key` | A certificate and key. Required when `ADDR` is not loopback. TLS 1.2 or newer, HTTP/1.1 only. |
 
-The server refuses to start, and says which rule, when: the address is not a loopback IP and there is no certificate (an
-empty host, `0.0.0.0` and `::` are not loopback); the address is the status page's; only one of the certificate and key is
-given; the token is not acceptable; or the token is the same as `-http-token`. The start log says
+The server refuses to start, and says which rule, when: the address is not loopback and there is no certificate (loopback
+means an IP address such as `127.0.0.1` or `::1`, or the name `localhost`, which is bound as `127.0.0.1`; an empty host,
+`0.0.0.0`, `::` and any other name are not loopback and need TLS); the address is the status page's; only one of the certificate and key is
+given; the token is not acceptable; or the token is the same as `-http-token` (also checked again on SIGHUP, where the old token
+stays in force). The start log says
 `admin API is experimental` with the address and whether TLS is on, and never the token.
 
 ## The token
@@ -59,24 +61,30 @@ exists.
   that routes are not revealed, the same `401` for any path. The read token on a request that is not `GET` or `HEAD`
   gets `403`.
 - A failure costs the client a growing delay (100 ms, doubling, up to 5 s) before the answer, keyed by IPv4 address or IPv6
-  `/64`, in a table of fixed size. It never blocks a request that carries the right token.
+  `/64`, in a table of fixed size. A request that carries the right token is never delayed and never counted as a failure,
+  even when it is a method the API does not take (that gets a plain `403` at once).
 - Each refusal writes one log line with the socket's remote address and a fixed reason, and nothing the client wrote:
 
   ```
   time=... level=WARN msg="admin refused" addr=192.0.2.7 reason="token missing or wrong"
   ```
 
-  This is the line to match with [fail2ban](fail2ban.md); the address is never taken from a header.
+  This is the line to match with [fail2ban](fail2ban.md); the address is never taken from a header. There is one line per
+  refused request with no rate limit of its own, so a flood writes a line per request: let fail2ban or the log pipeline
+  absorb it.
 - A request with an `Origin` header is refused with `403` even with the right token, and over plain HTTP the `Host` header
   must be an IP address or `localhost` (this stops a web page from reaching the API through a rebound name). No CORS header is sent.
-- Limits: 32 concurrent connections, 5 s to send headers, 10 s to read or write, 8 KiB of headers, 4 KiB of body.
+- Limits: 32 concurrent connections, and at most 8 of them from one source (an IPv4 address or an IPv6 `/64`); a connection
+  over a limit is closed at once, so one address cannot fill the cap. Many addresses together still can for the few seconds
+  a request may take, so do not expose the port to the internet without a firewall in front. Also 5 s to send headers, 10 s
+  to read or write, 8 KiB of headers and 4 KiB of body.
 
 ## Reaching it safely
 
 Keep the admin port off the public interface: bind it to loopback and reach it through an SSH forward or a WireGuard
 tunnel, or give it a certificate and put a firewall in front. A token is a password for the server's state; use a
-different one from the status page's. Over an SSH forward every request arrives from one address, which is why a failure only
-costs a delay and never a block.
+different one from the status page's. Over an SSH forward every request arrives from one source, so everyone who can use
+the tunnel shares one source's 8 connections and one failure counter; that is fine for a tunnel only you use.
 
 ## Not there yet
 

@@ -177,6 +177,8 @@ func TestAdminConfigRules(t *testing.T) {
 		{"0.0.0.0", adminConfig{Addr: "0.0.0.0:0", ReadTokenFile: tok}, "needs -admin-tls-cert"},
 		{"::", adminConfig{Addr: "[::]:0", ReadTokenFile: tok}, "needs -admin-tls-cert"},
 		{"public address", adminConfig{Addr: "192.0.2.1:0", ReadTokenFile: tok}, "needs -admin-tls-cert"},
+		{"a name is not loopback", adminConfig{Addr: "admin.example:0", ReadTokenFile: tok}, "needs -admin-tls-cert"},
+		{"a name that merely contains localhost", adminConfig{Addr: "localhost.example:0", ReadTokenFile: tok}, "needs -admin-tls-cert"},
 		{"same token as status", adminConfig{Addr: "127.0.0.1:0", ReadTokenFile: tok, StatusToken: testAdminToken}, "same as -http-token"},
 	}
 	for _, c := range cases {
@@ -259,6 +261,31 @@ func TestAdminAuth(t *testing.T) {
 	}
 	if resp.Header.Get("Access-Control-Allow-Origin") != "" {
 		t.Error("CORS header sent")
+	}
+}
+
+// A caller that holds the token and sends a request the API does not take gets a plain 403 at once: no delay, and
+// nothing counted against it.
+func TestAdminValidTokenOnPostIsNotAFailure(t *testing.T) {
+	a, _, logs, base := startAdmin(t, nil, func(a *adminServer) { a.fail.base, a.fail.max = 10*time.Second, 10*time.Second })
+	for _, m := range []string{"POST", "PUT", "DELETE"} {
+		start := time.Now()
+		req, _ := http.NewRequest(m, base+"/admin/v1/state", strings.NewReader("{}"))
+		req.Header.Set("Authorization", "Bearer "+testAdminToken)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != 403 || time.Since(start) > time.Second {
+			t.Errorf("%s: %d after %v, want 403 at once", m, resp.StatusCode, time.Since(start))
+		}
+	}
+	a.fail.mu.Lock()
+	n := len(a.fail.m)
+	a.fail.mu.Unlock()
+	if n != 0 || strings.Contains(logs.String(), "admin refused") {
+		t.Errorf("a valid token on a POST was recorded as a failure (%d entries, log %q)", n, logs.String())
 	}
 }
 
@@ -360,21 +387,38 @@ func TestAdminFailTable(t *testing.T) {
 	}
 }
 
-// A valid token is never delayed or blocked while failures pile up from the same address.
+// A valid token is not delayed while failures pile up from another address. (The flooding address is held to its own
+// share of connections, so some of its requests are closed; that is the point.)
 func TestAdminValidTokenDuringFailures(t *testing.T) {
 	_, _, _, base := startAdmin(t, nil, func(a *adminServer) { a.fail.base, a.fail.max = 50*time.Millisecond, 50*time.Millisecond })
+	from := func(ip string) *http.Client {
+		return &http.Client{Transport: &http.Transport{DisableKeepAlives: true,
+			DialContext: (&net.Dialer{LocalAddr: &net.TCPAddr{IP: net.ParseIP(ip)}}).DialContext}}
+	}
+	flood := from("127.0.0.2")
 	var wg sync.WaitGroup
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 40; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			adminGet(t, base+"/admin/v1/state", "Bearer nope-nope-nope-nope-nope-nope-nope", nil)
+			req, _ := http.NewRequest("GET", base+"/admin/v1/state", nil)
+			req.Header.Set("Authorization", "Bearer nope-nope-nope-nope-nope-nope-nope")
+			if resp, err := flood.Do(req); err == nil {
+				resp.Body.Close()
+			}
 		}()
 	}
+	time.Sleep(20 * time.Millisecond)
+	req, _ := http.NewRequest("GET", base+"/admin/v1/state", nil)
+	req.Header.Set("Authorization", "Bearer "+testAdminToken)
 	start := time.Now()
-	code, _ := adminGet(t, base+"/admin/v1/state", "Bearer "+testAdminToken, nil)
-	if code != 200 || time.Since(start) > 40*time.Millisecond {
-		t.Errorf("valid token during a flood: %d after %v", code, time.Since(start))
+	resp, err := from("127.0.0.3").Do(req)
+	if err != nil {
+		t.Skipf("cannot dial from 127.0.0.3: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 200 || time.Since(start) > 40*time.Millisecond {
+		t.Errorf("valid token during a flood: %d after %v", resp.StatusCode, time.Since(start))
 	}
 	wg.Wait()
 }
@@ -400,6 +444,19 @@ func TestAdminReload(t *testing.T) {
 	}
 	if code, _ := adminGet(t, base+"/admin/v1/state", "Bearer "+second, nil); code != 200 {
 		t.Errorf("new token: %d", code)
+	}
+}
+
+func TestAdminReloadRefusesTheStatusToken(t *testing.T) {
+	const status = "Hn7-bV2kQ9wXz4TcP6mLr1YdF8sJe3Gu"
+	var path string
+	a, _, _, base := startAdmin(t, func(c *adminConfig) { path = c.ReadTokenFile; c.StatusToken = status })
+	os.WriteFile(path, []byte(status), 0o600)
+	if err := a.reload(); err == nil || !strings.Contains(err.Error(), "same as -http-token") {
+		t.Fatalf("reload to the status token: %v", err)
+	}
+	if code, _ := adminGet(t, base+"/admin/v1/state", "Bearer "+testAdminToken, nil); code != 200 {
+		t.Errorf("old token after the refused reload: %d", code)
 	}
 }
 
@@ -430,9 +487,9 @@ func TestAdminSlowAndBigHeaders(t *testing.T) {
 
 func TestLimitListener(t *testing.T) {
 	ln, _ := net.Listen("tcp", "127.0.0.1:0")
-	l := limitListener(ln, 2)
+	l := limitListener(ln, 3, 2)
 	defer l.Close()
-	accepted := make(chan net.Conn, 3)
+	accepted := make(chan net.Conn, 8)
 	go func() {
 		for {
 			c, err := l.Accept()
@@ -442,30 +499,82 @@ func TestLimitListener(t *testing.T) {
 			accepted <- c
 		}
 	}()
-	var dials []net.Conn
-	for i := 0; i < 3; i++ {
-		c, err := net.Dial("tcp", ln.Addr().String())
+	dial := func(from string) net.Conn {
+		d := net.Dialer{LocalAddr: &net.TCPAddr{IP: net.ParseIP(from)}}
+		c, err := d.Dial("tcp", ln.Addr().String())
 		if err != nil {
-			t.Fatal(err)
+			t.Skipf("cannot dial from %s: %v", from, err)
 		}
-		dials = append(dials, c)
+		return c
 	}
-	c1, c2 := <-accepted, <-accepted
+	closedByServer := func(c net.Conn) bool {
+		c.SetReadDeadline(time.Now().Add(time.Second))
+		_, err := c.Read(make([]byte, 1))
+		return err == io.EOF || (err != nil && !strings.Contains(err.Error(), "timeout"))
+	}
+	a1, a2, a3 := dial("127.0.0.2"), dial("127.0.0.2"), dial("127.0.0.2")
+	s1, s2 := <-accepted, <-accepted
+	// The third connection from the same source is over its share of 2: closed at once, not queued.
+	if !closedByServer(a3) {
+		t.Error("a third connection from one source was kept")
+	}
 	select {
 	case <-accepted:
-		t.Fatal("a third connection was accepted at the cap of 2")
-	case <-time.After(150 * time.Millisecond):
+		t.Error("a third connection from one source was accepted")
+	case <-time.After(100 * time.Millisecond):
 	}
-	c1.Close()
+	// Another source still gets in, up to the total of 3; the fourth overall is closed.
+	b1 := dial("127.0.0.3")
+	s3 := <-accepted
+	c1 := dial("127.0.0.4")
+	if !closedByServer(c1) {
+		t.Error("a connection over the total cap was kept")
+	}
+	// Closing one frees its place.
+	s1.Close()
+	c2 := dial("127.0.0.4")
 	select {
 	case c := <-accepted:
 		c.Close()
 	case <-time.After(2 * time.Second):
-		t.Fatal("no connection was accepted after one closed")
+		t.Error("no connection was accepted after one closed")
 	}
-	c2.Close()
-	for _, c := range dials {
+	for _, c := range []net.Conn{a1, a2, a3, b1, c1, c2, s2, s3} {
 		c.Close()
+	}
+	// Accept returns when the listener closes (it never waits for a free place).
+	l.Close()
+}
+
+// One address that holds its whole share of connections cannot keep another address from reaching the API.
+func TestAdminOneSourceCannotFillTheCap(t *testing.T) {
+	a, _, _, base := startAdmin(t, nil)
+	var holders []net.Conn
+	for i := 0; i < adminPerSource+4; i++ {
+		d := net.Dialer{LocalAddr: &net.TCPAddr{IP: net.ParseIP("127.0.0.2")}}
+		c, err := d.Dial("tcp", a.Addr())
+		if err != nil {
+			t.Skipf("cannot dial from 127.0.0.2: %v", err)
+		}
+		c.Write([]byte("GET /admin/v1/state HTTP/1.1\r\nHost: 127.0.0.1\r\nX-Hold: ")) // an unfinished request
+		holders = append(holders, c)
+	}
+	defer func() {
+		for _, c := range holders {
+			c.Close()
+		}
+	}()
+	time.Sleep(50 * time.Millisecond)
+	cl := &http.Client{Transport: &http.Transport{DialContext: (&net.Dialer{LocalAddr: &net.TCPAddr{IP: net.ParseIP("127.0.0.3")}}).DialContext}}
+	req, _ := http.NewRequest("GET", base+"/admin/v1/state", nil)
+	req.Header.Set("Authorization", "Bearer "+testAdminToken)
+	resp, err := cl.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Errorf("a valid token from another address while one address held its share: %d", resp.StatusCode)
 	}
 }
 

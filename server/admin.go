@@ -31,6 +31,7 @@ const (
 	adminMinDistinct  = 12   // distinct byte values: rejects "aaaa..." and short repeating patterns
 	adminMaxTokenFile = 4096 // bytes
 	adminConnCap      = 32   // concurrent connections on the admin listener
+	adminPerSource    = 8    // of those, the most one source (IPv4 address or IPv6 /64) may hold
 	adminTableSize    = 4096 // addresses remembered by the failure table
 	adminBodyCap      = 4096 // bytes of request body
 	adminMaxHeader    = 8 << 10
@@ -48,13 +49,14 @@ type adminConfig struct {
 
 // adminServer is the experimental admin listener.
 type adminServer struct {
-	s    *Server
-	tls  bool
-	ln   net.Listener
-	hs   *http.Server
-	read atomic.Pointer[[sha256.Size]byte]
-	path string // the read token file, read again on reload
-	fail *failTable
+	s      *Server
+	tls    bool
+	ln     net.Listener
+	hs     *http.Server
+	read   atomic.Pointer[[sha256.Size]byte]
+	status *[sha256.Size]byte // digest of -http-token, which the read token must never equal
+	path   string             // the read token file, read again on reload
+	fail   *failTable
 }
 
 // loadAdminToken reads a token file and returns the SHA-256 of its token. The file must be a regular file of at most
@@ -101,25 +103,15 @@ func loadAdminToken(path string) ([sha256.Size]byte, error) {
 	return sha256.Sum256([]byte(tok)), nil
 }
 
-// adminLoopback reports whether host is a loopback address: an IP literal that parses as loopback, or a name every
-// one of whose addresses is loopback. An empty host and the unspecified addresses listen everywhere, so they are not.
+// adminLoopback reports whether host is loopback: an IP literal that parses as loopback, or the name localhost (which
+// the server binds as 127.0.0.1, so no name lookup decides what is loopback). An empty host and the unspecified
+// addresses listen everywhere, so they are not.
 func adminLoopback(host string) bool {
-	if ip, err := netip.ParseAddr(strings.Trim(host, "[]")); err == nil {
-		return ip.Unmap().IsLoopback()
+	if strings.EqualFold(host, "localhost") {
+		return true
 	}
-	if host == "" {
-		return false
-	}
-	ips, err := net.LookupIP(host)
-	if err != nil || len(ips) == 0 {
-		return false
-	}
-	for _, ip := range ips {
-		if !ip.IsLoopback() {
-			return false
-		}
-	}
-	return true
+	ip, err := netip.ParseAddr(strings.Trim(host, "[]"))
+	return err == nil && ip.Unmap().IsLoopback()
 }
 
 // sameListener reports whether two listen addresses could be the same socket: the same port with the same host, or
@@ -158,7 +150,7 @@ func newAdminServer(s *Server, cfg adminConfig) (*adminServer, error) {
 	}
 	useTLS := cfg.TLSCert != ""
 	if !useTLS && !adminLoopback(host) {
-		return nil, errors.New("-admin on an address that is not loopback needs -admin-tls-cert and -admin-tls-key (an empty host, 0.0.0.0 and :: are not loopback)")
+		return nil, errors.New("-admin on an address that is not loopback needs -admin-tls-cert and -admin-tls-key (loopback means an IP address such as 127.0.0.1 or ::1, or localhost; an empty host, 0.0.0.0, :: and other names are not)")
 	}
 	digest, err := loadAdminToken(cfg.ReadTokenFile)
 	if err != nil {
@@ -168,6 +160,10 @@ func newAdminServer(s *Server, cfg adminConfig) (*adminServer, error) {
 		return nil, errors.New("the admin read token is the same as -http-token: use a separate token")
 	}
 	a := &adminServer{s: s, tls: useTLS, path: cfg.ReadTokenFile, fail: newFailTable(adminTableSize)}
+	if cfg.StatusToken != "" {
+		d := sha256.Sum256([]byte(cfg.StatusToken))
+		a.status = &d
+	}
 	a.read.Store(&digest)
 	a.hs = &http.Server{
 		Handler:           a.handler(),
@@ -185,11 +181,15 @@ func newAdminServer(s *Server, cfg adminConfig) (*adminServer, error) {
 		}
 		a.hs.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{cert}}
 	}
-	ln, err := net.Listen("tcp", cfg.Addr)
+	listen := cfg.Addr
+	if strings.EqualFold(host, "localhost") {
+		listen = net.JoinHostPort("127.0.0.1", port) // bind the address the loopback check assumed
+	}
+	ln, err := net.Listen("tcp", listen)
 	if err != nil {
 		return nil, err
 	}
-	a.ln = limitListener(ln, adminConnCap)
+	a.ln = limitListener(ln, adminConnCap, adminPerSource)
 	return a, nil
 }
 
@@ -219,6 +219,9 @@ func (a *adminServer) reload() error {
 	digest, err := loadAdminToken(a.path)
 	if err != nil {
 		return err
+	}
+	if a.status != nil && *a.status == digest {
+		return errors.New("the new admin read token is the same as -http-token: use a separate token")
 	}
 	a.read.Store(&digest)
 	return nil
@@ -307,7 +310,9 @@ func (a *adminServer) handler() http.Handler {
 			return
 		}
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
-			a.refuse(w, r, http.StatusForbidden, "the read token cannot make changes")
+			// The caller holds the token: no delay and no failure on its record, only a plain refusal.
+			w.Header().Set("Allow", "GET, HEAD")
+			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
 		mux.ServeHTTP(w, r)
@@ -428,24 +433,48 @@ func (t *failTable) record(host string, now time.Time) time.Duration {
 	return d
 }
 
-// limitListener allows at most n connections at once: Accept waits for a free place.
-func limitListener(l net.Listener, n int) net.Listener {
-	return &limited{Listener: l, sem: make(chan struct{}, n)}
+// limitListener allows at most n connections at once and at most perSource from one source (an IPv4 address or an
+// IPv6 /64). A connection over a limit is closed at once, so Accept never waits and one address cannot fill the
+// whole cap. Many addresses together still can for the few seconds a request may take, and every request over an SSH
+// forward comes from one source; docs/admin-api.md says both.
+func limitListener(l net.Listener, n, perSource int) net.Listener {
+	return &limited{Listener: l, max: n, perSource: perSource, per: map[string]int{}}
 }
 
 type limited struct {
 	net.Listener
-	sem chan struct{}
+	max, perSource int
+	mu             sync.Mutex
+	total          int
+	per            map[string]int
 }
 
 func (l *limited) Accept() (net.Conn, error) {
-	l.sem <- struct{}{}
-	c, err := l.Listener.Accept()
-	if err != nil {
-		<-l.sem
-		return nil, err
+	for {
+		c, err := l.Listener.Accept()
+		if err != nil {
+			return nil, err
+		}
+		host, _, _ := net.SplitHostPort(c.RemoteAddr().String())
+		key := failKey(host)
+		l.mu.Lock()
+		if l.total >= l.max || l.per[key] >= l.perSource {
+			l.mu.Unlock()
+			c.Close()
+			continue
+		}
+		l.total++
+		l.per[key]++
+		l.mu.Unlock()
+		return &limitedConn{Conn: c, release: func() {
+			l.mu.Lock()
+			l.total--
+			if l.per[key]--; l.per[key] <= 0 {
+				delete(l.per, key)
+			}
+			l.mu.Unlock()
+		}}, nil
 	}
-	return &limitedConn{Conn: c, release: func() { <-l.sem }}, nil
 }
 
 type limitedConn struct {
