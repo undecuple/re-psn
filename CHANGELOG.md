@@ -14,7 +14,8 @@ All notable changes to this project are documented here. The format follows
 - The release build also makes three archives of the desktop app, `re-psn-app-vX.Y.Z-linux-amd64.tar.gz`, `-linux-arm64.tar.gz` and
   `-windows-amd64.zip`, each with the static `re-psn-app` binary (no cgo, version set from the tag), `LICENSE`, `NOTICE.md` and the
   app's README, and listed in `SHA256SUMS`. A release now has ten assets; `scripts/check-release.sh --assets`, both release workflows
-  and their tests expect them (v0.4.0, with seven, is still accepted by the release check). The install scripts do not install the app yet.
+  and their tests expect them (v0.4.0, with seven, is still accepted by the release check). The install scripts do not install the app unless asked (see below).
+- `install.sh --app` and `install.ps1 -App` install the desktop app (`re-psn-app`) from a release instead of the server, with the same checksum check, no sudo and no profile edits. They need a release that has the app archives (after v0.4.0) and say so when the download is missing. Without the flag the scripts behave as before.
 - `-lan-public-addr IP` (`RE_PSN_LAN_PUBLIC_ADDR`, off by default, IPv4): when a player connected from a private, carrier-grade NAT or
   link-local address, players on public addresses are given IP and that player's P2P port instead of the unreachable LAN address
   (the host must forward that port). Players on private addresses and players with public addresses are unaffected.

@@ -1,7 +1,7 @@
 #!/bin/sh
-# Install the re-psn server on Linux from a GitHub release of undecuple/re-psn, for the current user only.
+# Install the re-psn server (or, with --app, the desktop app) on Linux from a GitHub release of undecuple/re-psn, for the current user only.
 #
-# usage: sh install.sh [--version vX.Y.Z] [--dir DIR] [--appimage] [--dry-run] [--allow-root] [--help]
+# usage: sh install.sh [--version vX.Y.Z] [--dir DIR] [--appimage | --app] [--dry-run] [--allow-root] [--help]
 #
 # What it does, in order:
 #   1. Checks the system: Linux on amd64 (x86_64) or arm64 (aarch64). macOS and other systems have no release
@@ -9,7 +9,8 @@
 #   2. Picks the release: --version or RE_PSN_VERSION, else the newest release that is not a draft, pre-releases
 #      included (every release is a pre-release for now). That one lookup reads
 #      https://api.github.com/repos/undecuple/re-psn/releases; with a pinned version it is skipped.
-#   3. Downloads re-psn-vX.Y.Z-linux-<arch>.tar.gz (or, with --appimage, re-psn-vX.Y.Z-x86_64.AppImage) and
+#   3. Downloads re-psn-vX.Y.Z-linux-<arch>.tar.gz (with --appimage, re-psn-vX.Y.Z-x86_64.AppImage; with --app,
+#      re-psn-app-vX.Y.Z-linux-<arch>.tar.gz, which releases after v0.4.0 carry) and
 #      SHA256SUMS from https://github.com/undecuple/re-psn/releases/download/vX.Y.Z/ into a temporary directory,
 #      with curl (--proto =https --tlsv1.2) or GNU wget (HTTPS and TLS 1.2 only). No other host is named here;
 #      GitHub redirects the download to its own file servers.
@@ -17,8 +18,9 @@
 #      or a different hash stops it before anything is written outside the temporary directory.
 #   5. Installs the re-psn binary (or re-psn.AppImage) into DIR, mode 0755: copied to a temporary name in DIR,
 #      then renamed over the old file, so a running server keeps its old file and nothing half-written is left.
-#      The archive's LICENSE, NOTICE.md and examples/ go to ${XDG_DATA_HOME:-~/.local/share}/re-psn/vX.Y.Z/.
-#   6. Says what it did, how to start the server, and the line to add to your shell profile when DIR is not on
+#      The archive's LICENSE, NOTICE.md and examples/ go to ${XDG_DATA_HOME:-~/.local/share}/re-psn/vX.Y.Z/ (with
+#      --app: re-psn-app, LICENSE, NOTICE.md and README.md, into .../re-psn-app/vX.Y.Z/).
+#   6. Says what it did, how to start the server (or the app), and the line to add to your shell profile when DIR is not on
 #      PATH. It never edits a profile and never uses sudo.
 #
 # DIR is --dir, else RE_PSN_INSTALL_DIR, else ~/.local/bin. --dry-run prints these steps with the URLs and
@@ -43,6 +45,7 @@ Installs the re-psn server for the current user from a GitHub release (Linux amd
                     pre-releases included
   --dir DIR         install into DIR (or set RE_PSN_INSTALL_DIR); default: ~/.local/bin
   --appimage        install re-psn.AppImage instead of the archive's binary (x86_64 only)
+  --app             install the desktop app (re-psn-app) instead of the server; needs a release after v0.4.0
   --dry-run         print the steps and stop; download and write nothing
   --allow-root      run even as root (not recommended)
   -h, --help        show this help
@@ -54,6 +57,7 @@ EOF
 version="${RE_PSN_VERSION:-}"
 dir="${RE_PSN_INSTALL_DIR:-}"
 appimage=0
+app=0
 dry=0
 allow_root=0
 while [ "$#" -gt 0 ]; do
@@ -63,12 +67,17 @@ while [ "$#" -gt 0 ]; do
     --dir) [ "$#" -ge 2 ] || die "--dir needs a directory"; dir="$2"; shift 2 ;;
     --dir=*) dir="${1#--dir=}"; shift ;;
     --appimage) appimage=1; shift ;;
+    --app) app=1; shift ;;
     --dry-run) dry=1; shift ;;
     --allow-root) allow_root=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) usage >&2; die "unknown option: $1" ;;
   esac
 done
+
+[ "$app" = 0 ] || [ "$appimage" = 0 ] || die "--app and --appimage cannot be combined."
+pkg=re-psn
+[ "$app" = 0 ] || pkg=re-psn-app
 
 # 1. The system.
 os="$(uname -s)"
@@ -130,7 +139,7 @@ case ":${PATH:-}:" in *":$dir:"*) on_path=1 ;; esac
 if [ "$dry" = 1 ]; then
   v="${version:-<newest release>}"
   if [ "$appimage" = 1 ]; then asset="re-psn-$v-x86_64.AppImage"; target=re-psn.AppImage
-  else asset="re-psn-$v-linux-$arch.tar.gz"; target=re-psn; fi
+  else asset="$pkg-$v-linux-$arch.tar.gz"; target=$pkg; fi
   say "Dry run: nothing is downloaded or written."
   say "  system:   Linux $arch"
   if [ -n "$version" ]; then say "  release:  $version (pinned)"
@@ -139,7 +148,10 @@ if [ "$dry" = 1 ]; then
   say "            $dl/$v/SHA256SUMS"
   say "  check:    the SHA-256 of $asset against its line in SHA256SUMS; stop on a mismatch or no line"
   say "  install:  $dir/$target (mode 0755, renamed into place)"
-  [ "$appimage" = 1 ] || [ -z "$data" ] || say "  examples: $data/re-psn/$v/examples"
+  if [ "$appimage" = 0 ] && [ -n "$data" ]; then
+    if [ "$app" = 1 ]; then say "  extras:   $data/$pkg/$v (LICENSE, NOTICE.md, README.md)"
+    else say "  examples: $data/$pkg/$v/examples"; fi
+  fi
   [ "$on_path" = 1 ] || say "  PATH:     $dir is not on PATH; the line to add would be printed"
   exit 0
 fi
@@ -176,12 +188,12 @@ else
 fi
 
 if [ "$appimage" = 1 ]; then asset="re-psn-$version-x86_64.AppImage"; target=re-psn.AppImage
-else asset="re-psn-$version-linux-$arch.tar.gz"; target=re-psn; fi
+else asset="$pkg-$version-linux-$arch.tar.gz"; target=$pkg; fi
 
 # 3. The download.
 say "Downloading $dl/$version/$asset"
 fetch "$tmp/SHA256SUMS" "$dl/$version/SHA256SUMS" || die "could not download SHA256SUMS for $version"
-fetch "$tmp/$asset" "$dl/$version/$asset" || die "could not download $asset (is $version a release with Linux builds?)"
+fetch "$tmp/$asset" "$dl/$version/$asset" || die "could not download $asset (is $version a release with ${app:+app }Linux builds?${app:+ The app archives start after v0.4.0.})"
 
 # 4. The check.
 want="$(awk -v n="$asset" '$2 == n || $2 == "*" n { print $1 }' "$tmp/SHA256SUMS")"
@@ -202,10 +214,10 @@ if [ "$appimage" = 1 ]; then
 else
   mkdir "$tmp/x"
   tar -xzf "$tmp/$asset" -C "$tmp/x"
-  extras="$tmp/x/re-psn-$version-linux-$arch"
-  src="$extras/re-psn"
+  extras="$tmp/x/$pkg-$version-linux-$arch"
+  src="$extras/$pkg"
   if [ ! -f "$src" ] || [ -L "$src" ]; then
-    die "the archive has no re-psn binary where expected; nothing was installed."
+    die "the archive has no $pkg binary where expected; nothing was installed."
   fi
 fi
 
@@ -220,28 +232,35 @@ say "Installed $dir/$target"
 
 shared=''
 if [ -n "$extras" ] && [ -n "$data" ]; then
-  shared="$data/re-psn/$version"
+  shared="$data/$pkg/$version"
+  if [ "$app" = 1 ]; then extra_files="LICENSE NOTICE.md README.md"; else extra_files="LICENSE NOTICE.md examples"; fi
   if [ -e "$shared" ]; then
-    say "Kept $shared as it was (examples for $version are already there)"
+    say "Kept $shared as it was (the files for $version are already there)"
   else
-    mkdir -p "$data/re-psn"
+    mkdir -p "$data/$pkg"
     mkdir "$tmp/share"
-    for f in LICENSE NOTICE.md examples; do
+    for f in $extra_files; do
       [ ! -e "$extras/$f" ] || cp -R "$extras/$f" "$tmp/share/"
     done
     mv "$tmp/share" "$shared"
-    say "Copied LICENSE, NOTICE.md and examples/ to $shared"
+    if [ "$app" = 1 ]; then say "Copied LICENSE, NOTICE.md and README.md to $shared"
+    else say "Copied LICENSE, NOTICE.md and examples/ to $shared"; fi
   fi
 fi
 
 # 6. What next.
 say ""
 if [ "$on_path" = 1 ]; then
-  say "Start the server:       $target"
+  if [ "$app" = 1 ]; then say "Start the app:          $target"; else say "Start the server:       $target"; fi
 else
   say "$dir is not on your PATH. To add it, put this line in ~/.profile (or your shell's startup file):"
   say "  export PATH=\"$dir:\$PATH\""
-  say "Start the server:       $dir/$target"
+  if [ "$app" = 1 ]; then say "Start the app:          $dir/$target"; else say "Start the server:       $dir/$target"; fi
+fi
+if [ "$app" = 1 ]; then
+  say "The app is a terminal program; run it in a terminal."
+  [ -z "$shared" ] || say "Its README:              $shared/README.md"
+  exit 0
 fi
 say "With the status page:   add -http 127.0.0.1:36101 and open http://127.0.0.1:36101/"
 say "All flags:              $target -h"

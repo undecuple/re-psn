@@ -8,8 +8,8 @@ no macOS builds, and the Linux script says so and stops.
 
 > [!NOTE]
 > Releases built after v0.4.0 also carry the desktop app as separate archives (`re-psn-app-vX.Y.Z-linux-amd64.tar.gz`,
-> `-linux-arm64.tar.gz` and `-windows-amd64.zip`, listed in `SHA256SUMS`). These scripts do not install them yet: unpack an
-> app archive by hand.
+> `-linux-arm64.tar.gz` and `-windows-amd64.zip`, listed in `SHA256SUMS`). The scripts install the server unless asked: add
+> `--app` (Linux) or `-App` (Windows) to install the app instead. Neither works on v0.4.0 or earlier, which have no app archives.
 
 ## Contents
 
@@ -61,6 +61,7 @@ sh install.sh                     # the newest release, pre-releases included, i
 sh install.sh --version v0.4.0    # a pinned release (or RE_PSN_VERSION=v0.4.0)
 sh install.sh --dir ~/bin         # another folder (or RE_PSN_INSTALL_DIR)
 sh install.sh --appimage          # re-psn.AppImage instead of the binary (x86_64 only)
+sh install.sh --app               # the desktop app (re-psn-app) instead of the server; a release after v0.4.0
 sh install.sh --dry-run           # print the steps; download and write nothing
 ```
 
@@ -82,12 +83,19 @@ export PATH="$HOME/.local/bin:$PATH"
 Then `re-psn` starts the server; `re-psn -http 127.0.0.1:36101` also turns on the status page. See
 [running.md](running.md) for the flags.
 
+With `--app` the script installs `re-psn-app` (from `re-psn-app-vX.Y.Z-linux-<arch>.tar.gz`) in the same way, with the same
+checks and the same folder, and copies the archive's `LICENSE`, `NOTICE.md` and `README.md` to `~/.local/share/re-psn-app/vX.Y.Z/`.
+It installs the app *instead of* the server (run it twice for both), and cannot be combined with `--appimage`. The app is a terminal
+program: start it with `re-psn-app` in a terminal. If the release has no app archive the download fails and the script says the app
+archives start after v0.4.0; nothing is installed.
+
 ## Windows
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File install.ps1               # the newest release, into %LOCALAPPDATA%\re-psn\bin
 powershell -ExecutionPolicy Bypass -File install.ps1 -Version v0.4.0
 powershell -ExecutionPolicy Bypass -File install.ps1 -AddToPath    # also add that folder to the user PATH
+powershell -ExecutionPolicy Bypass -File install.ps1 -App           # the desktop app (re-psn-app.exe) instead of the server
 powershell -ExecutionPolicy Bypass -File install.ps1 -DryRun
 ```
 
@@ -96,6 +104,11 @@ and checks the zip with `Get-FileHash` against `SHA256SUMS`. `-Dir` picks anothe
 temporary name and moved over the old one; a running server has to be stopped first, and the script says so. `LICENSE`,
 `NOTICE.md` and `examples\` go to `%LOCALAPPDATA%\re-psn\vX.Y.Z\`. Without `-AddToPath` it changes no PATH and prints the
 command that would add the folder to the user PATH. `-AddToPath` rewrites the user PATH as plain text, so an entry that used `%VARIABLE%` references loses its expansion.
+
+With `-App` the script installs `re-psn-app.exe` (from `re-psn-app-vX.Y.Z-windows-amd64.zip`) the same way, into the same folder,
+and copies `LICENSE`, `NOTICE.md` and `README.md` to `%LOCALAPPDATA%\re-psn-app\vX.Y.Z\`. It installs the app instead of the server and
+needs a release after v0.4.0. The app is a terminal program: run it in Windows Terminal or PowerShell. The app is not code-signed,
+so Windows SmartScreen may warn about a downloaded `.exe`; the script checks the zip against `SHA256SUMS` first.
 
 ## What the scripts never do
 
@@ -108,6 +121,6 @@ command that would add the folder to the user PATH. `-AddToPath` rewrites the us
 
 `sh scripts/test-install.sh [SHELL]` runs the Linux script against a fake release with stub `curl`, `uname` and `id` commands
 and no network: both CPUs, a checksum mismatch, a missing line, macOS and an unknown CPU, `--dry-run`, `--dir`, the PATH hint,
-root, an existing binary replaced by a rename, the AppImage, and the `shasum` and `openssl` fallbacks.
+root, an existing binary replaced by a rename, the AppImage, `--app` (both CPUs, an old release without app archives, the dry run), and the `shasum` and `openssl` fallbacks.
 `pwsh -NoProfile -File scripts/test-install.ps1` does the same for the Windows script, with the downloads and the user PATH
 replaced by test functions.
