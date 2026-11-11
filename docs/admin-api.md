@@ -72,11 +72,15 @@ exists.
   This is the line to match with [fail2ban](fail2ban.md); the address is never taken from a header. There is one line per
   refused request with no rate limit of its own, so a flood writes a line per request: let fail2ban or the log pipeline
   absorb it.
-- A request with an `Origin` header is refused with `403` even with the right token, and over plain HTTP the `Host` header
+- Matching is on the token only; the `Bearer` scheme is case-insensitive. A request with an `Origin` header (or a bad `Host`) is refused with `403` even with the right token, and the refusal is logged and counted like any other, and over plain HTTP the `Host` header
   must be an IP address or `localhost` (this stops a web page from reaching the API through a rebound name). No CORS header is sent.
 - Limits: 32 concurrent connections, and at most 8 of them from one source (an IPv4 address or an IPv6 `/64`); a connection
-  over a limit is closed at once, so one address cannot fill the cap. Many addresses together still can for the few seconds
-  a request may take, so do not expose the port to the internet without a firewall in front. Also 5 s to send headers, 10 s
+  over a limit is closed at once, so one address cannot fill the cap. A refused request closes its connection, but a refusal
+  can be delayed by up to 5 s first, so a few addresses together can still keep the cap full. On a loopback listener
+  (an SSH forward) every local process and every forwarded request share one source, so another local user can lock
+  the admin out of 127.0.0.1. A web page open in the admin's browser can also send requests with an `Origin` header to the
+  listener; each is refused and counted against the admin's own address, and while it is delayed it holds one of that
+  address's 8 slots (a request with the right token is never delayed). Do not expose the port to the internet without a firewall in front. Also 5 s to send headers, 10 s
   to read or write, 8 KiB of headers and 4 KiB of body.
 
 ## Reaching it safely

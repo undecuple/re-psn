@@ -193,6 +193,7 @@ func main() {
 		as, err = newAdminServer(s, adminConfig{Addr: *adminAddr, ReadTokenFile: *adminRead, TLSCert: *adminCert, TLSKey: *adminKey,
 			StatusAddr: *httpAddr, StatusToken: statusToken})
 		if err != nil {
+			removePidFile(pidPath)
 			fatal(err)
 		}
 		logger.Warn("admin API is experimental: read-only, one token, no actions", "addr", as.Addr(), "tls", as.tls)
@@ -210,6 +211,7 @@ func main() {
 			}
 		}()
 	} else if *adminRead != "" || *adminCert != "" || *adminKey != "" {
+		removePidFile(pidPath)
 		fatal(errors.New("-admin-read-token-file, -admin-tls-cert and -admin-tls-key do nothing without -admin"))
 	}
 	go func() { errc <- s.Serve(ln) }()

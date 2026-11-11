@@ -17,6 +17,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -648,7 +649,7 @@ func FuzzAdminAuth(f *testing.F) {
 		req.RemoteAddr = "192.0.2.1:5555"
 		rec := &respRecorder{h: http.Header{}}
 		h.ServeHTTP(rec, req)
-		if rec.code == 200 && auth != "Bearer "+testAdminToken {
+		if rec.code == 200 && !(len(auth) > 7 && strings.EqualFold(auth[:7], "Bearer ") && auth[7:] == testAdminToken) {
 			t.Fatalf("answered 200 to Authorization %q Host %q", auth, host)
 		}
 		if strings.Contains(rec.body.String(), testAdminToken) {
@@ -663,4 +664,69 @@ func writeTokenForFuzz(f *testing.F) string {
 		f.Fatal(err)
 	}
 	return p
+}
+
+func TestAdminBearerSchemeIsCaseInsensitive(t *testing.T) {
+	_, _, _, base := startAdmin(t, nil)
+	for _, scheme := range []string{"bearer", "BEARER", "Bearer"} {
+		if code, _ := adminGet(t, base+"/admin/v1/state", scheme+" "+testAdminToken, nil); code != 200 {
+			t.Errorf("scheme %q with the token: %d, want 200", scheme, code)
+		}
+	}
+	if code, _ := adminGet(t, base+"/admin/v1/state", "bearer wrong-token-wrong-token-wrong-token", nil); code != 401 {
+		t.Errorf("lower-case scheme with a wrong token: %d, want 401", code)
+	}
+}
+
+func TestAdminBrowserRefusalsAreLoggedAndCounted(t *testing.T) {
+	_, _, logs, base := startAdmin(t, nil)
+	if code, _ := adminGet(t, base+"/admin/v1/state", "Bearer "+testAdminToken, map[string]string{"Origin": "https://evil.example"}); code != 403 {
+		t.Fatalf("Origin: %d, want 403", code)
+	}
+	out := logs.String()
+	if !strings.Contains(out, `msg="admin refused"`) || !strings.Contains(out, `reason="origin or host refused"`) || !strings.Contains(out, "addr=127.0.0.1") {
+		t.Errorf("no log line for the Origin refusal:\n%s", out)
+	}
+}
+
+func TestAdminRefusalsCloseTheConnection(t *testing.T) {
+	_, _, _, base := startAdmin(t, nil)
+	req, _ := http.NewRequest("GET", base+"/admin/v1/state", nil)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 401 || !resp.Close {
+		t.Errorf("status %d, close %v: a refusal must close the connection", resp.StatusCode, resp.Close)
+	}
+}
+
+func TestAdminTokenFileFIFOIsRefusedWithoutBlocking(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("no FIFOs on Windows")
+	}
+	path := filepath.Join(t.TempDir(), "fifo")
+	if err := exec.Command("mkfifo", path).Run(); err != nil {
+		t.Skip("no mkfifo:", err)
+	}
+	done := make(chan error, 1)
+	go func() { _, err := loadAdminToken(path); done <- err }()
+	select {
+	case err := <-done:
+		if err == nil || !strings.Contains(err.Error(), "not a regular file") {
+			t.Errorf("err = %v, want not a regular file", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("loadAdminToken blocked on a FIFO")
+	}
+}
+
+func TestSameListenerLocalhostIsLoopback(t *testing.T) {
+	if !sameListener("localhost:8080", "127.0.0.1:8080") || !sameListener("127.0.0.1:8080", "LOCALHOST:8080") {
+		t.Error("localhost and 127.0.0.1 on one port must count as the same listener")
+	}
+	if sameListener("localhost:8080", "127.0.0.1:8081") {
+		t.Error("different ports are different listeners")
+	}
 }

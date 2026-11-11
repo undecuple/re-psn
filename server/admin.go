@@ -64,6 +64,12 @@ type adminServer struct {
 // bytes without spaces and with at least 12 different byte values. Errors name the file and the rule, never the token.
 func loadAdminToken(path string) ([sha256.Size]byte, error) {
 	var zero [sha256.Size]byte
+	// Look before opening: opening a FIFO would block until something writes to it.
+	if li, err := os.Lstat(path); err != nil {
+		return zero, fmt.Errorf("admin token file: %w", err)
+	} else if li.Mode()&os.ModeNamedPipe != 0 {
+		return zero, fmt.Errorf("admin token file %s is not a regular file", path)
+	}
 	f, err := os.Open(path)
 	if err != nil {
 		return zero, fmt.Errorf("admin token file: %w", err)
@@ -125,6 +131,12 @@ func sameListener(a, b string) bool {
 	wild := func(h string) bool {
 		ip, err := netip.ParseAddr(h)
 		return h == "" || (err == nil && ip.IsUnspecified())
+	}
+	if strings.EqualFold(ha, "localhost") {
+		ha = "127.0.0.1" // newAdminServer binds it so
+	}
+	if strings.EqualFold(hb, "localhost") {
+		hb = "127.0.0.1"
 	}
 	return wild(ha) || wild(hb) || strings.EqualFold(ha, hb)
 }
@@ -260,10 +272,11 @@ func (a *adminServer) hostOK(host string) bool {
 // authenticated reports whether the request carries the read token in an Authorization: Bearer header. The query
 // string is never looked at. The SHA-256 digests are compared in constant time.
 func (a *adminServer) authenticated(r *http.Request) bool {
-	tok, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-	if !ok {
+	h := r.Header.Get("Authorization")
+	if len(h) < 7 || !strings.EqualFold(h[:7], "Bearer ") {
 		return false
 	}
+	tok := h[7:]
 	got := sha256.Sum256([]byte(tok))
 	want := a.read.Load()
 	return subtle.ConstantTimeCompare(got[:], want[:]) == 1
@@ -274,6 +287,8 @@ func (a *adminServer) authenticated(r *http.Request) bool {
 func (a *adminServer) refuse(w http.ResponseWriter, r *http.Request, code int, reason string) {
 	delay := a.fail.record(remoteIP(r), time.Now())
 	a.s.log.Warn("admin refused", "addr", remoteIP(r), "reason", reason)
+	// A refused connection is not kept for the idle timeout: an unauthenticated client must not park on a slot.
+	w.Header().Set("Connection", "close")
 	if delay > 0 {
 		t := time.NewTimer(delay)
 		select {
@@ -301,8 +316,7 @@ func (a *adminServer) handler() http.Handler {
 		r.Body = http.MaxBytesReader(w, r.Body, adminBodyCap)
 		// A browser page cannot reach this API: no CORS headers, no request with an Origin, no unknown Host.
 		if _, ok := r.Header["Origin"]; ok || !a.hostOK(r.Host) {
-			a.s.log.Debug("admin request refused before the token check", "addr", remoteIP(r))
-			http.Error(w, "forbidden", http.StatusForbidden)
+			a.refuse(w, r, http.StatusForbidden, "origin or host refused")
 			return
 		}
 		if !a.authenticated(r) {
