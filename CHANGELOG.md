@@ -44,6 +44,10 @@ All notable changes to this project are documented here. The format follows
   `title` field is unchanged. The protocol is unchanged.
 
 ### Fixed
+- The start log line for LAN discovery ("lan discovery on") no longer shows the server name quoted twice; the name is logged as a plain
+  attribute, quoted once by the log format. A test checks it in text and JSON.
+- The advice for the UDP PROBE (`client/psnr.h`, `docs/api.md`) is now concrete: send one about every 15 seconds while the title is
+  online, from its own P2P socket, because some home gateways drop an idle UDP mapping after 30 seconds. Comments and docs only.
 - `re-psn -h` no longer prints the status token. The `-http-token` default was read from `RE_PSN_HTTP_TOKEN` (or the old
   `PSNR_HTTP_TOKEN`), so the usage text showed it, and a pasted `-h` or a CI log could leak it. The flag's own default is now
   empty, as for `-db`, and the variable is read after the command line is parsed. The token is still taken from either

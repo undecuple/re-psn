@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -102,4 +103,32 @@ func (s *syncBuf) String() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.b.String()
+}
+
+// TestDiscoveryStartLogQuotesNameOnce checks that the LAN discovery start line
+// carries the name as a plain attribute, so the log format quotes it exactly
+// once and escapes control characters, in both formats.
+func TestDiscoveryStartLogQuotesNameOnce(t *testing.T) {
+	cases := map[string]string{
+		"text": `name="e2e box"`,
+		"json": `"name":"e2e box"`,
+	}
+	for format, want := range cases {
+		t.Run(format, func(t *testing.T) {
+			buf := &syncBuf{}
+			logDiscoveryOn(newLogger(buf, slog.LevelInfo, format), "e2e box")
+			out := buf.String()
+			if !strings.Contains(out, "lan discovery on") || !strings.Contains(out, want) {
+				t.Fatalf("log %q lacks message or %s", out, want)
+			}
+			if strings.Contains(out, `\"`) || strings.Count(out, "e2e box") != 1 {
+				t.Fatalf("name quoted twice or repeated: %q", out)
+			}
+		})
+	}
+	buf := &syncBuf{}
+	logDiscoveryOn(newLogger(buf, slog.LevelInfo, "text"), "a\nb")
+	if strings.Contains(buf.String(), "a\nb") || !strings.Contains(buf.String(), `a\nb`) {
+		t.Fatalf("control character not escaped: %q", buf.String())
+	}
 }

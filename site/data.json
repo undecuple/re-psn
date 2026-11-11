@@ -1141,12 +1141,14 @@
      "The status page and `/api/stats` show known games by name: rooms and leaderboards carry a `label` such as `[Killzone 3 (BCUS98234, BCES01007)]`, with `game` and `serials` fields, and are sorted by it."
     ],
     "Fixed": [
+     "The start log line for LAN discovery (\"lan discovery on\") no longer shows the server name quoted twice; the name is logged as a plain attribute, quoted once by the log format.",
+     "The advice for the UDP PROBE (`client/psnr.h`, `docs/api.md`) is now concrete: send one about every 15 seconds while the title is online, from its own P2P socket, because some home gateways drop an idle UDP mapping ...",
      "`re-psn -h` no longer prints the status token."
     ]
    },
    "counts": {
     "Added": 12,
-    "Fixed": 1
+    "Fixed": 3
    }
   },
   "latest": {
