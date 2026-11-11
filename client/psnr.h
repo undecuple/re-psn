@@ -45,18 +45,19 @@ extern "C" {
 
 /* Message types; payloads in docs/api.md. */
 enum {
-    PSNR_HELLO = 0x01, PSNR_HEARTBEAT = 0x02,
+    PSNR_HELLO = 0x01, PSNR_HEARTBEAT = 0x02, PSNR_PEER_AUTH = 0x03,
     PSNR_CREATE_ROOM = 0x10, PSNR_SEARCH_ROOMS = 0x11, PSNR_JOIN_ROOM = 0x12,
     PSNR_LEAVE_ROOM = 0x13, PSNR_SET_ROOM_DATA = 0x14, PSNR_ROOM_MESSAGE = 0x15,
-    PSNR_KICK_MEMBER = 0x16,
+    PSNR_KICK_MEMBER = 0x16, PSNR_SET_ROOM_ACCESS = 0x17, PSNR_JOIN_BY_CODE = 0x18,
+    PSNR_GET_ROOM_ACCESS = 0x19,
     PSNR_RECORD_SCORE = 0x20, PSNR_GET_RANKING = 0x21, PSNR_GET_RANKING_BY_ID = 0x22,
 
     PSNR_HELLO_ACK = 0x81, PSNR_ROOM_JOINED = 0x90, PSNR_ROOM_LIST = 0x91,
-    PSNR_OK = 0x93, PSNR_SCORE_RECORDED = 0xB0, PSNR_RANKING = 0xB1,
+    PSNR_ROOM_ACCESS = 0x97, PSNR_OK = 0x93, PSNR_SCORE_RECORDED = 0xB0, PSNR_RANKING = 0xB1,
     PSNR_ERROR = 0x8F,
 
     PSNR_MEMBER_JOINED = 0xA1, PSNR_MEMBER_LEFT = 0xA2, PSNR_ROOM_DATA = 0xA3,
-    PSNR_ROOM_MSG = 0xA4, PSNR_KICKED = 0xA5,
+    PSNR_ROOM_MSG = 0xA4, PSNR_KICKED = 0xA5, PSNR_PEER_KEY = 0xA8,
 
     /* the relay (docs/api.md, "Relay") */
     PSNR_STREAM_CONNECT = 0x30, PSNR_STREAM_ACCEPT = 0x31, PSNR_STREAM_READY = 0x96,
@@ -81,6 +82,12 @@ typedef struct {
     uint8_t* data;
     uint32_t len;
 } psnr_msg;
+
+/* Name limits on the wire: comm_id 12 bytes, online_id 16, NUL-padded and not necessarily
+ * terminated. psnr_connect refuses longer ones (NULL) instead of cutting them. Copy a name
+ * you read from a payload into a char[PSNR_ONLINE_ID_MAX + 1] and terminate it. */
+#define PSNR_COMM_ID_MAX   12
+#define PSNR_ONLINE_ID_MAX 16
 
 /* Blocking connect and HELLO setup (DNS/connect/send are not bounded by a
  * caller deadline). comm_id is the title's NP communication ID
@@ -203,6 +210,60 @@ int psnr_call(psnr_client* c, uint8_t type, const void* body, uint32_t len,
               psnr_msg* reply, int timeout_ms);
 
 void psnr_msg_free(psnr_msg* m);
+
+/* Decoders for the payloads in docs/api.md. Each checks every length against the message
+ * before it reads a field, so a short or damaged payload gives 0 and never reads past the
+ * end. The pointers inside a result (blobs) point into the psnr_msg's data: they are valid
+ * until psnr_msg_free. online_id fields come out NUL-terminated.
+ *
+ *   psnr_msg_free(&m) after psnr_room_joined_parse(&m, &rj) ... psnr_member_next(&rj.members, &mb)
+ *   is the pattern: a cursor starts valid and next returns 1 per entry, then 0 at the end. */
+typedef struct { const uint8_t* p; size_t left; uint32_t count; } psnr_cursor;
+
+typedef struct {
+    uint16_t member_id;
+    uint32_t user_id;
+    char     online_id[PSNR_ONLINE_ID_MAX + 1];
+    uint8_t  ip[4];
+    uint16_t p2p_port;
+    uint8_t  owner;
+    const uint8_t* data;      /* the member's own data blob */
+    uint16_t data_len;
+} psnr_member;
+
+typedef struct {
+    uint64_t room_id;
+    uint16_t my_member, owner;
+    uint8_t  max;
+    uint32_t flags;
+    const uint8_t* external;  uint16_t external_len;
+    const uint8_t* internal;  uint16_t internal_len;
+    psnr_cursor members;      /* read with psnr_member_next */
+} psnr_room_joined;
+
+typedef struct {
+    uint64_t room_id;
+    char     owner[PSNR_ONLINE_ID_MAX + 1];
+    uint8_t  cur, max;
+    uint32_t flags;
+    const uint8_t* external;  uint16_t external_len;
+} psnr_room;
+
+typedef struct {
+    uint32_t rank;
+    char     online_id[PSNR_ONLINE_ID_MAX + 1];
+    int64_t  score;
+    const uint8_t* comment;   uint16_t comment_len;
+    uint64_t recorded_unix;
+} psnr_rank;
+
+int psnr_room_joined_parse(const psnr_msg* m, psnr_room_joined* out);  /* ROOM_JOINED; 1 ok, 0 bad */
+int psnr_member_parse(const uint8_t* p, size_t len, psnr_member* out, size_t* used); /* a MEMBER_JOINED body after room_id, or one entry; 1 ok */
+int psnr_member_next(psnr_cursor* c, psnr_member* out);
+int psnr_room_list_parse(const psnr_msg* m, psnr_cursor* c, uint16_t* total); /* ROOM_LIST; 1 ok, 0 bad */
+int psnr_room_next(psnr_cursor* c, psnr_room* out);
+int psnr_ranking_parse(const psnr_msg* m, psnr_cursor* c, uint32_t* total);   /* RANKING; 1 ok, 0 bad */
+int psnr_rank_next(psnr_cursor* c, psnr_rank* out);
 
 /* Big-endian field helpers for building and reading payloads. */
 static inline uint8_t* psnr_put16(uint8_t* p, uint16_t v) { p[0] = (uint8_t)(v >> 8); p[1] = (uint8_t)v; return p + 2; }

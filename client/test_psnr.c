@@ -253,6 +253,63 @@ static void relay_source_tests(psnr_client* c)
     assert(from == 4242 && plen == 5 && memcmp(payload, "hello", 5) == 0);
 }
 
+/* The decoders on hand-built payloads, no server: every cut-short copy of a good payload is refused, and a trailing byte
+ * is refused too. */
+static void decoder_tests(void)
+{
+    uint8_t buf[128], *p = buf;
+    psnr_msg m;
+    psnr_cursor cur;
+    psnr_room_joined rj;
+    psnr_rank rk;
+    uint32_t total;
+    size_t n;
+
+    /* ROOM_JOINED: room 7, me 2, owner 1, max 4, flags 0, external "ab", internal "", 1 member "carol" with data "z" */
+    p = psnr_put64(p, 7); p = psnr_put16(p, 2); p = psnr_put16(p, 1); *p++ = 4; p = psnr_put32(p, 0);
+    p = psnr_put16(p, 2); *p++ = 'a'; *p++ = 'b'; p = psnr_put16(p, 0); *p++ = 1;
+    p = psnr_put16(p, 2); p = psnr_put32(p, 99); memset(p, 0, 16); memcpy(p, "carol", 5); p += 16;
+    *p++ = 10; *p++ = 0; *p++ = 0; *p++ = 1; p = psnr_put16(p, 3658); *p++ = 0; p = psnr_put16(p, 1); *p++ = 'z';
+    n = (size_t)(p - buf);
+    m.type = PSNR_ROOM_JOINED; m.req = 1; m.data = buf;
+    m.len = (uint32_t)n;
+    assert(psnr_room_joined_parse(&m, &rj) && rj.members.count == 1 && rj.external_len == 2);
+    for (size_t cut = 0; cut < n; cut++) { m.len = (uint32_t)cut; assert(!psnr_room_joined_parse(&m, &rj)); }
+    buf[n] = 0; m.len = (uint32_t)n + 1;
+    assert(!psnr_room_joined_parse(&m, &rj));   /* a trailing byte */
+
+    /* RANKING: total 5, one row: rank 1, "dave", score -3, comment "hi", recorded 1700000000 */
+    p = buf;
+    p = psnr_put32(p, 5); p = psnr_put16(p, 1);
+    p = psnr_put32(p, 1); memset(p, 0, 16); memcpy(p, "dave", 4); p += 16;
+    p = psnr_put64(p, (uint64_t)(int64_t)-3); p = psnr_put16(p, 2); *p++ = 'h'; *p++ = 'i'; p = psnr_put64(p, 1700000000u);
+    n = (size_t)(p - buf);
+    m.type = PSNR_RANKING; m.data = buf; m.len = (uint32_t)n;
+    assert(psnr_ranking_parse(&m, &cur, &total) && total == 5 && cur.count == 1);
+    assert(psnr_rank_next(&cur, &rk) && rk.rank == 1 && strcmp(rk.online_id, "dave") == 0 && rk.score == -3 && rk.comment_len == 2 && rk.recorded_unix == 1700000000u);
+    assert(!psnr_rank_next(&cur, &rk));
+    for (size_t cut = 0; cut < n; cut++) { m.len = (uint32_t)cut; assert(!psnr_ranking_parse(&m, &cur, &total)); }
+
+    /* a count larger than the entries present is refused, not read past */
+    p = buf; p = psnr_put16(p, 9); p = psnr_put16(p, 3);
+    m.type = PSNR_ROOM_LIST; m.len = 4;
+    assert(!psnr_room_list_parse(&m, &cur, NULL));
+}
+
+/* Names longer than the wire fields are refused, not cut. This needs the live server: against a closed port
+ * psnr_connect fails whatever the names are, so only a server that is there shows the check refusing. */
+static void name_limit_tests(const char* host, uint16_t port)
+{
+    psnr_client* ok;
+
+    assert(psnr_connect(host, port, "NPWR00001_00X", "ok", 0, NULL, NULL) == NULL);
+    assert(psnr_connect(host, port, COMM, "this-name-is-17-c", 0, NULL, NULL) == NULL);
+    /* the longest names that fit still connect */
+    ok = psnr_connect(host, port, COMM, "sixteen-chars-ok", 0, NULL, NULL);
+    assert(ok);
+    psnr_close(ok);
+}
+
 int main(int argc, char** argv)
 {
     const char* host = argc > 1 ? argv[1] : "127.0.0.1";
@@ -260,6 +317,8 @@ int main(int argc, char** argv)
     uint32_t ida, idb;
     uint8_t ip[4];
 
+    decoder_tests();
+    name_limit_tests(host, port);
     discover_tests();
     psnr_client* a = psnr_connect(host, port, COMM, "alice", 3658, &ida, ip);
     psnr_client* b = psnr_connect(host, port, COMM, "bob", 3659, &idb, ip);
@@ -285,6 +344,14 @@ int main(int argc, char** argv)
     assert(psnr_call(a, PSNR_CREATE_ROOM, body, (uint32_t)(p - body), &m, 2000) == 1);
     assert(m.type == PSNR_ROOM_JOINED);
     uint64_t room = psnr_get64(m.data);
+    {   /* the decoder reads what the server really sent */
+        psnr_room_joined rj;
+        psnr_member mb;
+        assert(psnr_room_joined_parse(&m, &rj) && rj.room_id == room && rj.max == 4);
+        assert(rj.external_len == 1 && rj.external[0] == 'x' && rj.members.count == 1);
+        assert(psnr_member_next(&rj.members, &mb) && strcmp(mb.online_id, "alice") == 0 && mb.owner == 1 && mb.p2p_port == 3658);
+        assert(!psnr_member_next(&rj.members, &mb));
+    }
     psnr_msg_free(&m);
 
     /* bob searches and joins */
@@ -292,11 +359,23 @@ int main(int argc, char** argv)
     p = psnr_put16(p, 10);
     assert(psnr_call(b, PSNR_SEARCH_ROOMS, body, 4, &m, 2000) == 1);
     assert(m.type == PSNR_ROOM_LIST && psnr_get16(m.data + 2) == 1 && psnr_get64(m.data + 4) == room);
+    {
+        psnr_cursor cur;
+        psnr_room r;
+        uint16_t total;
+        assert(psnr_room_list_parse(&m, &cur, &total) && total == 1 && cur.count == 1);
+        assert(psnr_room_next(&cur, &r) && r.room_id == room && strcmp(r.owner, "alice") == 0 && r.cur == 1 && r.max == 4 && r.external_len == 1);
+        assert(!psnr_room_next(&cur, &r));
+    }
     psnr_msg_free(&m);
     p = psnr_put64(body, room);
     p = psnr_put16(p, 0);   /* no member data */
     assert(psnr_call(b, PSNR_JOIN_ROOM, body, (uint32_t)(p - body), &m, 2000) == 1);
     assert(m.type == PSNR_ROOM_JOINED);
+    {
+        psnr_room_joined rj;
+        assert(psnr_room_joined_parse(&m, &rj) && rj.members.count == 2);
+    }
     psnr_msg_free(&m);
 
     /* alice makes an unrelated call first: the MEMBER_JOINED push that lands
