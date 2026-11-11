@@ -1155,6 +1155,7 @@
      "The status page and `/api/stats` show known games by name: rooms and leaderboards carry a `label` such as `[Killzone 3 (BCUS98234, BCES01007)]`, with `game` and `serials` fields, and are sorted by it."
     ],
     "Fixed": [
+     "`deploy/re-psn.env.example` now lists `RE_PSN_DISCOVER`, `RE_PSN_NAME` and `RE_PSN_LAN_PUBLIC_ADDR`, and the old names of those and of `-relay-force`, so `scripts/check-deploy.sh` (run by the release build) passes again.",
      "The start log line for LAN discovery (\"lan discovery on\") no longer shows the server name quoted twice; the name is logged as a plain attribute, quoted once by the log format.",
      "The advice for the UDP PROBE (`client/psnr.h`, `docs/api.md`) is now concrete: send one about every 15 seconds while the title is online, from its own P2P socket, because some home gateways drop an idle UDP mapping ...",
      "`re-psn -h` no longer prints the status token."
@@ -1162,7 +1163,7 @@
    },
    "counts": {
     "Added": 13,
-    "Fixed": 3
+    "Fixed": 4
    }
   },
   "latest": {

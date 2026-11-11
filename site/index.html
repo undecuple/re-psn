@@ -344,6 +344,7 @@
 </ul>
 <h4>Fixed</h4>
 <ul>
+<li><code>deploy/re-psn.env.example</code> now lists <code>RE_PSN_DISCOVER</code>, <code>RE_PSN_NAME</code> and <code>RE_PSN_LAN_PUBLIC_ADDR</code>, and the old names of those and of <code>-relay-force</code>, so <code>scripts/check-deploy.sh</code> (run by the release build) passes again.</li>
 <li>The start log line for LAN discovery (&quot;lan discovery on&quot;) no longer shows the server name quoted twice; the name is logged as a plain attribute, quoted once by the log format.</li>
 <li>The advice for the UDP PROBE (<code>client/psnr.h</code>, <code>docs/api.md</code>) is now concrete: send one about every 15 seconds while the title is online, from its own P2P socket, because some home gateways drop an idle UDP mapping ...</li>
 <li><code>re-psn -h</code> no longer prints the status token.</li>
