@@ -29,6 +29,9 @@ const clientTimeout = 90 * time.Second // HELLO/HEARTBEAT keep a client alive
 // for longer than this. A var so a test can shorten it.
 var writeTimeout = 10 * time.Second
 
+// defaultMaxConns is the default for -max-conns: a bound on file descriptors, high enough that a normal server never meets it.
+const defaultMaxConns = 4096
+
 // A reported round trip is shown while it is fresh, and values above maxReportedRTT (including 0xFFFF, "unknown")
 // clear it.
 const (
@@ -69,9 +72,13 @@ type Server struct {
 	scores store.Store // leaderboards (scores.go); memory unless -db says otherwise
 
 	maxPlayerRooms int            // rooms one player may be in at once
+	maxConns       int            // open connections in total, players and relay legs (0: no limit)
 	maxPerAddr     int            // open connections per remote address
 	maxReqRate     int            // requests per second per connection
 	addrConns      map[string]int // open connections by remote host
+	openConns      int            // open connections in total
+	lastConnsLog   time.Time      // when a refusal for -max-conns was last logged
+	connsLogSkip   int            // refusals for -max-conns not logged since then
 
 	discover bool   // -discover: answer LAN DISCOVER packets (discover.go)
 	name     string // -name: shown in discovery, at most 24 bytes
@@ -88,6 +95,7 @@ type Server struct {
 	relayed    uint64 // bytes carried by the relay (atomic)
 
 	refusedConns   uint64 // connections refused for too many from one address (atomic)
+	refusedTotal   uint64 // connections refused because -max-conns were open (atomic)
 	refusedReqRate uint64 // connections closed for sending requests too fast (atomic)
 }
 
@@ -132,6 +140,7 @@ func NewServer(maxRooms int, verbose bool) *Server {
 		started:  time.Now(),
 
 		maxPlayerRooms: 8,
+		maxConns:       defaultMaxConns,
 		maxPerAddr:     32,
 		maxReqRate:     200,
 		maxUDPRate:     defaultUDPRate,
@@ -207,7 +216,25 @@ func (s *Server) admit(conn net.Conn) {
 		conn.Close()
 		return
 	}
+	if s.maxConns > 0 && s.openConns >= s.maxConns {
+		// a flood must not also flood the log: one line a second, with the number left out in between
+		var skipped int
+		logIt := time.Since(s.lastConnsLog) >= time.Second
+		if logIt {
+			s.lastConnsLog, skipped, s.connsLogSkip = time.Now(), s.connsLogSkip, 0
+		} else {
+			s.connsLogSkip++
+		}
+		s.mu.Unlock()
+		atomic.AddUint64(&s.refusedTotal, 1)
+		if logIt {
+			s.log.Warn("connection refused", "reason", "too many connections in total", "limit", s.maxConns, "refused_since_last_line", skipped)
+		}
+		conn.Close()
+		return
+	}
 	s.addrConns[host]++
+	s.openConns++
 	s.nextID++
 	s.conns++
 	c := &client{id: s.nextID, conn: conn, addr: real.Unmap().WithZone(""), rooms: map[uint64]*room{}}
@@ -219,6 +246,7 @@ func (s *Server) admit(conn net.Conn) {
 	s.mu.Unlock()
 	s.run(c)
 	s.mu.Lock()
+	s.openConns--
 	if s.addrConns[host]--; s.addrConns[host] <= 0 {
 		delete(s.addrConns, host)
 	}

@@ -65,6 +65,7 @@ type statsJSON struct {
 type limitsJSON struct {
 	MaxRooms        int `json:"max_rooms"`
 	MaxPlayerRooms  int `json:"max_player_rooms"`
+	MaxConns        int `json:"max_conns"`
 	MaxConnsPerAddr int `json:"max_conns_per_addr"`
 	MaxReqRate      int `json:"max_req_rate"`
 	MaxUDPRate      int `json:"max_udp_rate"`
@@ -72,6 +73,7 @@ type limitsJSON struct {
 
 // refusalsJSON counts TCP connections turned away since start.
 type refusalsJSON struct {
+	Conns        uint64 `json:"conns"`
 	ConnsPerAddr uint64 `json:"conns_per_addr"`
 	ReqRate      uint64 `json:"req_rate"`
 }
@@ -119,9 +121,9 @@ func (s *Server) snapshot() statsJSON {
 		Version:     version,
 		Relay:       s.relay,
 		RelayBytes:  atomic.LoadUint64(&s.relayed),
-		Limits: limitsJSON{MaxRooms: s.maxRooms, MaxPlayerRooms: s.maxPlayerRooms, MaxConnsPerAddr: s.maxPerAddr,
+		Limits: limitsJSON{MaxRooms: s.maxRooms, MaxPlayerRooms: s.maxPlayerRooms, MaxConns: s.maxConns, MaxConnsPerAddr: s.maxPerAddr,
 			MaxReqRate: s.maxReqRate, MaxUDPRate: s.maxUDPRate},
-		TCPRefusals: refusalsJSON{ConnsPerAddr: atomic.LoadUint64(&s.refusedConns), ReqRate: atomic.LoadUint64(&s.refusedReqRate)},
+		TCPRefusals: refusalsJSON{Conns: atomic.LoadUint64(&s.refusedTotal), ConnsPerAddr: atomic.LoadUint64(&s.refusedConns), ReqRate: atomic.LoadUint64(&s.refusedReqRate)},
 	}
 	for _, c := range s.clients {
 		if c.commID != "" && c.udpPort != 0 {

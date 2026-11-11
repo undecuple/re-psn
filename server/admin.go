@@ -363,9 +363,9 @@ func (a *adminServer) state(w http.ResponseWriter, r *http.Request) {
 		Uptime:     time.Since(s.started).Round(time.Second).String(),
 		Relay:      s.relay,
 		RelayBytes: atomic.LoadUint64(&s.relayed),
-		Limits: limitsJSON{MaxRooms: s.maxRooms, MaxPlayerRooms: s.maxPlayerRooms, MaxConnsPerAddr: s.maxPerAddr,
+		Limits: limitsJSON{MaxRooms: s.maxRooms, MaxPlayerRooms: s.maxPlayerRooms, MaxConns: s.maxConns, MaxConnsPerAddr: s.maxPerAddr,
 			MaxReqRate: s.maxReqRate, MaxUDPRate: s.maxUDPRate},
-		TCPRefusals: refusalsJSON{ConnsPerAddr: atomic.LoadUint64(&s.refusedConns), ReqRate: atomic.LoadUint64(&s.refusedReqRate)},
+		TCPRefusals: refusalsJSON{Conns: atomic.LoadUint64(&s.refusedTotal), ConnsPerAddr: atomic.LoadUint64(&s.refusedConns), ReqRate: atomic.LoadUint64(&s.refusedReqRate)},
 		UDPDrops:    s.udpDrops.snapshot(),
 	}
 	s.mu.Unlock()

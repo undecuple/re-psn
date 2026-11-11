@@ -1070,6 +1070,12 @@
    "description": "Rooms one player may be in at once (0: no limit)"
   },
   {
+   "flag": "-max-conns",
+   "variable": "RE_PSN_MAX_CONNS",
+   "default": "4096",
+   "description": "Open TCP connections in total, players and relay legs (0: no limit); not in v0.5.0"
+  },
+  {
    "flag": "-max-conns-per-addr",
    "variable": "RE_PSN_MAX_CONNS_PER_ADDR",
    "default": "32",
@@ -1166,6 +1172,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "**Server:** `-max-conns` (`RE_PSN_MAX_CONNS`, default 4096; 0 for no limit) caps the open TCP connections in total, players and relay legs together.",
      "Experimental, read-only admin API, off by default: `-admin ADDR` (`RE_PSN_ADMIN`) opens a second listener with one route, `GET /admin/v1/state`, for a read token kept in a file (`-admin-read-token-file`; at least 32 ...",
      "Medius compatibility switch, off by default: `-medius` (`RE_PSN_MEDIUS`), `-medius-port` (default 10071) and `-medius-addr` (default `127.0.0.1`; a loopback, private or link-local address, or `0.0.0.0`/`::` in a ...",
      "C client: constants for `PEER_AUTH`, `SET_ROOM_ACCESS`, `JOIN_BY_CODE`, `GET_ROOM_ACCESS`, `ROOM_ACCESS` and `PEER_KEY`, and bounds-checked decoders for ROOM_JOINED, member entries, ROOM_LIST and RANKING ...",
@@ -1190,7 +1197,7 @@
     ]
    },
    "counts": {
-    "Added": 7,
+    "Added": 8,
     "Fixed": 9,
     "Changed": 1
    }
