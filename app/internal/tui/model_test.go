@@ -161,7 +161,7 @@ func mustNotShow(t *testing.T, m Model, not ...string) {
 func homeModel(t *testing.T, f *fake, set config.Settings) Model {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), config.FileName)
-	return New(Options{Path: path, File: &config.File{Settings: set}, Fetcher: f, Now: func() time.Time { return time.Unix(0, 0) }})
+	return New(Options{Path: path, File: &config.File{Settings: set}, Fetcher: f, Now: ticking()})
 }
 
 func TestFirstRunChooser(t *testing.T) {
@@ -522,4 +522,51 @@ func TestServerTextCannotInjectEscapes(t *testing.T) {
 	f.err = errors.New("dial h:1: \x1b[2Jrefused")
 	m = drive(t, m, keys("r")...)
 	check("refused")
+}
+
+// Spamming r must not open a connection per key press: a press while a fetch runs, or just after one, does nothing.
+func TestRefreshKeyDoesNotStackFetches(t *testing.T) {
+	f := &fake{snap: sampleSnap}
+	now := time.Unix(100, 0)
+	m := New(Options{Path: filepath.Join(t.TempDir(), config.FileName), File: &config.File{Settings: config.Settings{Server: "h:1"}},
+		Fetcher: f, Now: func() time.Time { return now }})
+	m = drive(t, m, initialRefreshMsg{}) // the first fetch on start
+	if n := len(f.queries); n != 1 {
+		t.Fatalf("start made %d fetches, want 1", n)
+	}
+	now = now.Add(5 * time.Second)
+	// First press starts a fetch; run it later, so it is "in flight" while the key is hit again.
+	next, cmd := m.Update(press("r"))
+	m = next.(Model)
+	if cmd == nil || !m.loading {
+		t.Fatal("r did not start a fetch")
+	}
+	for i := 0; i < 20; i++ {
+		var c tea.Cmd
+		next, c = m.Update(press("r"))
+		m = next.(Model)
+		if c != nil {
+			t.Fatalf("press %d while a fetch was running started another", i+2)
+		}
+	}
+	// The fetch finishes; a press within the cooldown still does nothing.
+	next, _ = m.Update(cmd())
+	m = next.(Model)
+	if _, c := m.Update(press("r")); c != nil {
+		t.Error("r inside the cooldown started a fetch")
+	}
+	// After the cooldown it works again.
+	now = now.Add(refreshCooldown)
+	if _, c := m.Update(press("r")); c == nil {
+		t.Error("r after the cooldown did nothing")
+	}
+	if n := len(f.queries); n != 2 {
+		t.Errorf("%d fetches in all, want 2 (start and the first press)", n)
+	}
+}
+
+// ticking is a clock that moves two seconds on every look, so the r cooldown never holds back a test.
+func ticking() func() time.Time {
+	t := time.Unix(0, 0)
+	return func() time.Time { t = t.Add(2 * time.Second); return t }
 }
