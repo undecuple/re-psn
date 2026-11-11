@@ -6,14 +6,14 @@ What re-psn does today and what is planned, one row per feature. Each status res
 
 | Status | Meaning | Features |
 |---|---|---|
-| available | merged, with a test or a recorded run | 38 |
+| available | merged, with a test or a recorded run | 39 |
 | not yet verified | merged, but nothing in the repository checks it | 3 |
 | partial | merged in part, or with known gaps | 8 |
 | in progress | an open pull request or branch | 0 |
 | planned | wanted and intended, not started | 15 |
 | later | after the planned items, or after a decision | 9 |
 | declined | will not be done | 1 |
-| all | | 74 |
+| all | | 75 |
 
 ## Rooms and matchmaking
 
@@ -151,6 +151,7 @@ What re-psn does today and what is planned, one row per feature. Each status res
 | ID | Feature | Status | Since | Evidence | Note |
 |---|---|---|---|---|---|
 | `app-lan-discover` | **Find servers on the LAN**: Find on LAN in the desktop app (`f` in Settings, Ctrl+F while typing the server): the Go client broadcasts one 64-byte UDP request from a temporary socket, collects the 52-byte replies for about 1.5 s, drops anything with the wrong length, type or nonce, and lists name, address:port, players, relay and version; the chosen address fills the server field. Typing host:port still works. | available | main | [`app/internal/client/discover.go`](../app/internal/client/discover.go), [`TestDiscoverValidReply`](../app/internal/client/discover_test.go), [`TestDiscoverIgnoresBadDatagrams`](../app/internal/client/discover_test.go), [`TestDiscoverDeduplicates`](../app/internal/client/discover_test.go), [`TestDiscoverTimeoutIsEmptyNotError`](../app/internal/client/discover_test.go), [`TestDiscoverSanitisesText`](../app/internal/client/discover_test.go), [`TestDiscoverCancel`](../app/internal/client/discover_test.go), [`app/internal/tui/lan_test.go`](../app/internal/tui/lan_test.go), [`TestFindOnLANShowsListAndFillsServer`](../app/internal/tui/lan_test.go), [`TestFindOnLANNoneFound`](../app/internal/tui/lan_test.go), [`TestFindOnLANWhileTypingTheServer`](../app/internal/tui/lan_test.go), [`TestFindOnLANFirstRun`](../app/internal/tui/lan_test.go) | Not in v0.4.0. Finds only servers started with -discover. Tested against a fake responder and, by hand, against a real server on loopback; not a real broadcast across a network. IPv4 and the local subnet only. `server = auto` in re-psn.ini is not supported. |
+| `app-server-view` | **Server view in Status**: With a status URL set, the Status screen has a read-only Server tab (Tab cycles Rooms, Leaderboards, Server): version, uptime, relay on or off, the limits in force (0 shown as none), TCP refusals and UDP drop counters, and the payload carried by the relay with a bytes-per-second rate computed between two refreshes. A counter that goes down is shown as server restarted and the rate baseline starts again. Fields an older server omits are shown as not reported by this server, never as 0 or off. Nothing is changed on the server and the token is never shown. | available | main | [`app/internal/tui/server_stats.go`](../app/internal/tui/server_stats.go), [`app/internal/tui/server_view.go`](../app/internal/tui/server_view.go), [`app/internal/tui/server_view_test.go`](../app/internal/tui/server_view_test.go), [`TestDecodeServerStatsAllFields`](../app/internal/tui/server_view_test.go), [`TestDecodeServerStatsOldServer`](../app/internal/tui/server_view_test.go), [`TestDecodeServerStatsPartial`](../app/internal/tui/server_view_test.go), [`TestServerTrackRate`](../app/internal/tui/server_view_test.go), [`TestServerTrackCounterWentDown`](../app/internal/tui/server_view_test.go), [`TestServerViewNewServer`](../app/internal/tui/server_view_test.go), [`TestServerViewOldServer`](../app/internal/tui/server_view_test.go), [`TestServerViewRestart`](../app/internal/tui/server_view_test.go), [`TestServerViewNoToken`](../app/internal/tui/server_view_test.go), [`TestServerTabOnlyWithStatusURL`](../app/internal/tui/server_view_test.go) | Not in v0.4.0. Needs a server that reports the fields (newer than v0.4.0); older servers show not reported. Relay bytes and the rate are payload carried by the relay, not network bandwidth. Checked by hand against a real server on loopback. |
 
 ## Testing and CI
 

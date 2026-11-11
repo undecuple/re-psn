@@ -68,6 +68,8 @@ bottom. Under 70 columns the menu and the content are shown one at a time.
   title's communication ID (such as `NPWR00860_00`) first. Rooms shows ID, owner, members as current/max and the room flags.
   Leaderboards shows one board, whose id you type: rank, player, score and when it was recorded. With a configured HTTP
   status source, these screens instead show public room/member/age data and board leader summaries across titles.
+  With a status URL set, Status has a third tab, **Server** (Tab cycles Rooms, Leaderboards, Server; Esc returns to the menu).
+  See [Server tab](#server-tab).
 - **Settings:** mode, name, server, status URL and theme. Enter changes the selected row; `s` saves to `re-psn.ini` (mode 0600).
   A refused value says which rule it broke. The optional status URL takes effect on refresh. Its token-file path is
   set in `re-psn.ini`; the UI does not display or edit the token itself.
@@ -142,9 +144,21 @@ after changing the URL or token file; clearing the URL returns to protocol-only 
 
 | Screen | HTTP data |
 |---|---|
-| Overview | Uptime, current client count and total connections; the server version remains unshared. |
+| Overview | Uptime, current client count and total connections; the server version is on the Server tab. |
 | Rooms | Public-room IDs, titles, current/max members, names and age, including full rooms; invite-only rooms are counted without names. |
 | Leaderboards | Existing boards, entry counts, leader and best score. These are board summaries; HTTP does not provide full rankings. |
+
+### Server tab
+
+With a status URL set, the Status screen has a read-only Server tab. It shows the server's version, uptime, whether the relay
+is on, the limits in force (`none` means no limit), TCP refusals (too many connections from one address, request rate) and UDP
+drop counters, all counted since the server started. It also shows the payload the relay has carried and, from the
+difference between two refreshes (press `r`), a rate in bytes per second. These are the bytes the relay forwarded for players,
+not network bandwidth or interface traffic. If any counter is lower than at the previous refresh, the tab says the server
+restarted and starts the rate again from that refresh. The tab changes nothing on the server, and the token is never shown.
+
+A server that predates these fields leaves them out. The tab then says `not reported by this server` for each missing value
+and never shows it as 0 or off. This needs a server newer than v0.4.0.
 
 Leave title/board filters empty to show all shared entries, or use the existing `e`/`b` controls to filter. Up to 100
 matching rows are displayed with a count. Room IDs, connection totals and scores retain their full integer precision.
