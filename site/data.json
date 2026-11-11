@@ -1142,6 +1142,12 @@
    "description": "Carry traffic for players who cannot reach each other (uses the host's bandwidth)"
   },
   {
+   "flag": "-relay-idle",
+   "variable": "RE_PSN_RELAY_IDLE",
+   "default": "600",
+   "description": "With -relay, close a relay stream after this many seconds with no bytes in either direction (0: never); not in v0.5.0"
+  },
+  {
    "flag": "-relay-force",
    "variable": "RE_PSN_RELAY_FORCE",
    "default": "off",
@@ -1172,6 +1178,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "**Network:** `-relay-idle` (`RE_PSN_RELAY_IDLE`, default 600 seconds; 0 for never) closes a relay TCP stream that has carried no bytes in either direction for that long, and a write to a stream leg that the peer does ...",
      "**Docs and tooling:** `docs/integrating.md` has a \"Mapping the NP calls\" section: suggested NP call families to re-psn message tables, a list of what the protocol does not cover (world lists included), and a recommended ...",
      "**Server:** `-max-conns` (`RE_PSN_MAX_CONNS`, default 4096; 0 for no limit) caps the open TCP connections in total, players and relay legs together.",
      "Experimental, read-only admin API, off by default: `-admin ADDR` (`RE_PSN_ADMIN`) opens a second listener with one route, `GET /admin/v1/state`, for a read token kept in a file (`-admin-read-token-file`; at least 32 ...",
@@ -1198,7 +1205,7 @@
     ]
    },
    "counts": {
-    "Added": 9,
+    "Added": 10,
     "Fixed": 9,
     "Changed": 1
    }

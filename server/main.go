@@ -49,6 +49,7 @@ func main() {
 	httpToken := flag.String("http-token", "", "require this token (Authorization: Bearer, or ?token=) on the status page; set it when -http is not on localhost")
 	maxRooms := num("max-rooms", 1000, "room limit across all titles")
 	playerRooms := num("max-player-rooms", 8, "rooms one player may be in at once (0 for no limit)")
+	relayIdle := num("relay-idle", int(defaultRelayIdle/time.Second), "close a relay stream after this many seconds with no bytes in either direction (0 for never; needs -relay)")
 	maxConns := num("max-conns", defaultMaxConns, "open TCP connections in total, players and relay legs (0 for no limit)")
 	perAddr := num("max-conns-per-addr", 32, "open connections per remote address (0 for no limit)")
 	reqRate := num("max-req-rate", 200, "requests per second per connection before it is closed (0 for no limit)")
@@ -130,6 +131,10 @@ func main() {
 		fatal(errors.New("-relay-force needs -relay"))
 	}
 	s.relayForce = *relayForce
+	if *relayIdle < 0 {
+		fatal(errors.New("-relay-idle must not be negative"))
+	}
+	s.relayIdle = time.Duration(*relayIdle) * time.Second
 	s.lanPublic = lanPublicIP
 	if lanPublicIP != ([4]byte{}) {
 		logger.Info("lan public address", "addr", ipString(lanPublicIP))
