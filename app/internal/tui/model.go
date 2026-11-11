@@ -360,6 +360,11 @@ func (m Model) homeKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "r":
 		if m.menu <= paneBoards || m.menu == paneServer {
+			// Every fetch opens a connection to the server, which counts it: ask again only when no fetch is
+			// running and the last answer is at least refreshCooldown old.
+			if m.loading || m.justFetched() {
+				return m, nil
+			}
 			return m, m.refresh()
 		}
 	case "tab", "shift+tab":
@@ -556,6 +561,14 @@ func (m Model) settingsKey(key string) (tea.Model, tea.Cmd) {
 		m.dirty = m.set != m.file.Settings
 	}
 	return m, nil
+}
+
+// refreshCooldown is how soon after an answer the r key asks the server again.
+const refreshCooldown = time.Second
+
+// justFetched reports whether the last answer arrived less than refreshCooldown ago.
+func (m Model) justFetched() bool {
+	return !m.fetchedAt.IsZero() && m.opt.Now().Sub(m.fetchedAt) < refreshCooldown
 }
 
 // refresh starts one fetch from the server, with a timeout. Without a server it only says so.
