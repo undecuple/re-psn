@@ -114,8 +114,11 @@ static int pump(psnr_client* c)
 {
     for (;;) {
         if (c->rx_cap - c->rx_len < 4096) {
-            c->rx_cap = c->rx_cap ? c->rx_cap * 2 : 8192;
-            c->rx = (uint8_t*)realloc(c->rx, c->rx_cap);
+            size_t cap = c->rx_cap ? c->rx_cap * 2 : 8192;
+            uint8_t* grown = (uint8_t*)realloc(c->rx, cap);
+            if (!grown) { c->dead = 1; break; }
+            c->rx = grown;
+            c->rx_cap = cap;
         }
         int k = recv(c->s, (char*)c->rx + c->rx_len, (int)(c->rx_cap - c->rx_len), 0);
         if (k == 0 || (k < 0 && !WOULD_BLOCK())) { c->dead = 1; break; }
@@ -132,11 +135,17 @@ static int pump(psnr_client* c)
 
         /* Replies (0x8x, 0x9x, 0xBx) start with the request id; pushes (0xAx) don't. */
         int has_req = (type & 0xF0) != 0xA0;
+        if (has_req && n < 4) {   /* a reply with no request id is damaged: drop it, do not pass it off as a push */
+            off += 3u + n;
+            continue;
+        }
         node* nd = (node*)calloc(1, sizeof(node));
-        if (has_req && n >= 4) { nd->m.req = psnr_get32(p); p += 4; n -= 4; }
+        if (!nd) { c->dead = 1; break; }
+        if (has_req) { nd->m.req = psnr_get32(p); p += 4; n -= 4; }
         nd->m.type = type;
         nd->m.len = n;
         nd->m.data = (uint8_t*)malloc(n ? n : 1);
+        if (!nd->m.data) { free(nd); c->dead = 1; break; }
         memcpy(nd->m.data, p, n);
         if (c->tail) c->tail->next = nd; else c->head = nd;
         c->tail = nd;
@@ -233,6 +242,9 @@ psnr_client* psnr_connect(const char* host, uint16_t port,
     char portstr[8];
     sock_t s = BAD_SOCK;
 
+    /* The wire fields are 12 and 16 bytes: refuse a longer name instead of cutting it. */
+    if (!host || !comm_id || !online_id || strlen(comm_id) > PSNR_COMM_ID_MAX || strlen(online_id) > PSNR_ONLINE_ID_MAX) return NULL;
+
 #ifdef _WIN32
     WSADATA w;
     WSAStartup(MAKEWORD(2, 2), &w);
@@ -263,6 +275,7 @@ psnr_client* psnr_connect(const char* host, uint16_t port,
 #endif
 
     psnr_client* c = (psnr_client*)calloc(1, sizeof(psnr_client));
+    if (!c) { sock_close(s); return NULL; }
     c->s = s;
     {   /* UDP goes to the same server address and port; the local end is
          * this machine's address on the way to the server, for peers on the
@@ -279,8 +292,8 @@ psnr_client* psnr_connect(const char* host, uint16_t port,
 
     /* HELLO: comm_id [12] | online_id [16] | p2p_port u16 */
     uint8_t hello[30] = {0};
-    strncpy((char*)hello, comm_id, 12);
-    strncpy((char*)hello + 12, online_id, 16);
+    memcpy(hello, comm_id, strlen(comm_id));
+    memcpy(hello + 12, online_id, strlen(online_id));
     psnr_put16(hello + 28, p2p_port);
     psnr_msg ack;
     s_connect_error = 0;
@@ -600,4 +613,129 @@ int psnr_discover(uint16_t port, int timeout_ms, psnr_found* out, int max)
     }
 #endif
     return psnr_discover_to(port ? port : 36100, timeout_ms, out, max, dests, n);
+}
+
+/* ---- payload decoders --------------------------------------------------- */
+
+static void copy_name(char out[PSNR_ONLINE_ID_MAX + 1], const uint8_t* p)
+{
+    memcpy(out, p, PSNR_ONLINE_ID_MAX);
+    out[PSNR_ONLINE_ID_MAX] = 0;
+    for (size_t i = 0; out[i]; i++) if ((unsigned char)out[i] < 0x20 || (unsigned char)out[i] > 0x7E) out[i] = '?';
+}
+
+/* A u16-length blob at p within len bytes: 1 and the pointers on success. */
+static int take_blob(const uint8_t* p, size_t len, const uint8_t** data, uint16_t* n, size_t* used)
+{
+    if (len < 2) return 0;
+    *n = psnr_get16(p);
+    if (len - 2 < *n) return 0;
+    *data = p + 2;
+    *used = 2u + *n;
+    return 1;
+}
+
+int psnr_member_parse(const uint8_t* p, size_t len, psnr_member* out, size_t* used)
+{
+    size_t b;
+    if (len < 29) return 0;
+    out->member_id = psnr_get16(p);
+    out->user_id = psnr_get32(p + 2);
+    copy_name(out->online_id, p + 6);
+    memcpy(out->ip, p + 22, 4);
+    out->p2p_port = psnr_get16(p + 26);
+    out->owner = p[28];
+    if (!take_blob(p + 29, len - 29, &out->data, &out->data_len, &b)) return 0;
+    if (used) *used = 29 + b;
+    return 1;
+}
+
+int psnr_member_next(psnr_cursor* c, psnr_member* out)
+{
+    size_t used;
+    if (c->count == 0 || !psnr_member_parse(c->p, c->left, out, &used)) return 0;
+    c->p += used; c->left -= used; c->count--;
+    return 1;
+}
+
+int psnr_room_joined_parse(const psnr_msg* m, psnr_room_joined* out)
+{
+    const uint8_t* p = m->data;
+    size_t len = m->len, b;
+    psnr_cursor probe;
+    psnr_member mb;
+    if (len < 17) return 0;
+    out->room_id = psnr_get64(p);
+    out->my_member = psnr_get16(p + 8);
+    out->owner = psnr_get16(p + 10);
+    out->max = p[12];
+    out->flags = psnr_get32(p + 13);
+    p += 17; len -= 17;
+    if (!take_blob(p, len, &out->external, &out->external_len, &b)) return 0;
+    p += b; len -= b;
+    if (!take_blob(p, len, &out->internal, &out->internal_len, &b)) return 0;
+    p += b; len -= b;
+    if (len < 1) return 0;
+    out->members.count = p[0];
+    out->members.p = p + 1;
+    out->members.left = len - 1;
+    probe = out->members;               /* every member must parse, and nothing may trail */
+    while (probe.count) if (!psnr_member_next(&probe, &mb)) return 0;
+    return probe.left == 0;
+}
+
+int psnr_room_list_parse(const psnr_msg* m, psnr_cursor* c, uint16_t* total)
+{
+    psnr_cursor probe;
+    psnr_room r;
+    if (m->len < 4) return 0;
+    if (total) *total = psnr_get16(m->data);
+    c->count = psnr_get16(m->data + 2);
+    c->p = m->data + 4;
+    c->left = m->len - 4;
+    probe = *c;
+    while (probe.count) if (!psnr_room_next(&probe, &r)) return 0;
+    return probe.left == 0;
+}
+
+int psnr_room_next(psnr_cursor* c, psnr_room* out)
+{
+    size_t b;
+    if (c->count == 0 || c->left < 30) return 0;
+    if (!take_blob(c->p + 30, c->left - 30, &out->external, &out->external_len, &b)) return 0;
+    out->room_id = psnr_get64(c->p);
+    copy_name(out->owner, c->p + 8);
+    out->cur = c->p[24];
+    out->max = c->p[25];
+    out->flags = psnr_get32(c->p + 26);
+    c->p += 30 + b; c->left -= 30 + b; c->count--;
+    return 1;
+}
+
+int psnr_ranking_parse(const psnr_msg* m, psnr_cursor* c, uint32_t* total)
+{
+    psnr_cursor probe;
+    psnr_rank r;
+    if (m->len < 6) return 0;
+    if (total) *total = psnr_get32(m->data);
+    c->count = psnr_get16(m->data + 4);
+    c->p = m->data + 6;
+    c->left = m->len - 6;
+    probe = *c;
+    while (probe.count) if (!psnr_rank_next(&probe, &r)) return 0;
+    return probe.left == 0;
+}
+
+int psnr_rank_next(psnr_cursor* c, psnr_rank* out)
+{
+    size_t b;
+    if (c->count == 0 || c->left < 28) return 0;
+    if (!take_blob(c->p + 28, c->left - 28, &out->comment, &out->comment_len, &b)) return 0;
+    if (c->left - 28 - b < 8) return 0;
+    out->rank = psnr_get32(c->p);
+    copy_name(out->online_id, c->p + 4);
+    out->score = (int64_t)psnr_get64(c->p + 20);
+    out->recorded_unix = psnr_get64(c->p + 28 + b);
+    c->p += 36 + b; c->left -= 36 + b; c->count--;
+    return 1;
 }

@@ -197,6 +197,18 @@ On Windows, preserve SOCKET width for returned stream handles and close them wit
 lifetime with the host runtime: this C-client snapshot calls `WSAStartup` on connect and does not balance it with
 `WSACleanup`. These are current API constraints, not automatic cleanup or reconnection guarantees.
 
+### Read payloads with the decoders
+`psnr.h` has bounds-checked decoders for the payloads titles read most: `psnr_room_joined_parse` (ROOM_JOINED, with a member
+cursor read by `psnr_member_next`), `psnr_member_parse` (one member entry, as in MEMBER_JOINED after its `room_id`),
+`psnr_room_list_parse` with `psnr_room_next` (ROOM_LIST) and `psnr_ranking_parse` with `psnr_rank_next` (RANKING). Each checks every
+length against the message before it reads a field and returns 0 for a short, damaged or over-long payload. A cursor starts
+valid and `next` returns 1 per entry, then 0. Blob pointers in a result point into the `psnr_msg` and are valid until
+`psnr_msg_free`; `online_id` fields come out NUL-terminated and printable. Names you send are limited to 12 bytes
+(`comm_id`) and 16 (`online_id`): `psnr_connect` returns NULL for a longer one instead of cutting it, and a name read
+from a payload is not necessarily NUL-terminated, so copy it into a `char[PSNR_ONLINE_ID_MAX + 1]` (the decoders do).
+Other payloads (HELLO_ACK, ROOM_ACCESS, PEER_KEY, SCORE_RECORDED, the relay messages) are still read by hand with the
+`psnr_get*` helpers; the layouts are in [api.md](api.md).
+
 ### Translate operations deliberately
 
 Use [api.md](api.md) for payloads, reply/push formats and refusal codes. Map room create/search/join/leave, data/message

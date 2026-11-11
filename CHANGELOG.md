@@ -8,6 +8,8 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 - Experimental, read-only admin API, off by default: `-admin ADDR` (`RE_PSN_ADMIN`) opens a second listener with one route, `GET /admin/v1/state`, for a read token kept in a file (`-admin-read-token-file`; at least 32 characters, mode 0600, read again on SIGHUP). An address that is not loopback needs `-admin-tls-cert` and `-admin-tls-key` (TLS 1.2 or newer). The state is aggregate only (version, uptime, relay, limits, refusal counts, the ban count, which is 0 for now): no address, player or token. A wrong or missing token gets one identical 401 after a growing, capped delay and one log line that carries only the socket's remote address, at most 8 of the 32 connections go to one source, an `Origin` header, or a name in `Host` over plain HTTP, is refused. There are no actions yet, and the status page and `/api/stats` are unchanged. See docs/admin-api.md.
+- C client: constants for `PEER_AUTH`, `SET_ROOM_ACCESS`, `JOIN_BY_CODE`, `GET_ROOM_ACCESS`, `ROOM_ACCESS` and `PEER_KEY`, and
+  bounds-checked decoders for ROOM_JOINED, member entries, ROOM_LIST and RANKING (`psnr_room_joined_parse` and friends).
 
 ### Fixed
 - A search no longer disconnects the player when the rooms' data is large: the reply lists only as many rooms as fit in one packet, and the player pages on from there.
@@ -19,6 +21,9 @@ All notable changes to this project are documented here. The format follows
   reads relayed datagrams with `psnr_relay_unwrap` can be sent a forged sender by any room member; `psnr_relay_unwrap` is kept
   unchanged for compatibility and documented as not checking the source.
 - Docs: a comment in `server/rooms.go` that pointed at the missing `docs/room-codes.md` now names the section of `docs/api.md` that holds the content; SECURITY.md states that players behind one address can take over each other's names, and the docs say that `-max-req-rate` does not bound the in-memory score store (which has its own fixed limits per title and board), and that peer keys give no replay protection on their own.
+- C client: the receive path checks its allocations (a failure now ends the connection instead of dereferencing NULL), a reply
+  frame too short to hold its request id is dropped instead of being delivered as a push, and `psnr_connect` refuses a
+  `comm_id` over 12 or an `online_id` over 16 bytes instead of cutting it.
 
 ## [0.5.0] - 2026-11-11
 

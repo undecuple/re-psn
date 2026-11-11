@@ -333,6 +333,7 @@
 <h4>Added</h4>
 <ul>
 <li>Experimental, read-only admin API, off by default: <code>-admin ADDR</code> (<code>RE_PSN_ADMIN</code>) opens a second listener with one route, <code>GET /admin/v1/state</code>, for a read token kept in a file (<code>-admin-read-token-file</code>; at least 32 ...</li>
+<li>C client: constants for <code>PEER_AUTH</code>, <code>SET_ROOM_ACCESS</code>, <code>JOIN_BY_CODE</code>, <code>GET_ROOM_ACCESS</code>, <code>ROOM_ACCESS</code> and <code>PEER_KEY</code>, and bounds-checked decoders for ROOM_JOINED, member entries, ROOM_LIST and RANKING ...</li>
 </ul>
 <h4>Fixed</h4>
 <ul>
@@ -343,6 +344,7 @@
 <li>A score server no longer slows down or grows without bound under many boards: the memory store keeps at most 1000 boards per title and 10000 players per board, and a score that would pass either gets ERROR 6 (an ...</li>
 <li>The C client has <code>psnr_relay_unwrap_from</code>, which accepts a relayed datagram only from the server&#x27;s UDP address.</li>
 <li>Docs: a comment in <code>server/rooms.go</code> that pointed at the missing <code>docs/room-codes.md</code> now names the section of <code>docs/api.md</code> that holds the content; SECURITY.md states that players behind one address can take over each ...</li>
+<li>C client: the receive path checks its allocations (a failure now ends the connection instead of dereferencing NULL), a reply frame too short to hold its request id is dropped instead of being delivered as a push, and ...</li>
 </ul>
 <h3>0.5.0 (2026-11-11)</h3>
 <p>15 under Added, 4 under Fixed.</p>
