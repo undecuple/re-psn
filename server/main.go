@@ -42,6 +42,10 @@ func main() {
 	tcpAddr := flag.String("tcp-addr", envStr("tcp-addr", ""), "TCP address for game clients (default: -addr)")
 	udpAddr := flag.String("udp-addr", envStr("udp-addr", ""), "UDP address for game clients (default: -addr)")
 	httpAddr := flag.String("http", envStr("http", ""), "HTTP status page, /api/stats and /healthz, off unless set (for example 127.0.0.1:36101)")
+	adminAddr := flag.String("admin", envStr("admin", ""), "EXPERIMENTAL read-only admin API on this address, off unless set; needs -admin-read-token-file, and an address that is not loopback also needs -admin-tls-cert and -admin-tls-key (see docs/admin-api.md)")
+	adminRead := flag.String("admin-read-token-file", envStr("admin-read-token-file", ""), "file holding the admin read token (at least 32 characters, mode 0600); read again on SIGHUP")
+	adminCert := flag.String("admin-tls-cert", envStr("admin-tls-cert", ""), "certificate file for the admin listener (TLS 1.2 or newer)")
+	adminKey := flag.String("admin-tls-key", envStr("admin-tls-key", ""), "private key file for the admin listener")
 	httpToken := flag.String("http-token", "", "require this token (Authorization: Bearer, or ?token=) on the status page; set it when -http is not on localhost")
 	maxRooms := num("max-rooms", 1000, "room limit across all titles")
 	playerRooms := num("max-player-rooms", 8, "rooms one player may be in at once (0 for no limit)")
@@ -169,7 +173,7 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, stopSignals()...)
 	defer signal.Stop(stop)
-	errc := make(chan error, 3)
+	errc := make(chan error, 4)
 	go func() { errc <- s.ServeUDP(pc) }()
 	logger.Info("started", "version", version, "clients", ln.Addr().String(), "udp", pc.LocalAddr().String(), "relay", *relay)
 	var hs *http.Server
@@ -183,6 +187,32 @@ func main() {
 		go func() { errc <- hs.ListenAndServe() }()
 	} else {
 		logger.Debug("status page off (set -http to turn it on)")
+	}
+	var as *adminServer
+	if *adminAddr != "" {
+		as, err = newAdminServer(s, adminConfig{Addr: *adminAddr, ReadTokenFile: *adminRead, TLSCert: *adminCert, TLSKey: *adminKey,
+			StatusAddr: *httpAddr, StatusToken: statusToken})
+		if err != nil {
+			removePidFile(pidPath)
+			fatal(err)
+		}
+		logger.Warn("admin API is experimental: read-only, one token, no actions", "addr", as.Addr(), "tls", as.tls)
+		go func() { errc <- as.Serve() }()
+		hup := make(chan os.Signal, 1)
+		signal.Notify(hup, syscall.SIGHUP)
+		defer signal.Stop(hup)
+		go func() {
+			for range hup {
+				if err := as.reload(); err != nil {
+					logger.Warn("admin token reload failed; the previous token stays in force", "err", err)
+				} else {
+					logger.Info("admin token reloaded")
+				}
+			}
+		}()
+	} else if *adminRead != "" || *adminCert != "" || *adminKey != "" {
+		removePidFile(pidPath)
+		fatal(errors.New("-admin-read-token-file, -admin-tls-cert and -admin-tls-key do nothing without -admin"))
 	}
 	go func() { errc <- s.Serve(ln) }()
 	var serveErr error
@@ -204,6 +234,9 @@ func main() {
 		if err := hs.Shutdown(ctx); err != nil {
 			hs.Close()
 		}
+	}
+	if as != nil {
+		as.Shutdown(ctx)
 	}
 	removePidFile(pidPath)
 	if serveErr != nil {

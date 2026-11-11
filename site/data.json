@@ -6,7 +6,7 @@
  "status_counts": {
   "available": 40,
   "unverified": 3,
-  "partial": 8,
+  "partial": 9,
   "in-progress": 0,
   "planned": 15,
   "later": 9,
@@ -914,6 +914,18 @@
    "status_class": "ok"
   },
   {
+   "id": "admin-api",
+   "area": "Status page",
+   "feature": "Experimental admin API, read-only part",
+   "detail": "An opt-in listener of its own (`-admin`, `-admin-read-token-file`, TLS for a non-loopback address) with one route, `GET /admin/v1/state`, for a read token: version, uptime, relay, limits, TCP and UDP refusal counts and the ban count (always 0 for now), no address or player. Failed requests get a growing capped delay and one fail2ban-shaped log line; the token file is read again on SIGHUP.",
+   "status": "partial",
+   "since": "main",
+   "evidence": "server/admin.go, server/admin_test.go, docs/admin-api.md",
+   "note": "Experimental and not in a release. Read-only: no action, no ban, no limit change, and no app view yet; those are separate changes. Not run against a reverse proxy, on Windows, or on a container secret mount.",
+   "status_label": "partial",
+   "status_class": "warn"
+  },
+  {
    "id": "app-archives",
    "area": "Release",
    "feature": "Desktop app archives",
@@ -978,6 +990,7 @@
    "net-lan-discover",
    "client-lan-discover",
    "app-server-view",
+   "admin-api",
    "app-archives"
   ],
   "Now": [],
@@ -1151,8 +1164,14 @@
   "unreleased": {
    "version": "Unreleased",
    "date": "",
-   "sections": {},
-   "counts": {}
+   "sections": {
+    "Added": [
+     "Experimental, read-only admin API, off by default: `-admin ADDR` (`RE_PSN_ADMIN`) opens a second listener with one route, `GET /admin/v1/state`, for a read token kept in a file (`-admin-read-token-file`; at least 32 ..."
+    ]
+   },
+   "counts": {
+    "Added": 1
+   }
   },
   "latest": {
    "version": "0.5.0",
