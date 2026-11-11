@@ -4,6 +4,9 @@ This is a scope and evidence record, not an implementation or a compatibility cl
 3 US `BCUS98234`, update `1.14`, Medius application ID `23044`**. Compatibility is **not tested and not supported**.
 No Medius profile is implemented or supported in re-psn.
 
+A second candidate, **Killzone 2 US `BCUS98116`, update `1.29`**, is recorded below at a lower evidence level. Neither
+candidate is tested, implemented or supported.
+
 ## Source observations
 
 - The existing re-psn path uses the psnr protocol for rooms and leaderboards; the proposed Medius frontend is separate
@@ -44,3 +47,33 @@ No Medius profile is implemented or supported in re-psn.
   unknown. Do not equate Medius worlds with psnr rooms or assume reuse of psnr NAT traversal or relay.
 - A controlled, authorized exact-build run and separately evidenced two-client lifecycle, isolation and data path
   would be needed before any compatibility claim. Until then, the candidate remains not tested and not supported.
+
+## Second candidate: Killzone 2 US `BCUS98116`, update `1.29`
+
+This entry records what a separate project reports from **static reading** of the game's client strings and imports. It
+is a model-level source report on that project's word: no capture, no live exchange, nothing run, nothing kept.
+
+- The client is reported as `rt_msg_client` 3.03.01 with `svoclient-ntly` 3.03.01, with SCE-RT1 framing named, about 60
+  `Medius*` status names, SVO/SVML requests over HTTP with `X-SVOMac` and `X-SVONonce` headers, a ticket-login URI, UPnP
+  port mapping, and a lobby host that the game names itself, with port 10071.
+- The imports include the PSN ticket request and HTTP calls, and no `sceNpMatching2`, `sceNpScore` or `cellRudp`.
+- **Not established:** the Medius application ID, any message layout, the handshake, the service order, encryption and
+  checksum use, and whether the build needs SVO, DNAS or real PSN authentication. If an excluded item is required, this
+  build's real-client path is out of scope, as for the first candidate.
+- Compatibility is **not tested and not supported**, and every rule above applies to this candidate unchanged.
+
+### Allowed first observation: a passive loopback listener
+
+The first real evidence for either candidate can be a listener that only observes the first exchange, on loopback, run
+by the title's own project on its own decision; re-psn runs and keeps nothing of it. The listener sends
+nothing. It records only:
+
+- per connection: an order number, relative start and end time, the port, TCP or UDP, the byte counts each way and which
+  side closed;
+- per frame, client to listener only: the message id byte and its encryption-flag bit, the declared two-byte length, and
+  whether a checksum field is present (yes or no).
+
+It never records payload bytes, checksum values, tickets, names, hashes of any of these, or any address other than
+loopback. If the first bytes do not fit the assumed framing it records the total length and "unknown framing", then
+stops. A synthetic responder for a first message is considered only after a layout is established from such records, and
+needs its own review.
