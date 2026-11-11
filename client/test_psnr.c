@@ -209,6 +209,50 @@ static void discover_tests(void)
 #endif
 }
 
+/* The relay's server-to-client datagram: "PSNR" 03 | from u32 | payload.
+ * psnr_relay_unwrap_from must take it only from the server's UDP address. */
+static void relay_source_tests(psnr_client* c)
+{
+    uint8_t srv_ip[4], other_ip[4], dg[9 + 5];
+    uint16_t srv_port;
+    uint32_t from = 0;
+    const uint8_t* payload = NULL;
+    size_t plen = 0;
+
+    psnr_server_addr(c, srv_ip, &srv_port);
+    memcpy(other_ip, srv_ip, 4);
+    other_ip[3] ^= 1;                       /* a different address on the same network */
+    memcpy(dg, "PSNR", 4);
+    dg[4] = 0x03;
+    psnr_put32(dg + 5, 4242);               /* from_user */
+    memcpy(dg + 9, "hello", 5);
+
+    /* the server's address: accepted, with the sender and payload */
+    assert(psnr_relay_unwrap_from(c, srv_ip, srv_port, dg, sizeof(dg), &from, &payload, &plen) == 1);
+    assert(from == 4242 && plen == 5 && memcmp(payload, "hello", 5) == 0);
+
+    /* a member's datagram, same bytes, from another address: refused */
+    from = 0;
+    payload = NULL;
+    plen = 0;
+    assert(psnr_relay_unwrap_from(c, other_ip, srv_port, dg, sizeof(dg), &from, &payload, &plen) == 0);
+    assert(from == 0 && payload == NULL && plen == 0);
+
+    /* the server's address but another port: refused */
+    assert(psnr_relay_unwrap_from(c, srv_ip, (uint16_t)(srv_port + 1), dg, sizeof(dg), &from, &payload, &plen) == 0);
+    assert(from == 0 && payload == NULL && plen == 0);
+
+    /* the server's address, a datagram that isn't a relay one: still refused (same rules as before) */
+    dg[4] = 0x02;
+    assert(psnr_relay_unwrap_from(c, srv_ip, srv_port, dg, sizeof(dg), &from, &payload, &plen) == 0);
+    dg[4] = 0x03;
+
+    /* the old function is unchanged: it still accepts the same bytes */
+    from = 0;
+    assert(psnr_relay_unwrap(dg, sizeof(dg), &from, &payload, &plen) == 1);
+    assert(from == 4242 && plen == 5 && memcmp(payload, "hello", 5) == 0);
+}
+
 int main(int argc, char** argv)
 {
     const char* host = argc > 1 ? argv[1] : "127.0.0.1";
@@ -227,6 +271,7 @@ int main(int argc, char** argv)
         psnr_punch_packet(a, punch);
         assert(psnr_is_control(punch, sizeof(punch)) && !psnr_is_control("hello", 5));
     }
+    relay_source_tests(a);
 
     /* alice hosts: max 4 | flags 0 | external "x" | internal "" | member data "" */
     uint8_t body[64], *p = body;

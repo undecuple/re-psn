@@ -194,7 +194,7 @@ These are modelled on sceNpMatching2 rooms.
 
 ## Peer keys
 
-Game datagrams between players who connect directly never pass through the server, so it cannot vouch for who sent one, as it does for a relayed datagram. Peer keys let two players tag their packets to each other and check the tags they get.
+Game datagrams between players who connect directly never pass through the server, so it cannot vouch for who sent one, as it does for a relayed datagram. A relayed datagram is vouched for by the server only when the title checks that it came from the server's address (see [Relay](#relay)). Peer keys let two players tag their packets to each other and check the tags they get.
 
 - **Asking.** A client sends PEER_AUTH (no body) after HELLO, only if HELLO_ACK's flag bit 2 is set; the reply is OK. Asking twice changes nothing. A client that never asks gets no key and nobody gets a key about it, so older clients and titles are unaffected, and a server from before this does not set the bit.
 - **The keys.** When two members who both asked are in a room together (when the second joins, or when the second asks), each gets a PEER_KEY push with the same new random 16-byte key about the other. A third member gets a different key for each of its own pairs. The key is new for every join and is not kept by the server or used for anything else.
@@ -320,6 +320,15 @@ target's probed endpoint. The
 target's router already lets packets from there in, because the target's
 probes go there. Receivers unwrap it and hand the payload to the title as if
 it came from that member's address.
+
+A title must check the source address of every 0x03 datagram it reads from
+its P2P socket before it trusts `from_user`. Any room member knows every other
+member's endpoint and can send a datagram with this header straight to the
+title's UDP port, with any `from_user` it likes. The C client's
+`psnr_relay_unwrap_from` returns 0 unless the datagram's source IP and port
+equal the server's UDP address (`psnr_server_addr`), then unwraps as
+`psnr_relay_unwrap` does. `psnr_relay_unwrap` does not check the source: prefer
+`psnr_relay_unwrap_from`.
 
 ## HTTP
 

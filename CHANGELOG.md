@@ -15,6 +15,9 @@ All notable changes to this project are documented here. The format follows
 - A second HELLO on one connection gets error 1 and changes nothing, and a name is held by the player's full IPv6 address: before, all IPv6 players shared one address, so any of them could take another's name.
 - A room whose members' data, with the room's blobs, would make its join reply too big for one packet no longer breaks the joiner: JOIN_ROOM and JOIN_BY_CODE answer error 6 and the joiner is not added, instead of the connection being closed after the other members were told of it.
 - A score server no longer slows down or grows without bound under many boards: the memory store keeps at most 1000 boards per title and 10000 players per board, and a score that would pass either gets ERROR 6 (an existing player can still improve their score). Ranks are read from a sorted list instead of sorting the board on every request, and a GET_RANKING_BY_ID with more than 100 ids is refused before its ids are read.
+- The C client has `psnr_relay_unwrap_from`, which accepts a relayed datagram only from the server's UDP address. A title that
+  reads relayed datagrams with `psnr_relay_unwrap` can be sent a forged sender by any room member; `psnr_relay_unwrap` is kept
+  unchanged for compatibility and documented as not checking the source.
 
 ## [0.5.0] - 2026-11-11
 

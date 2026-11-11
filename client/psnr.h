@@ -116,7 +116,11 @@ int  psnr_probe_reply(const void* buf, size_t len, uint8_t ip[4], uint16_t* port
  * if the server runs with -relay.
  *   Datagrams: wrap a payload for a peer and send it to psnr_server_addr from
  *   the P2P socket; what comes back from the server unwraps to the sender and
- *   the payload.
+ *   the payload. Check the source address of every datagram that unwraps:
+ *   use psnr_relay_unwrap_from, which returns 0 unless it came from the server.
+ *   Any room member can send a datagram with this header straight to the
+ *   title's UDP port, so a title that unwraps without the source check can be
+ *   sent a forged from_user.
  *   Streams: when a ROUTE push says a peer takes streams only through the
  *   relay, psnr_stream_connect opens one to it; the peer gets a STREAM_OFFER
  *   push (stream_id u32 | from_user u32 | vport u16) and answers with
@@ -125,8 +129,17 @@ int  psnr_probe_reply(const void* buf, size_t len, uint8_t ip[4], uint16_t* port
 int     psnr_relay_available(const psnr_client* c);
 size_t  psnr_relay_wrap(const psnr_client* c, uint32_t to_user, const void* payload, size_t len,
                         uint8_t* out, size_t cap);   /* 0 if it doesn't fit */
+/* Does not check the source: prefer psnr_relay_unwrap_from. Kept for
+ * compatibility; it accepts a datagram from anywhere. */
 int     psnr_relay_unwrap(const void* buf, size_t len, uint32_t* from_user,
                           const uint8_t** payload, size_t* payload_len);
+/* psnr_relay_unwrap, but returns 0 unless the datagram's source (src_ip,
+ * src_port, as the UDP socket reports it) is the server's UDP address
+ * (psnr_server_addr). Use this one for every datagram a title reads from its
+ * P2P socket. */
+int     psnr_relay_unwrap_from(const psnr_client* c, const uint8_t src_ip[4], uint16_t src_port,
+                               const void* buf, size_t len, uint32_t* from_user,
+                               const uint8_t** payload, size_t* payload_len);
 int64_t psnr_stream_connect(const psnr_client* c, uint32_t to_user, uint16_t vport, int timeout_ms);
 int64_t psnr_stream_accept(const psnr_client* c, uint32_t stream_id, int timeout_ms);
 
