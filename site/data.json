@@ -897,7 +897,7 @@
    "status": "available",
    "since": "main",
    "evidence": "client/psnr.c, client/test_psnr.c",
-   "note": "Not in v0.4.0. Finds only servers started with -discover. Tested against a fake responder and, by hand, against a real server on loopback; not a real broadcast across a network. Does not cross subnets or client-isolated Wi-Fi. The Windows build broadcasts to 255.255.255.255 only and is untested.",
+   "note": "Not in v0.4.0. Finds only servers started with -discover. Tested against a fake responder and, by hand, against a real server on loopback; not a real broadcast across a network. Does not cross subnets or client-isolated Wi-Fi. The Windows build broadcasts to 255.255.255.255 only; CI compiles the client with MSVC but does not run it on Windows.",
    "status_label": "available",
    "status_class": "ok"
   },
@@ -1167,7 +1167,8 @@
    "sections": {
     "Added": [
      "Experimental, read-only admin API, off by default: `-admin ADDR` (`RE_PSN_ADMIN`) opens a second listener with one route, `GET /admin/v1/state`, for a read token kept in a file (`-admin-read-token-file`; at least 32 ...",
-     "C client: constants for `PEER_AUTH`, `SET_ROOM_ACCESS`, `JOIN_BY_CODE`, `GET_ROOM_ACCESS`, `ROOM_ACCESS` and `PEER_KEY`, and bounds-checked decoders for ROOM_JOINED, member entries, ROOM_LIST and RANKING ..."
+     "C client: constants for `PEER_AUTH`, `SET_ROOM_ACCESS`, `JOIN_BY_CODE`, `GET_ROOM_ACCESS`, `ROOM_ACCESS` and `PEER_KEY`, and bounds-checked decoders for ROOM_JOINED, member entries, ROOM_LIST and RANKING ...",
+     "CI compiles the C client (`client/psnr.c`, `client/examples/minimal.c`) with MSVC on Windows and does not run it there; the build instructions in `docs/integrating.md` give the MSVC command."
     ],
     "Fixed": [
      "A search no longer disconnects the player when the rooms' data is large: the reply lists only as many rooms as fit in one packet, and the player pages on from there.",
@@ -1181,7 +1182,7 @@
     ]
    },
    "counts": {
-    "Added": 2,
+    "Added": 3,
     "Fixed": 8
    }
   },

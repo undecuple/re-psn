@@ -10,6 +10,7 @@ All notable changes to this project are documented here. The format follows
 - Experimental, read-only admin API, off by default: `-admin ADDR` (`RE_PSN_ADMIN`) opens a second listener with one route, `GET /admin/v1/state`, for a read token kept in a file (`-admin-read-token-file`; at least 32 characters, mode 0600, read again on SIGHUP). An address that is not loopback needs `-admin-tls-cert` and `-admin-tls-key` (TLS 1.2 or newer). The state is aggregate only (version, uptime, relay, limits, refusal counts, the ban count, which is 0 for now): no address, player or token. A wrong or missing token gets one identical 401 after a growing, capped delay and one log line that carries only the socket's remote address, at most 8 of the 32 connections go to one source, an `Origin` header, or a name in `Host` over plain HTTP, is refused. There are no actions yet, and the status page and `/api/stats` are unchanged. See docs/admin-api.md.
 - C client: constants for `PEER_AUTH`, `SET_ROOM_ACCESS`, `JOIN_BY_CODE`, `GET_ROOM_ACCESS`, `ROOM_ACCESS` and `PEER_KEY`, and
   bounds-checked decoders for ROOM_JOINED, member entries, ROOM_LIST and RANKING (`psnr_room_joined_parse` and friends).
+- CI compiles the C client (`client/psnr.c`, `client/examples/minimal.c`) with MSVC on Windows and does not run it there; the build instructions in `docs/integrating.md` give the MSVC command.
 
 ### Fixed
 - A search no longer disconnects the player when the rooms' data is large: the reply lists only as many rooms as fit in one packet, and the player pages on from there.
