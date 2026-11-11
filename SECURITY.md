@@ -27,9 +27,9 @@ address, the same as on real PSN P2P.
 
 See [docs/running.md](docs/running.md) for the flags.
 
-- Room blobs are capped at 4096 bytes, a player can be in 8 rooms at once, one address can hold 32 connections, and a
-  connection that sends more than 200 requests a second is closed (`-max-player-rooms`, `-max-conns-per-addr`,
-  `-max-req-rate`; 0 turns a limit off).
+- Room blobs are capped at 4096 bytes, a player can be in 8 rooms at once, one address can hold 32 connections, the
+  server holds at most 4096 connections in all, and a connection that sends more than 200 requests a second is closed
+  (`-max-player-rooms`, `-max-conns-per-addr`, `-max-conns`, `-max-req-rate`; 0 turns a limit off).
 - UDP admission defaults to 1000 packets/second per source IP with the same burst, shared by valid and invalid probes
   and relay datagrams. A bounded table holds at most 4096 sources and expires idle entries. Players behind one NAT
   share the allowance; `-max-udp-rate 0` disables it. Aggregate drop counters add no source labels. This does not

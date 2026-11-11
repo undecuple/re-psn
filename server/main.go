@@ -49,6 +49,7 @@ func main() {
 	httpToken := flag.String("http-token", "", "require this token (Authorization: Bearer, or ?token=) on the status page; set it when -http is not on localhost")
 	maxRooms := num("max-rooms", 1000, "room limit across all titles")
 	playerRooms := num("max-player-rooms", 8, "rooms one player may be in at once (0 for no limit)")
+	maxConns := num("max-conns", defaultMaxConns, "open TCP connections in total, players and relay legs (0 for no limit)")
 	perAddr := num("max-conns-per-addr", 32, "open connections per remote address (0 for no limit)")
 	reqRate := num("max-req-rate", 200, "requests per second per connection before it is closed (0 for no limit)")
 	udpRate := flag.String("max-udp-rate", "1000", "UDP datagrams per second per source (IPv4 address or IPv6 /64), with the same burst allowance (0 for no limit)")
@@ -158,7 +159,7 @@ func main() {
 	if *udpAny {
 		logger.Warn("-udp-any-source: UDP probes and relay packets are accepted from any address that has the right token")
 	}
-	s.maxPlayerRooms, s.maxPerAddr, s.maxReqRate = *playerRooms, *perAddr, *reqRate
+	s.maxPlayerRooms, s.maxConns, s.maxPerAddr, s.maxReqRate = *playerRooms, *maxConns, *perAddr, *reqRate
 	s.maxUDPRate = udpRateN
 	var med *mediusListener
 	if *medius {

@@ -332,6 +332,7 @@
 <h3>Unreleased</h3>
 <h4>Added</h4>
 <ul>
+<li>**Server:** <code>-max-conns</code> (<code>RE_PSN_MAX_CONNS</code>, default 4096; 0 for no limit) caps the open TCP connections in total, players and relay legs together.</li>
 <li>Experimental, read-only admin API, off by default: <code>-admin ADDR</code> (<code>RE_PSN_ADMIN</code>) opens a second listener with one route, <code>GET /admin/v1/state</code>, for a read token kept in a file (<code>-admin-read-token-file</code>; at least 32 ...</li>
 <li>Medius compatibility switch, off by default: <code>-medius</code> (<code>RE_PSN_MEDIUS</code>), <code>-medius-port</code> (default 10071) and <code>-medius-addr</code> (default <code>127.0.0.1</code>; a loopback, private or link-local address, or <code>0.0.0.0</code>/<code>::</code> in a ...</li>
 <li>C client: constants for <code>PEER_AUTH</code>, <code>SET_ROOM_ACCESS</code>, <code>JOIN_BY_CODE</code>, <code>GET_ROOM_ACCESS</code>, <code>ROOM_ACCESS</code> and <code>PEER_KEY</code>, and bounds-checked decoders for ROOM_JOINED, member entries, ROOM_LIST and RANKING ...</li>
@@ -362,7 +363,7 @@
 </section>
 <section id="settings">
 <h2>Settings</h2>
-<p>Each of the 22 flags can also be set as a <code>RE_PSN_&lt;FLAG&gt;</code> variable. A flag on the command line wins, then the variable; a value that does not parse stops the server at start. It runs with no settings at all. <a href="https://github.com/undecuple/re-psn/blob/main/docs/running.md">docs/running.md</a> has the full text.</p>
+<p>Each of the 23 flags can also be set as a <code>RE_PSN_&lt;FLAG&gt;</code> variable. A flag on the command line wins, then the variable; a value that does not parse stops the server at start. It runs with no settings at all. <a href="https://github.com/undecuple/re-psn/blob/main/docs/running.md">docs/running.md</a> has the full text.</p>
 <table class="stack set">
 <thead><tr><th>Flag</th><th>Variable</th><th>Default</th><th>What it does</th></tr></thead>
 <tbody>
@@ -373,6 +374,7 @@
 <tr><td data-label="Flag"><code>-http-token</code></td><td data-label="Variable"><code>RE_PSN_HTTP_TOKEN</code></td><td data-label="Default"><code>none</code></td><td data-label="What it does">Token the status page requires (Authorization: Bearer, or ?token=)</td></tr>
 <tr><td data-label="Flag"><code>-max-rooms</code></td><td data-label="Variable"><code>RE_PSN_MAX_ROOMS</code></td><td data-label="Default"><code>1000</code></td><td data-label="What it does">Rooms across all titles</td></tr>
 <tr><td data-label="Flag"><code>-max-player-rooms</code></td><td data-label="Variable"><code>RE_PSN_MAX_PLAYER_ROOMS</code></td><td data-label="Default"><code>8</code></td><td data-label="What it does">Rooms one player may be in at once (0: no limit)</td></tr>
+<tr><td data-label="Flag"><code>-max-conns</code></td><td data-label="Variable"><code>RE_PSN_MAX_CONNS</code></td><td data-label="Default"><code>4096</code></td><td data-label="What it does">Open TCP connections in total, players and relay legs (0: no limit); not in v0.5.0</td></tr>
 <tr><td data-label="Flag"><code>-max-conns-per-addr</code></td><td data-label="Variable"><code>RE_PSN_MAX_CONNS_PER_ADDR</code></td><td data-label="Default"><code>32</code></td><td data-label="What it does">Open connections per remote address (0: no limit)</td></tr>
 <tr><td data-label="Flag"><code>-max-req-rate</code></td><td data-label="Variable"><code>RE_PSN_MAX_REQ_RATE</code></td><td data-label="Default"><code>200</code></td><td data-label="What it does">Requests per second per connection before it is closed (0: no limit)</td></tr>
 <tr><td data-label="Flag"><code>-max-udp-rate</code></td><td data-label="Variable"><code>RE_PSN_MAX_UDP_RATE</code></td><td data-label="Default"><code>1000</code></td><td data-label="What it does">UDP packets per second per source (IPv4 address or IPv6 /64), shared by probes and relay traffic; same-size burst (0: no limit); since v0.4.0</td></tr>

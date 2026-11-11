@@ -46,8 +46,8 @@ server `SIGHUP` to rotate the token without a restart: the old token stops worki
 
 ```json
 {"schema":1,"version":"0.5.0","uptime":"2h3m0s","relay":false,"relay_bytes":0,
- "limits":{"max_rooms":0,"max_player_rooms":8,"max_conns_per_addr":32,"max_req_rate":200,"max_udp_rate":1000},
- "tcp_refusals":{"conns_per_addr":0,"req_rate":0},"udp_drops":{"...":0},
+ "limits":{"max_rooms":0,"max_player_rooms":8,"max_conns":4096,"max_conns_per_addr":32,"max_req_rate":200,"max_udp_rate":1000},
+ "tcp_refusals":{"conns":0,"conns_per_addr":0,"req_rate":0},"udp_drops":{"...":0},
  "bans":{"count":0,"next_expiry_seconds":null},"actions_enabled":false}
 ```
 
