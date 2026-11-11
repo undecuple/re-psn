@@ -4,7 +4,7 @@
  "repository": "https://github.com/undecuple/re-psn",
  "go": "1.22",
  "status_counts": {
-  "available": 37,
+  "available": 38,
   "unverified": 3,
   "partial": 8,
   "in-progress": 0,
@@ -542,6 +542,18 @@
    "status_class": "plan"
   },
   {
+   "id": "app-lan-discover",
+   "area": "Desktop app",
+   "feature": "Find servers on the LAN",
+   "detail": "Find on LAN in the desktop app (`f` in Settings, Ctrl+F while typing the server): the Go client broadcasts one 64-byte UDP request from a temporary socket, collects the 52-byte replies for about 1.5 s, drops anything with the wrong length, type or nonce, and lists name, address:port, players, relay and version; the chosen address fills the server field. Typing host:port still works.",
+   "status": "available",
+   "since": "main",
+   "evidence": "app/internal/client/discover.go, TestDiscoverValidReply, TestDiscoverIgnoresBadDatagrams, TestDiscoverDeduplicates, TestDiscoverTimeoutIsEmptyNotError, TestDiscoverSanitisesText, TestDiscoverCancel, app/internal/tui/lan_test.go, TestFindOnLANShowsListAndFillsServer, TestFindOnLANNoneFound, TestFindOnLANWhileTypingTheServer, TestFindOnLANFirstRun",
+   "note": "Not in v0.4.0. Finds only servers started with -discover. Tested against a fake responder and, by hand, against a real server on loopback; not a real broadcast across a network. IPv4 and the local subnet only. `server = auto` in re-psn.ini is not supported.",
+   "status_label": "available",
+   "status_class": "ok"
+  },
+  {
    "id": "app-themes",
    "area": "Client",
    "feature": "Colour themes",
@@ -916,6 +928,7 @@
    "client-c",
    "app-client",
    "app-tui",
+   "app-lan-discover",
    "test-fuzz",
    "ci-checks",
    "release-archives",
@@ -1124,6 +1137,7 @@
      "A test checks that no secret reaches the log: it drives a session at debug level, in both log formats, and looks for each player's UDP token, a room's invite code (right and wrong), a peer key and the status token ...",
      "Peer keys, for players who connect directly: a client may send PEER_AUTH (0x03, after HELLO, when HELLO_ACK's flag bit 2 says the server issues keys), and then each pair of members who both asked gets one new random ...",
      "`-relay-force` (`RE_PSN_RELAY_FORCE`, off by default, needs `-relay`): every stream goes through the relay, even between players who could connect directly, so the relay can be tested from one network.",
+     "The desktop app can find servers on the local network: Find on LAN (`f` in Settings, Ctrl+F while typing the server, also on the first start) broadcasts one 64-byte UDP datagram (`PSNR`, type 0x04, a random nonce) from ...",
      "The status page and `/api/stats` show known games by name: rooms and leaderboards carry a `label` such as `[Killzone 3 (BCUS98234, BCES01007)]`, with `game` and `serials` fields, and are sorted by it."
     ],
     "Fixed": [
@@ -1131,7 +1145,7 @@
     ]
    },
    "counts": {
-    "Added": 11,
+    "Added": 12,
     "Fixed": 1
    }
   },

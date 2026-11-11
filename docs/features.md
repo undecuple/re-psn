@@ -6,14 +6,14 @@ What re-psn does today and what is planned, one row per feature. Each status res
 
 | Status | Meaning | Features |
 |---|---|---|
-| available | merged, with a test or a recorded run | 37 |
+| available | merged, with a test or a recorded run | 38 |
 | not yet verified | merged, but nothing in the repository checks it | 3 |
 | partial | merged in part, or with known gaps | 8 |
 | in progress | an open pull request or branch | 0 |
 | planned | wanted and intended, not started | 15 |
 | later | after the planned items, or after a decision | 9 |
 | declined | will not be done | 1 |
-| all | | 73 |
+| all | | 74 |
 
 ## Rooms and matchmaking
 
@@ -145,6 +145,12 @@ What re-psn does today and what is planned, one row per feature. Each status res
 | `app-appearance` | **Appearance mode**: Dark, Light or System (the default): presets carry a dark and a light variant where their project has both, and System follows the OS or the terminal background and switches while the app runs. | planned |  |  | Desktop presets and system-following remain planned. The server status page supports browser System/Light/Dark and local appearance controls; see status-page. |
 | `app-colours` | **Custom colours**: Edit named colour slots (background, surface, text, muted, accent, good, warn, bad) as hex values, with a contrast warning below 4.5:1, import and export, saved per user and per mode. | planned |  |  | Not started. A bad value falls back to the default preset. |
 | `client-lan-discover` | **LAN discovery in the C client**: `psnr_discover` broadcasts one UDP request from its own temporary socket and returns the LAN servers that answer, with their ports, relay flag, player count, name and version. | available | main | [`client/psnr.c`](../client/psnr.c), [`client/test_psnr.c`](../client/test_psnr.c) | Not in v0.4.0. Finds only servers started with -discover. Tested against a fake responder and, by hand, against a real server on loopback; not a real broadcast across a network. Does not cross subnets or client-isolated Wi-Fi. The Windows build broadcasts to 255.255.255.255 only and is untested. |
+
+## Desktop app
+
+| ID | Feature | Status | Since | Evidence | Note |
+|---|---|---|---|---|---|
+| `app-lan-discover` | **Find servers on the LAN**: Find on LAN in the desktop app (`f` in Settings, Ctrl+F while typing the server): the Go client broadcasts one 64-byte UDP request from a temporary socket, collects the 52-byte replies for about 1.5 s, drops anything with the wrong length, type or nonce, and lists name, address:port, players, relay and version; the chosen address fills the server field. Typing host:port still works. | available | main | [`app/internal/client/discover.go`](../app/internal/client/discover.go), [`TestDiscoverValidReply`](../app/internal/client/discover_test.go), [`TestDiscoverIgnoresBadDatagrams`](../app/internal/client/discover_test.go), [`TestDiscoverDeduplicates`](../app/internal/client/discover_test.go), [`TestDiscoverTimeoutIsEmptyNotError`](../app/internal/client/discover_test.go), [`TestDiscoverSanitisesText`](../app/internal/client/discover_test.go), [`TestDiscoverCancel`](../app/internal/client/discover_test.go), [`app/internal/tui/lan_test.go`](../app/internal/tui/lan_test.go), [`TestFindOnLANShowsListAndFillsServer`](../app/internal/tui/lan_test.go), [`TestFindOnLANNoneFound`](../app/internal/tui/lan_test.go), [`TestFindOnLANWhileTypingTheServer`](../app/internal/tui/lan_test.go), [`TestFindOnLANFirstRun`](../app/internal/tui/lan_test.go) | Not in v0.4.0. Finds only servers started with -discover. Tested against a fake responder and, by hand, against a real server on loopback; not a real broadcast across a network. IPv4 and the local subnet only. `server = auto` in re-psn.ini is not supported. |
 
 ## Testing and CI
 

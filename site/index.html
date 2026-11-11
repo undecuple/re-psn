@@ -34,7 +34,7 @@
 <h2>Overview</h2>
 <p>re-psn answers the matchmaking and leaderboard calls of a statically recompiled PS3 game, for a group running its own server: a LAN, a VPN, or friends connecting to one person&#x27;s machine. The server keeps rooms and leaderboards and tells each player where the others are. Game traffic goes directly between players, and through the server only when two players cannot reach each other and the host has turned the relay on.</p>
 <p>It is a fork of <a href="https://github.com/sp00nznet/psnr">psnr</a> by sp00nz: a Go server and a one-file C client, with no accounts and no public instance.</p>
-<p class="status-line">Version 0.4.0 (pre-release). 73 features: 37 available, 3 not yet verified, 8 partial, 15 planned, 9 later, 1 declined.</p>
+<p class="status-line">Version 0.4.0 (pre-release). 74 features: 38 available, 3 not yet verified, 8 partial, 15 planned, 9 later, 1 declined.</p>
 <p class="notice">Unofficial; not affiliated with Sony. No game files, keys or firmware are in the repository or needed from it. Play only games you own.</p>
 </section>
 <section id="features">
@@ -186,6 +186,13 @@
 <tr id="f-client-lan-discover"><td data-label="Feature"><strong>LAN discovery in the C client</strong> <code>client-lan-discover</code><br><code>psnr_discover</code> broadcasts one UDP request from its own temporary socket and returns the LAN servers that answer, with their ports, relay flag, player count, name and version.<br><span class="note">Not in v0.4.0. Finds only servers started with -discover. Tested against a fake responder and, by hand, against a real server on loopback; not a real broadcast across a network. Does not cross subnets or client-isolated Wi-Fi. The Windows build broadcasts to 255.255.255.255 only and is untested.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
 </tbody>
 </table>
+<h3 id="area-desktop-app">Desktop app</h3>
+<table class="stack feat">
+<thead><tr><th>Feature</th><th>Status</th><th>Since</th></tr></thead>
+<tbody>
+<tr id="f-app-lan-discover"><td data-label="Feature"><strong>Find servers on the LAN</strong> <code>app-lan-discover</code><br>Find on LAN in the desktop app (<code>f</code> in Settings, Ctrl+F while typing the server): the Go client broadcasts one 64-byte UDP request from a temporary socket, collects the 52-byte replies for about 1.5 s, drops anything with the wrong length, type or nonce, and lists name, address:port, players, relay and version; the chosen address fills the server field. Typing host:port still works.<br><span class="note">Not in v0.4.0. Finds only servers started with -discover. Tested against a fake responder and, by hand, against a real server on loopback; not a real broadcast across a network. IPv4 and the local subnet only. <code>server = auto</code> in re-psn.ini is not supported.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
+</tbody>
+</table>
 <h3 id="area-testing-and-ci">Testing and CI</h3>
 <table class="stack feat">
 <thead><tr><th>Feature</th><th>Status</th><th>Since</th></tr></thead>
@@ -226,7 +233,7 @@
 <h2>Roadmap</h2>
 <p>The same list grouped by status. No dates are promised; <a href="https://github.com/undecuple/re-psn/blob/main/ROADMAP.md">ROADMAP.md</a> has the order and the scope.</p>
 <div class="cols">
-<div><h3>Done <span class="count">(48)</span></h3>
+<div><h3>Done <span class="count">(49)</span></h3>
 <ul>
 <li><a href="#f-rooms-basic">Rooms and search</a></li>
 <li><a href="#f-rooms-data">Room and member data</a></li>
@@ -252,6 +259,7 @@
 <li><a href="#f-client-c">C client</a></li>
 <li><a href="#f-app-client">Go client package</a> <span class="tag warn">partial</span></li>
 <li><a href="#f-app-tui">Desktop app, terminal UI</a> <span class="tag warn">partial</span></li>
+<li><a href="#f-app-lan-discover">Find servers on the LAN</a></li>
 <li><a href="#f-test-fuzz">Fuzz tests</a></li>
 <li><a href="#f-ci-checks">CI checks</a></li>
 <li><a href="#f-release-archives">Release archives and checksums</a> <span class="tag warn">partial</span></li>
@@ -328,6 +336,7 @@
 <li>A test checks that no secret reaches the log: it drives a session at debug level, in both log formats, and looks for each player&#x27;s UDP token, a room&#x27;s invite code (right and wrong), a peer key and the status token ...</li>
 <li>Peer keys, for players who connect directly: a client may send PEER_AUTH (0x03, after HELLO, when HELLO_ACK&#x27;s flag bit 2 says the server issues keys), and then each pair of members who both asked gets one new random ...</li>
 <li><code>-relay-force</code> (<code>RE_PSN_RELAY_FORCE</code>, off by default, needs <code>-relay</code>): every stream goes through the relay, even between players who could connect directly, so the relay can be tested from one network.</li>
+<li>The desktop app can find servers on the local network: Find on LAN (<code>f</code> in Settings, Ctrl+F while typing the server, also on the first start) broadcasts one 64-byte UDP datagram (<code>PSNR</code>, type 0x04, a random nonce) from ...</li>
 <li>The status page and <code>/api/stats</code> show known games by name: rooms and leaderboards carry a <code>label</code> such as <code>[Killzone 3 (BCUS98234, BCES01007)]</code>, with <code>game</code> and <code>serials</code> fields, and are sorted by it.</li>
 </ul>
 <h4>Fixed</h4>
