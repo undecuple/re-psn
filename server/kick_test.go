@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net"
 	"testing"
+	"time"
 )
 
 func kickBody(room uint64, target uint16) []byte {
@@ -227,6 +228,8 @@ func (c *kickRecordingConn) Write(p []byte) (int, error) {
 	*c.writes = append(*c.writes, kickWrite{c.name, append([]byte(nil), p...)})
 	return len(p), nil
 }
+
+func (c *kickRecordingConn) SetWriteDeadline(time.Time) error { return nil }
 
 func TestRoomKickDispatchOrder(t *testing.T) {
 	s := NewServer(10, false)

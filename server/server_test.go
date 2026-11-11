@@ -20,6 +20,12 @@ type pkt struct {
 }
 
 func start(t *testing.T) string {
+	_, addr := startServer(t)
+	return addr
+}
+
+// startServer is start, also returning the server for tests that look at its state.
+func startServer(t *testing.T) (*Server, string) {
 	s := NewServer(10, false)
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -27,7 +33,7 @@ func start(t *testing.T) string {
 	}
 	t.Cleanup(func() { ln.Close() })
 	go s.Serve(ln)
-	return ln.Addr().String()
+	return s, ln.Addr().String()
 }
 
 func dial(t *testing.T, addr, commID, onlineID string, port uint16) *tc {
@@ -35,6 +41,11 @@ func dial(t *testing.T, addr, commID, onlineID string, port uint16) *tc {
 	if err != nil {
 		t.Fatal(err)
 	}
+	return helloConn(t, conn, commID, onlineID, port)
+}
+
+// helloConn closes conn when the test ends and makes the HELLO on it.
+func helloConn(t *testing.T, conn net.Conn, commID, onlineID string, port uint16) *tc {
 	t.Cleanup(func() { conn.Close() })
 	c := &tc{t: t, conn: conn}
 	w := &writer{}
