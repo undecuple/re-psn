@@ -90,7 +90,10 @@ checked on the way. Pre-releases come often and on no schedule, whenever there i
 Manual `release-check` runs still accept the historical lists: nine assets for v0.2.0 (each download with a `.sha256` file,
 and `SHA256SUMS`), five for v0.3.0 and seven for v0.4.0 (no app archives). Later tags require all ten assets and compare both installer scripts with the
 tagged source.
-9. Afterwards: CI is green on the tagged commit, and a fixed issue gets a comment naming the release.
+9. Afterwards: CI is green on the tagged commit, a fixed issue gets a comment naming the release, and the places that name the
+   newest release and its image are updated in one pull request: the "newest" line and the container paragraph in `README.md`, and the
+   image tag in `docker/README.md` (`docker pull`, and "the current image"). Check that the image exists first (the container run
+   passed, and the manifest answers without a login).
 
 > [!NOTE]
 > One bump is one commit, made by the maintainer. A fix found after the tag goes into the next pre-release, never into a
