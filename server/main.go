@@ -66,6 +66,9 @@ func main() {
 	name := flag.String("name", "", "server name shown in LAN discovery, at most 24 printable ASCII bytes (default: none)")
 	db := flag.String("db", "off", "score storage: off or memory (both keep scores in memory; no database backend is built yet)")
 	dbFile := flag.String("db-file", "", "read the -db setting from this file instead (it may hold a password)")
+	medius := toggle("medius", false, "enable Medius compatibility (off by default). No Medius protocol is implemented yet: this opens the -medius-port listener, which closes every connection. See docs/medius-scope.md")
+	mediusPort := num("medius-port", defaultMediusPort, "TCP port of the Medius listener (a value other than the default needs -medius)")
+	mediusAddr := flag.String("medius-addr", envStr("medius-addr", defaultMediusAddr), "address of the Medius listener: a loopback, private or link-local IP address, or 0.0.0.0 or :: inside a container (a value other than the default needs -medius)")
 	replace := toggle("replace", false, "if the game port is already in use by an earlier instance of this server, ask it to stop, wait for the port, then start (Linux only)")
 	flag.Parse()
 	if bad != nil {
@@ -157,6 +160,23 @@ func main() {
 	}
 	s.maxPlayerRooms, s.maxPerAddr, s.maxReqRate = *playerRooms, *perAddr, *reqRate
 	s.maxUDPRate = udpRateN
+	var med *mediusListener
+	if *medius {
+		mediusListen, wide, err := parseMediusAddr(*mediusAddr, *mediusPort)
+		if err != nil {
+			log.Fatal(err)
+		}
+		med, err = newMediusListener(mediusListen, logger)
+		if err != nil {
+			log.Fatal(err)
+		}
+		logger.Warn("Medius compatibility is on, but no Medius protocol is implemented: every connection to the Medius port is closed", "addr", med.Addr())
+		if wide {
+			logger.Warn("the Medius listener accepts connections on every interface; publish its port only to a private network")
+		}
+	} else if *mediusPort != defaultMediusPort || *mediusAddr != defaultMediusAddr {
+		log.Fatal("a -medius-port or -medius-addr other than the default does nothing without -medius")
+	}
 	tcpA, udpA := listenAddrs(*addr, *tcpAddr, *udpAddr)
 	ln, pc, err := listenGame(logger, tcpA, udpA, *replace)
 	if err != nil {
@@ -173,7 +193,7 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, stopSignals()...)
 	defer signal.Stop(stop)
-	errc := make(chan error, 4)
+	errc := make(chan error, 5)
 	go func() { errc <- s.ServeUDP(pc) }()
 	logger.Info("started", "version", version, "clients", ln.Addr().String(), "udp", pc.LocalAddr().String(), "relay", *relay)
 	var hs *http.Server
@@ -214,6 +234,9 @@ func main() {
 		removePidFile(pidPath)
 		fatal(errors.New("-admin-read-token-file, -admin-tls-cert and -admin-tls-key do nothing without -admin"))
 	}
+	if med != nil {
+		go func() { errc <- med.Serve() }()
+	}
 	go func() { errc <- s.Serve(ln) }()
 	var serveErr error
 	select {
@@ -230,6 +253,9 @@ func main() {
 	// startup failure, so also close the descriptors opened by main.
 	ln.Close()
 	pc.Close()
+	if med != nil {
+		med.Shutdown()
+	}
 	if hs != nil {
 		if err := hs.Shutdown(ctx); err != nil {
 			hs.Close()

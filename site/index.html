@@ -333,6 +333,7 @@
 <h4>Added</h4>
 <ul>
 <li>Experimental, read-only admin API, off by default: <code>-admin ADDR</code> (<code>RE_PSN_ADMIN</code>) opens a second listener with one route, <code>GET /admin/v1/state</code>, for a read token kept in a file (<code>-admin-read-token-file</code>; at least 32 ...</li>
+<li>Medius compatibility switch, off by default: <code>-medius</code> (<code>RE_PSN_MEDIUS</code>), <code>-medius-port</code> (default 10071) and <code>-medius-addr</code> (default <code>127.0.0.1</code>; a loopback, private or link-local address, or <code>0.0.0.0</code>/<code>::</code> in a ...</li>
 <li>C client: constants for <code>PEER_AUTH</code>, <code>SET_ROOM_ACCESS</code>, <code>JOIN_BY_CODE</code>, <code>GET_ROOM_ACCESS</code>, <code>ROOM_ACCESS</code> and <code>PEER_KEY</code>, and bounds-checked decoders for ROOM_JOINED, member entries, ROOM_LIST and RANKING ...</li>
 <li><code>psnr_connect_timeout(...)</code> (<code>client/psnr.h</code>): <code>psnr_connect</code> with a time limit.</li>
 <li><code>psnr_dead_reason(c)</code> and <code>psnr_last_os_error(c)</code>: why the C client&#x27;s connection was lost (peer closed, I/O error, out of memory, send timeout) and the OS error at that point.</li>

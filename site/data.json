@@ -1167,6 +1167,7 @@
    "sections": {
     "Added": [
      "Experimental, read-only admin API, off by default: `-admin ADDR` (`RE_PSN_ADMIN`) opens a second listener with one route, `GET /admin/v1/state`, for a read token kept in a file (`-admin-read-token-file`; at least 32 ...",
+     "Medius compatibility switch, off by default: `-medius` (`RE_PSN_MEDIUS`), `-medius-port` (default 10071) and `-medius-addr` (default `127.0.0.1`; a loopback, private or link-local address, or `0.0.0.0`/`::` in a ...",
      "C client: constants for `PEER_AUTH`, `SET_ROOM_ACCESS`, `JOIN_BY_CODE`, `GET_ROOM_ACCESS`, `ROOM_ACCESS` and `PEER_KEY`, and bounds-checked decoders for ROOM_JOINED, member entries, ROOM_LIST and RANKING ...",
      "`psnr_connect_timeout(...)` (`client/psnr.h`): `psnr_connect` with a time limit.",
      "`psnr_dead_reason(c)` and `psnr_last_os_error(c)`: why the C client's connection was lost (peer closed, I/O error, out of memory, send timeout) and the OS error at that point.",
@@ -1188,7 +1189,7 @@
     ]
    },
    "counts": {
-    "Added": 6,
+    "Added": 7,
     "Fixed": 8,
     "Changed": 1
    }
