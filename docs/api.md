@@ -101,7 +101,7 @@ client's `psnr_poll` sends a HEARTBEAT every 20 seconds.
 
 | Type | Name | Payload (after `req`) |
 |---|---|---|
-| 0x81 | HELLO_ACK | `user_id u32` `public_ip [4]` `token u32` (the token UDP PROBEs carry; 0.3 on) `flags u8` (bit 0: the server relays; 0.3 on. bit 1: invite-only rooms, see below; 0.4 on. bit 2: the server issues peer keys, see "Peer keys"; after 0.4) |
+| 0x81 | HELLO_ACK | `user_id u32` `public_ip [4]` `token u32` (the token UDP PROBEs carry; 0.3 on) `flags u8` (bit 0: the server relays; 0.3 on. Clear for a title in `-no-peer-titles`, after 0.5.0. bit 1: invite-only rooms, see below; 0.4 on. bit 2: the server issues peer keys, see "Peer keys"; after 0.4) |
 | 0x93 | OK | — |
 | 0x8F | ERROR | `code u32` |
 
@@ -193,7 +193,7 @@ These are modelled on sceNpMatching2 rooms.
 | 0xA5 | KICKED | `room_id u64`, sent to the kicked member only; the rest get MEMBER_LEFT |
 | 0xA6 | STREAM_OFFER | `stream_id u32` `from_user u32` `vport u16`: a relayed stream is waiting for you (see "Relay") |
 | 0xA8 | PEER_KEY | `room_id u64` `user u32` `key [16]`: the key you share with that member in that room (see "Peer keys"); sent only to a member who sent PEER_AUTH, about a member who did too |
-| 0xA7 | ROUTE | `room_id u64` `user u32` `flags u8`: how to reach that member; bit 0 set = streams to it go through the relay (the server sets it for a player behind a router seen from outside its network, and for every player with `-relay-force`). Sent to both sides when a member joins, only with `-relay` |
+| 0xA7 | ROUTE | `room_id u64` `user u32` `flags u8`: how to reach that member; bit 0 set = streams to it go through the relay (the server sets it for a player behind a router seen from outside its network, and for every player with `-relay-force`; never for a player of a title in `-no-peer-titles`). Sent to both sides when a member joins, only with `-relay` |
 
 ## Peer keys
 

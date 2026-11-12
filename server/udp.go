@@ -105,8 +105,9 @@ func (s *Server) serveUDP(pc net.PacketConn, now func() time.Time) error {
 		s.mu.Lock()
 		c := s.clients[id]
 		ok = c != nil && c.commID != "" && c.token == token
-		mismatch := ok && !s.udpAnySource && c.ip != [4]byte(ip)
-		if ok && !mismatch {
+		off := ok && s.noPeer[c.commID]
+		mismatch := ok && !off && !s.udpAnySource && c.ip != [4]byte(ip)
+		if ok && !off && !mismatch {
 			copy(c.udpIP[:], ip)
 			c.udpPort = uint16(ua.Port)
 			c.localIP = local
@@ -116,6 +117,10 @@ func (s *Server) serveUDP(pc net.PacketConn, now func() time.Time) error {
 			c.udpWarned = true
 		}
 		s.mu.Unlock()
+		if off {
+			s.log.Debug("UDP probe ignored: the title is in -no-peer-titles", "client", id)
+			continue
+		}
 		if mismatch {
 			s.udpDrops.sourceMismatch.Add(1)
 			// Not this player's address: a spoofed source, a stolen token, or a network whose UDP leaves from another address (-udp-any-source).

@@ -44,10 +44,11 @@ const (
 
 type Server struct {
 	log        *slog.Logger
-	relay      bool          // -relay: carry traffic for players who can't reach each other (relay.go)
-	relayForce bool          // -relay-force: with relay, send every stream through it (a test aid)
-	relayIdle  time.Duration // -relay-idle: close a relay stream with no bytes either way for this long (0: never)
-	lanPublic  [4]byte       // -lan-public-addr: address announced for LAN members to viewers outside the LAN (zero: off)
+	relay      bool            // -relay: carry traffic for players who can't reach each other (relay.go)
+	relayForce bool            // -relay-force: with relay, send every stream through it (a test aid)
+	noPeer     map[string]bool // -no-peer-titles: communication IDs of titles that use no peer traffic (title_peer.go)
+	relayIdle  time.Duration   // -relay-idle: close a relay stream with no bytes either way for this long (0: never)
+	lanPublic  [4]byte         // -lan-public-addr: address announced for LAN members to viewers outside the LAN (zero: off)
 
 	httpToken string // -http-token: required by the status page when set (api.go)
 
@@ -416,7 +417,7 @@ func (s *Server) hello(c *client, req uint32, r *reader) (byte, []byte) {
 	w.bytes(c.ip[:])
 	w.u32(c.token)
 	var flags uint8
-	if s.relay {
+	if s.relay && !s.noPeer[commID] {
 		flags |= 1 // the relay is available
 	}
 	flags |= 2 // invite-only rooms (room codes)

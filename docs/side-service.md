@@ -52,6 +52,9 @@ decides whether to call `psnr_connect` again. The server drops a connection that
   server answers these calls itself, locally. Friends, presence and invites for everyone on one server are a planned feature
   ([ROADMAP.md](../ROADMAP.md), [features](features.md)); they are not built, and this page does not promise them to a title that
   runs its own server.
-- Today the probe, hole punching and relay are server-wide settings, not per title. A host who wants a server without the relay
-  leaves `-relay` off; the probe and UDP stay available but unused unless the title sends them.
+- The probe, hole punching and relay are server-wide settings, except that `-no-peer-titles` (`RE_PSN_NO_PEER_TITLES`) names
+  titles that use no peer traffic. For their players the server answers no UDP probe (so nobody learns a UDP endpoint to
+  punch toward), relays nothing, sends no relay route and clears the relay flag in HELLO_ACK; they still use rooms and
+  scores. A host who wants no relay for any title leaves `-relay` off; the probe and UDP stay available but unused unless
+  the title sends them.
 - The server does not report which features it offers beyond the few HELLO_ACK flags documented in [api.md](api.md).

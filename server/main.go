@@ -65,6 +65,7 @@ func main() {
 	relayForce := toggle("relay-force", false, "send every stream through the relay, whether or not the players could connect directly (for testing the relay from one network; needs -relay; uses this server's bandwidth)")
 	lanPublic := flag.String("lan-public-addr", "", "IPv4 address to give players outside the LAN as the address of players who connected over a private, CGNAT or link-local address (the host must forward each such player's P2P port to them; off unless set)")
 	discover := toggle("discover", false, "answer LAN discovery broadcasts on the game UDP port, from private-network senders only (off by default)")
+	noPeer := flag.String("no-peer-titles", "", "comma-separated communication IDs of titles that use no peer traffic: for their players the server answers no UDP probe and does not relay or route (they still use rooms and scores; off unless set)")
 	name := flag.String("name", "", "server name shown in LAN discovery, at most 24 printable ASCII bytes (default: none)")
 	db := flag.String("db", "off", "score storage: off or memory (both keep scores in memory; no database backend is built yet)")
 	dbFile := flag.String("db-file", "", "read the -db setting from this file instead (it may hold a password)")
@@ -156,6 +157,13 @@ func main() {
 	}
 	s.trustedProxies, s.proxyProto = trusted, *proxyProto
 	s.udpAnySource = *udpAny
+	noPeerSet := lookupSetting("no-peer-titles", *noPeer, onCmdLine["no-peer-titles"])
+	if s.noPeer, err = parseTitleList(noPeerSet.val); err != nil {
+		fatal(err)
+	}
+	if len(s.noPeer) > 0 {
+		logger.Info("no-peer-titles", "count", len(s.noPeer))
+	}
 	nameSet := lookupSetting("name", *name, onCmdLine["name"])
 	if err := validServerName(nameSet.val); err != nil {
 		fatal(err)

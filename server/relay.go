@@ -53,6 +53,9 @@ type stream struct {
 // stream goes through the relay, whoever the two are, so a test can use it
 // from one network.
 func (s *Server) relayStream(target, viewer *client) bool {
+	if s.noPeer[target.commID] || s.noPeer[viewer.commID] {
+		return false
+	}
 	if s.relay && s.relayForce {
 		return true
 	}
@@ -125,13 +128,17 @@ func (s *Server) streamLeg(conn net.Conn, t byte, p []byte) (handedOff bool) {
 	s.mu.Lock()
 	from, to := s.clients[user], s.clients[toUser]
 	ok := r.err == nil && from != nil && from.token == token && to != nil && to.commID != "" && sharesRoom(from, to)
+	off := ok && (s.noPeer[from.commID] || s.noPeer[to.commID])
 	var st *stream
-	if ok {
+	if ok && !off {
 		s.nextStream++
 		st = &stream{id: s.nextStream, from: from, to: to, accept: make(chan net.Conn, 1)}
 		s.streams[st.id] = st
 	}
 	s.mu.Unlock()
+	if off {
+		return fail(errNoRelay)
+	}
 	if !ok {
 		return fail(errNotFound)
 	}
@@ -223,7 +230,9 @@ func (s *Server) relayUDP(pc net.PacketConn, pkt []byte, sender *net.UDPAddr) {
 	from, token, toID := binary.BigEndian.Uint32(pkt[5:]), binary.BigEndian.Uint32(pkt[9:]), binary.BigEndian.Uint32(pkt[13:])
 	s.mu.Lock()
 	src, dst := s.clients[from], s.clients[toID]
-	ok := src != nil && src.token == token && dst != nil && dst.udpPort != 0 && sharesRoom(src, dst)
+	valid := src != nil && src.token == token && dst != nil && sharesRoom(src, dst)
+	off := valid && (s.noPeer[src.commID] || s.noPeer[dst.commID]) // checked before the endpoint: a listed title never has one
+	ok := valid && !off && dst.udpPort != 0
 	mismatch := false
 	if ok && !s.udpAnySource {
 		ip := sender.IP.To4()
@@ -234,6 +243,10 @@ func (s *Server) relayUDP(pc net.PacketConn, pkt []byte, sender *net.UDPAddr) {
 		to = &net.UDPAddr{IP: net.IP(append([]byte(nil), dst.udpIP[:]...)), Port: int(dst.udpPort)}
 	}
 	s.mu.Unlock()
+	if off {
+		s.udpDrops.relayDisabled.Add(1)
+		return
+	}
 	if !ok {
 		s.udpDrops.unauthorized.Add(1)
 		return

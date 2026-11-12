@@ -387,6 +387,7 @@ Variables are upper case, with dashes as underscores. Defaults are those of `./r
 | `-relay` | `RE_PSN_RELAY` | off | Carry traffic for players who cannot reach each other (uses the host's bandwidth) |
 | `-relay-idle` | `RE_PSN_RELAY_IDLE` | `600` | With `-relay`, close a relay stream after this many seconds with no bytes in either direction (0: never); not in v0.5.0 |
 | `-relay-force` | `RE_PSN_RELAY_FORCE` | off | With `-relay`, send every stream through the relay, even between players who could connect directly. For testing the relay from one network; uses the host's bandwidth |
+| `-no-peer-titles` | `RE_PSN_NO_PEER_TITLES` | none | Comma-separated communication IDs of titles that use no peer traffic. For their players the server answers no UDP probe, relays nothing and routes nothing, and HELLO_ACK says the relay is off; rooms and scores work as usual. Other titles are unaffected; not in v0.5.0 |
 | `-db` | `RE_PSN_DB` | `off` | Score storage: `off` or `memory` |
 | `-db-file` | `RE_PSN_DB_FILE` | none | Read the `-db` setting from this file instead |
 | `-replace` | `RE_PSN_REPLACE` | off | If an earlier re-psn of this user holds the game port, stop it (SIGTERM) and start in its place (Linux only) |
