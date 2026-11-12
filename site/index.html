@@ -345,32 +345,34 @@
 <li>**Network:** <code>-relay-idle</code> (<code>RE_PSN_RELAY_IDLE</code>, default 600 seconds; 0 for never) closes a relay TCP stream that has carried no bytes in either direction for that long, and a write to a stream leg that the peer does ...</li>
 <li>**Docs and tooling:** <code>docs/integrating.md</code> has a &quot;Mapping the NP calls&quot; section: suggested NP call families to re-psn message tables, a list of what the protocol does not cover (world lists included), and a recommended ...</li>
 <li>**Server:** <code>-max-conns</code> (<code>RE_PSN_MAX_CONNS</code>, default 4096; 0 for no limit) caps the open TCP connections in total, players and relay legs together.</li>
-<li>Experimental, read-only admin API, off by default: <code>-admin ADDR</code> (<code>RE_PSN_ADMIN</code>) opens a second listener with one route, <code>GET /admin/v1/state</code>, for a read token kept in a file (<code>-admin-read-token-file</code>; at least 32 ...</li>
-<li>Medius compatibility switch, off by default: <code>-medius</code> (<code>RE_PSN_MEDIUS</code>), <code>-medius-port</code> (default 10071) and <code>-medius-addr</code> (default <code>127.0.0.1</code>; a loopback, private or link-local address, or <code>0.0.0.0</code>/<code>::</code> in a ...</li>
-<li>C client: constants for <code>PEER_AUTH</code>, <code>SET_ROOM_ACCESS</code>, <code>JOIN_BY_CODE</code>, <code>GET_ROOM_ACCESS</code>, <code>ROOM_ACCESS</code> and <code>PEER_KEY</code>, and bounds-checked decoders for ROOM_JOINED, member entries, ROOM_LIST and RANKING ...</li>
-<li><code>psnr_connect_timeout(...)</code> (<code>client/psnr.h</code>): <code>psnr_connect</code> with a time limit.</li>
-<li><code>psnr_dead_reason(c)</code> and <code>psnr_last_os_error(c)</code>: why the C client&#x27;s connection was lost (peer closed, I/O error, out of memory, send timeout) and the OS error at that point.</li>
-<li><code>PSNR_SEND_TIMEOUT_MS</code> (5000, overridable before including <code>psnr.h</code>): the most time one write may wait for the socket to accept data, in total.</li>
-<li>CI compiles the C client (<code>client/psnr.c</code>, <code>client/examples/minimal.c</code>) with MSVC on Windows and does not run it there; the build instructions in <code>docs/integrating.md</code> give the MSVC command.</li>
+<li>**Server:** <code>-no-peer-titles</code> (<code>RE_PSN_NO_PEER_TITLES</code>, off by default): a comma-separated list of communication IDs (1 to 12 printable ASCII bytes each; anything else stops startup) of titles that use no peer traffic.</li>
+<li>**Server:** Experimental, read-only admin API, off by default: <code>-admin ADDR</code> (<code>RE_PSN_ADMIN</code>) opens a second listener with one route, <code>GET /admin/v1/state</code>, for a read token kept in a file (<code>-admin-read-token-file</code>; at ...</li>
+<li>**Server:** Medius compatibility switch, off by default: <code>-medius</code> (<code>RE_PSN_MEDIUS</code>), <code>-medius-port</code> (default 10071) and <code>-medius-addr</code> (default <code>127.0.0.1</code>; a loopback, private or link-local address, or <code>0.0.0.0</code>/<code>::</code> ...</li>
+<li>**Client:** constants for <code>PEER_AUTH</code>, <code>SET_ROOM_ACCESS</code>, <code>JOIN_BY_CODE</code>, <code>GET_ROOM_ACCESS</code>, <code>ROOM_ACCESS</code> and <code>PEER_KEY</code>, and bounds-checked decoders for ROOM_JOINED, member entries, ROOM_LIST and RANKING ...</li>
+<li>**Client:** <code>psnr_connect_timeout(...)</code> (<code>client/psnr.h</code>): <code>psnr_connect</code> with a time limit.</li>
+<li>**Client:** <code>psnr_dead_reason(c)</code> and <code>psnr_last_os_error(c)</code>: why the C client&#x27;s connection was lost (peer closed, I/O error, out of memory, send timeout) and the OS error at that point.</li>
+<li>**Client:** <code>PSNR_SEND_TIMEOUT_MS</code> (5000, overridable before including <code>psnr.h</code>): the most time one write may wait for the socket to accept data, in total.</li>
+<li>**Docs and tooling:** CI compiles the C client (<code>client/psnr.c</code>, <code>client/examples/minimal.c</code>) with MSVC on Windows and does not run it there; the build instructions in <code>docs/integrating.md</code> give the MSVC command.</li>
 </ul>
 <h4>Fixed</h4>
 <ul>
 <li>**Server:** <code>SET_ROOM_DATA</code> no longer lets the owner make the room&#x27;s own join reply too big for one packet: a write to the external or internal blob that would is refused with error 6 and changes nothing, so a member ...</li>
-<li>A search no longer disconnects the player when the rooms&#x27; data is large: the reply lists only as many rooms as fit in one packet, and the player pages on from there.</li>
-<li>A player whose connection stops reading no longer freezes the other players in its room: the server drops it after 10 seconds of a stuck write (<code>writeTimeout</code>), so its room mates&#x27; requests get their replies and the ...</li>
-<li>A second HELLO on one connection gets error 1 and changes nothing, and a name is held by the player&#x27;s full IPv6 address: before, all IPv6 players shared one address, so any of them could take another&#x27;s name.</li>
-<li>A room whose members&#x27; data, with the room&#x27;s blobs, would make its join reply too big for one packet no longer breaks the joiner: JOIN_ROOM and JOIN_BY_CODE answer error 6 and the joiner is not added, instead of the ...</li>
-<li>A score server no longer slows down or grows without bound under many boards: the memory store keeps at most 1000 boards per title and 10000 players per board, and a score that would pass either gets ERROR 6 (an ...</li>
-<li>The C client has <code>psnr_relay_unwrap_from</code>, which accepts a relayed datagram only from the server&#x27;s UDP address.</li>
-<li>Docs: a comment in <code>server/rooms.go</code> that pointed at the missing <code>docs/room-codes.md</code> now names the section of <code>docs/api.md</code> that holds the content; SECURITY.md states that players behind one address can take over each ...</li>
-<li>C client: the receive path checks its allocations (a failure now ends the connection instead of dereferencing NULL), a reply frame too short to hold its request id is dropped instead of being delivered as a push, and ...</li>
+<li>**Server:** A search no longer disconnects the player when the rooms&#x27; data is large: the reply lists only as many rooms as fit in one packet, and the player pages on from there.</li>
+<li>**Server:** A player whose connection stops reading no longer freezes the other players in its room: the server drops it after 10 seconds of a stuck write (<code>writeTimeout</code>), so its room mates&#x27; requests get their replies ...</li>
+<li>**Server:** A second HELLO on one connection gets error 1 and changes nothing, and a name is held by the player&#x27;s full IPv6 address: before, all IPv6 players shared one address, so any of them could take another&#x27;s name.</li>
+<li>**Server:** A room whose members&#x27; data, with the room&#x27;s blobs, would make its join reply too big for one packet no longer breaks the joiner: JOIN_ROOM and JOIN_BY_CODE answer error 6 and the joiner is not added, instead ...</li>
+<li>**Server:** a player with no IPv4 address (an IPv6 connection) is no longer treated as being on the same network as every other such player.</li>
+<li>**Server:** A score server no longer slows down or grows without bound under many boards: the memory store keeps at most 1000 boards per title and 10000 players per board, and a score that would pass either gets ERROR 6 ...</li>
+<li>**Client:** The C client has <code>psnr_relay_unwrap_from</code>, which accepts a relayed datagram only from the server&#x27;s UDP address.</li>
+<li>**Docs and tooling:** a comment in <code>server/rooms.go</code> that pointed at the missing <code>docs/room-codes.md</code> now names the section of <code>docs/api.md</code> that holds the content; SECURITY.md states that players behind one address can ...</li>
+<li>**Client:** the receive path checks its allocations (a failure now ends the connection instead of dereferencing NULL), a reply frame too short to hold its request id is dropped instead of being delivered as a push, and ...</li>
 </ul>
 <h4>Changed</h4>
 <ul>
 <li>**Docs and tooling:** <code>docs/side-service.md</code> says re-psn offers none of the platform social services (sign-in ticket, friends, presence, block list, recent players, messages, lookup by online ID, account region and age) ...</li>
 <li>**Docs and tooling:** README no longer says the desktop app has no release binary: from v0.5.0 a release carries the app archives (the &quot;Release archives&quot; section already said so).</li>
 <li>**Docs and tooling:** README and ROADMAP no longer call ps3recomp#200 a draft: GitHub shows it merged into ps3recomp&#x27;s <code>master</code> on 2026-10-07.</li>
-<li>The C client&#x27;s writes give up after <code>PSNR_SEND_TIMEOUT_MS</code> in total instead of waiting without a limit.</li>
+<li>**Client:** The C client&#x27;s writes give up after <code>PSNR_SEND_TIMEOUT_MS</code> in total instead of waiting without a limit.</li>
 </ul>
 <h3>0.5.0 (2026-11-11)</h3>
 <p>15 under Added, 4 under Fixed.</p>
