@@ -34,7 +34,7 @@
 <h2>Overview</h2>
 <p>re-psn answers the matchmaking and leaderboard calls of a statically recompiled PS3 game, for a group running its own server: a LAN, a VPN, or friends connecting to one person&#x27;s machine. The server keeps rooms and leaderboards and tells each player where the others are. Game traffic goes directly between players, and through the server only when two players cannot reach each other and the host has turned the relay on.</p>
 <p>It is a fork of <a href="https://github.com/sp00nznet/psnr">psnr</a> by sp00nz: a Go server and a one-file C client, with no accounts and no public instance.</p>
-<p class="status-line">Version 0.5.0 (pre-release). 77 features: 40 available, 3 not yet verified, 9 partial, 15 planned, 9 later, 1 declined.</p>
+<p class="status-line">Version 0.5.0 (pre-release). 78 features: 41 available, 3 not yet verified, 9 partial, 15 planned, 9 later, 1 declined.</p>
 <p class="notice">Unofficial; not affiliated with Sony. No game files, keys or firmware are in the repository or needed from it. Play only games you own.</p>
 </section>
 <section id="features">
@@ -185,6 +185,7 @@
 <tr id="f-app-appearance"><td data-label="Feature"><strong>Appearance mode</strong> <code>app-appearance</code><br>Dark, Light or System (the default): presets carry a dark and a light variant where their project has both, and System follows the OS or the terminal background and switches while the app runs.<br><span class="note">Desktop presets and system-following remain planned. The server status page supports browser System/Light/Dark and local appearance controls; see status-page.</span></td><td data-label="Status"><span class="tag plan">planned</span></td><td data-label="Since">not released</td></tr>
 <tr id="f-app-colours"><td data-label="Feature"><strong>Custom colours</strong> <code>app-colours</code><br>Edit named colour slots (background, surface, text, muted, accent, good, warn, bad) as hex values, with a contrast warning below 4.5:1, import and export, saved per user and per mode.<br><span class="note">Not started. A bad value falls back to the default preset.</span></td><td data-label="Status"><span class="tag plan">planned</span></td><td data-label="Since">not released</td></tr>
 <tr id="f-client-lan-discover"><td data-label="Feature"><strong>LAN discovery in the C client</strong> <code>client-lan-discover</code><br><code>psnr_discover</code> broadcasts one UDP request from its own temporary socket and returns the LAN servers that answer, with their ports, relay flag, player count, name and version.<br><span class="note">Not in v0.4.0. Finds only servers started with -discover. Tested against a fake responder and, by hand, against a real server on loopback; not a real broadcast across a network. Does not cross subnets or client-isolated Wi-Fi. The Windows build broadcasts to 255.255.255.255 only; CI compiles the client with MSVC but does not run it on Windows.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
+<tr id="f-client-connect-policy"><td data-label="Feature"><strong>Host connect policy in the C client</strong> <code>client-connect-policy</code><br><code>psnr_set_connect_policy</code> registers one callback that the client asks before it opens a TCP connection: the connection <code>psnr_connect</code> and <code>psnr_connect_timeout</code> make (once per resolved address, with the host as typed) and each relay leg (<code>psnr_stream_connect</code>, <code>psnr_stream_accept</code>). A refusal skips that address, or returns -1 for a relay leg; refusing every address gives NULL and <code>psnr_connect_error()</code> is <code>PSNR_E_POLICY</code>. No callback means today&#x27;s behaviour.<br><span class="note">Not in v0.5.0. Process-wide, set before the first connect; not covered: <code>psnr_discover</code> and the title&#x27;s own P2P socket. IPv4 only, like the client. Tested against a real server on loopback; each check fails with its hook removed.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
 </tbody>
 </table>
 <h3 id="area-desktop-app">Desktop app</h3>
@@ -236,7 +237,7 @@
 <h2>Roadmap</h2>
 <p>The same list grouped by status. No dates are promised; <a href="https://github.com/undecuple/re-psn/blob/main/ROADMAP.md">ROADMAP.md</a> has the order and the scope.</p>
 <div class="cols">
-<div><h3>Done <span class="count">(52)</span></h3>
+<div><h3>Done <span class="count">(53)</span></h3>
 <ul>
 <li><a href="#f-rooms-basic">Rooms and search</a></li>
 <li><a href="#f-rooms-data">Room and member data</a></li>
@@ -287,6 +288,7 @@
 <li><a href="#f-net-lan-public-addr">Public address for LAN players</a></li>
 <li><a href="#f-net-lan-discover">LAN discovery (server side)</a></li>
 <li><a href="#f-client-lan-discover">LAN discovery in the C client</a></li>
+<li><a href="#f-client-connect-policy">Host connect policy in the C client</a></li>
 <li><a href="#f-app-server-view">Server view in Status</a></li>
 <li><a href="#f-admin-api">Experimental admin API, read-only part</a> <span class="tag warn">partial</span></li>
 <li><a href="#f-app-archives">Desktop app archives</a></li>
@@ -332,6 +334,7 @@
 <h3>Unreleased</h3>
 <h4>Added</h4>
 <ul>
+<li>**Client:** <code>psnr_set_connect_policy(fn, user)</code> (<code>client/psnr.h</code>): the host registers one callback that the C client asks before it opens a TCP connection, so a runtime that restricts where a game may connect can refuse ...</li>
 <li>**Deploy:** <code>docker/docker-compose.yml</code> and <code>docker/docker-compose.host.yml</code> now run the container as user 10001 with all capabilities dropped, <code>no-new-privileges</code> and a read-only root filesystem with a 16 MB tmpfs on ...</li>
 <li>**Deploy:** <code>deploy/re-psn.service</code> sets <code>LimitNOFILE=16384</code>, so a server at the default <code>-max-conns</code> (4096, a relayed stream counting two sockets) stays under the file-descriptor limit.</li>
 <li>**Network:** <code>-relay-idle</code> (<code>RE_PSN_RELAY_IDLE</code>, default 600 seconds; 0 for never) closes a relay TCP stream that has carried no bytes in either direction for that long, and a write to a stream leg that the peer does ...</li>

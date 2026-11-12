@@ -264,6 +264,20 @@ void psnr_msg_free(psnr_msg* m)
 }
 
 static int s_connect_error;
+static psnr_connect_policy_fn s_policy;
+static void* s_policy_user;
+
+void psnr_set_connect_policy(psnr_connect_policy_fn fn, void* user)
+{
+    s_policy = fn;
+    s_policy_user = user;
+}
+
+/* 1 if the host's policy (if any) allows a connection to ip:port. */
+static int policy_allows(int purpose, const char* host, const uint8_t ip[4], uint16_t port)
+{
+    return !s_policy || s_policy(s_policy_user, purpose, host, ip, port) != 0;
+}
 
 static void set_nonblock(sock_t s)
 {
@@ -307,6 +321,7 @@ static psnr_client* connect_impl(const char* host, uint16_t port,
     struct addrinfo hints, *res = NULL, *ai;
     char portstr[8];
     sock_t s = BAD_SOCK;
+    int denied = 0, tried = 0;
     uint64_t deadline = now_ms() + (uint64_t)(timeout_ms > 0 ? timeout_ms : 0);
 
     /* The wire fields are 12 and 16 bytes: refuse a longer name instead of cutting it. */
@@ -321,7 +336,13 @@ static psnr_client* connect_impl(const char* host, uint16_t port,
     hints.ai_socktype = SOCK_STREAM;
     snprintf(portstr, sizeof(portstr), "%u", port);
     if (getaddrinfo(host, portstr, &hints, &res) != 0) return NULL;
+    s_connect_error = 0;
     for (ai = res; ai; ai = ai->ai_next) {
+        if (ai->ai_family == AF_INET) {
+            const uint8_t* ipb = (const uint8_t*)&((const struct sockaddr_in*)ai->ai_addr)->sin_addr;
+            if (!policy_allows(PSNR_PURPOSE_SERVER, host, ipb, port)) { denied = 1; continue; }
+        }
+        tried = 1;
         s = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
         if (s == BAD_SOCK) continue;
         if (timeout_ms < 0 ? connect(s, ai->ai_addr, (int)ai->ai_addrlen) == 0
@@ -330,7 +351,10 @@ static psnr_client* connect_impl(const char* host, uint16_t port,
         s = BAD_SOCK;
     }
     freeaddrinfo(res);
-    if (s == BAD_SOCK) return NULL;
+    if (s == BAD_SOCK) {
+        if (denied && !tried) s_connect_error = PSNR_E_POLICY;
+        return NULL;
+    }
 
     {   /* small request/reply frames: don't let Nagle sit on them */
         int one = 1;
@@ -478,7 +502,9 @@ static int64_t stream_leg(const psnr_client* c, uint8_t type, const uint8_t* bod
     uint8_t f[64], hdr[3];
     pollfd_t pfd;
     int one = 1;
-    sock_t s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    sock_t s;
+    if (!policy_allows(PSNR_PURPOSE_STREAM, NULL, c->server_ip, c->server_port)) return -1;
+    s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (s == BAD_SOCK) return -1;
     memset(&a, 0, sizeof(a));
     a.sin_family = AF_INET;

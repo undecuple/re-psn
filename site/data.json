@@ -4,7 +4,7 @@
  "repository": "https://github.com/undecuple/re-psn",
  "go": "1.22",
  "status_counts": {
-  "available": 40,
+  "available": 41,
   "unverified": 3,
   "partial": 9,
   "in-progress": 0,
@@ -902,6 +902,18 @@
    "status_class": "ok"
   },
   {
+   "id": "client-connect-policy",
+   "area": "Client",
+   "feature": "Host connect policy in the C client",
+   "detail": "`psnr_set_connect_policy` registers one callback that the client asks before it opens a TCP connection: the connection `psnr_connect` and `psnr_connect_timeout` make (once per resolved address, with the host as typed) and each relay leg (`psnr_stream_connect`, `psnr_stream_accept`). A refusal skips that address, or returns -1 for a relay leg; refusing every address gives NULL and `psnr_connect_error()` is `PSNR_E_POLICY`. No callback means today's behaviour.",
+   "status": "available",
+   "since": "main",
+   "evidence": "client/psnr.c, client/psnr.h, client/test_psnr.c",
+   "note": "Not in v0.5.0. Process-wide, set before the first connect; not covered: `psnr_discover` and the title's own P2P socket. IPv4 only, like the client. Tested against a real server on loopback; each check fails with its hook removed.",
+   "status_label": "available",
+   "status_class": "ok"
+  },
+  {
    "id": "app-server-view",
    "area": "Desktop app",
    "feature": "Server view in Status",
@@ -989,6 +1001,7 @@
    "net-lan-public-addr",
    "net-lan-discover",
    "client-lan-discover",
+   "client-connect-policy",
    "app-server-view",
    "admin-api",
    "app-archives"
@@ -1178,6 +1191,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "**Client:** `psnr_set_connect_policy(fn, user)` (`client/psnr.h`): the host registers one callback that the C client asks before it opens a TCP connection, so a runtime that restricts where a game may connect can refuse ...",
      "**Deploy:** `docker/docker-compose.yml` and `docker/docker-compose.host.yml` now run the container as user 10001 with all capabilities dropped, `no-new-privileges` and a read-only root filesystem with a 16 MB tmpfs on ...",
      "**Deploy:** `deploy/re-psn.service` sets `LimitNOFILE=16384`, so a server at the default `-max-conns` (4096, a relayed stream counting two sockets) stays under the file-descriptor limit.",
      "**Network:** `-relay-idle` (`RE_PSN_RELAY_IDLE`, default 600 seconds; 0 for never) closes a relay TCP stream that has carried no bytes in either direction for that long, and a write to a stream leg that the peer does ...",
@@ -1210,7 +1224,7 @@
     ]
    },
    "counts": {
-    "Added": 12,
+    "Added": 13,
     "Fixed": 9,
     "Changed": 4
    }
