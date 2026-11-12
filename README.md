@@ -17,7 +17,7 @@
 | **1** port | TCP and UDP 36100 for players ([ports](docs/running.md#ports)) |
 | **1** C file | the client: no third-party libraries and no threads ([client/psnr.c](client/psnr.c)) |
 | **Linux and Windows** | amd64 and arm64 on Linux, amd64 on Windows ([releases](https://github.com/undecuple/re-psn/releases)) |
-| **1** desktop app | a terminal UI to watch a server's rooms and leaderboards; build it from source today, a release download is planned ([app/README.md](app/README.md)) |
+| **1** desktop app | a terminal UI to watch a server's rooms and leaderboards; release archives from v0.5.0, or build it from source ([app/README.md](app/README.md)) |
 
 ## Quick start: host a server
 
@@ -238,7 +238,7 @@ website's colours. The server's version, uptime and connection counts are not av
 An explicitly configured [HTTP status source](app/README.md#optional-native-http-status) adds uptime, connection totals,
 public-room members and board summaries natively, with the existing token rules and no browser. It falls back to the
 game protocol when HTTP is unavailable; the server version remains unshared.
-The app has no release binary yet: build it from source (see [app/README.md](app/README.md)); a download is planned for the next release. On Linux desktops, starting without a terminal can open a supported terminal; the Windows build uses its console.
+From v0.5.0 a release carries the app as `re-psn-app-vX.Y.Z-<os>-<arch>` archives (see [Release archives](#release-archives)); you can also build it from source (see [app/README.md](app/README.md)). On Linux desktops, starting without a terminal can open a supported terminal; the Windows build uses its console.
 See the [desktop startup instructions](app/README.md#starting-from-the-desktop) and the limits of local testing.
 The terminal UI uses [Bubble Tea](https://github.com/charmbracelet/bubbletea) and [Lip Gloss](https://github.com/charmbracelet/lipgloss)
 (MIT); the server module stays standard-library only. The app module needs Go 1.26 or newer; the server and the C client keep
