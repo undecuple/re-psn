@@ -56,7 +56,7 @@ The rest of the status response still contains the usual room/player data and ne
 | `rate_limit` | The source has no packet token available. |
 | `source_capacity` | The source table is full and this source has no entry. |
 | `malformed` | An unusable source address, an IPv6 probe, short packet, wrong magic or unknown UDP message type, which includes a DISCOVER while `-discover` is off or one that is not exactly 64 bytes. A short RELAY is malformed even when relay is off. |
-| `relay_disabled` | A well-formed RELAY arrived while `-relay` is off. |
+| `relay_disabled` | A well-formed RELAY arrived while `-relay` is off, or from or to a player of a title in `-no-peer-titles`. |
 | `unauthorized` | A missing client, bad token, unready target endpoint or missing shared room prevents acceptance. |
 | `source_mismatch` | An otherwise authorized packet's source differs from the player's TCP source and `-udp-any-source` is off. |
 | `discover_refused` | A LAN DISCOVER arrived from a source that is not private, carrier-grade NAT, link-local or loopback while `-discover` is on (never answered). |

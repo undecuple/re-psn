@@ -4,7 +4,7 @@
  "repository": "https://github.com/undecuple/re-psn",
  "go": "1.22",
  "status_counts": {
-  "available": 40,
+  "available": 41,
   "unverified": 3,
   "partial": 9,
   "in-progress": 0,
@@ -854,6 +854,18 @@
    "status_class": "ok"
   },
   {
+   "id": "net-no-peer-titles",
+   "area": "Network",
+   "feature": "Per-title peer traffic off",
+   "detail": "`-no-peer-titles` lists communication IDs of titles that use no peer traffic: their players get no UDP probe reply, no relay for datagrams or streams, no relay route and no relay flag in HELLO_ACK, and still use rooms and scores. Other titles on the server are unaffected.",
+   "status": "available",
+   "since": "main",
+   "evidence": "server/title_peer.go, TestNoPeerTitleProbe, TestNoPeerTitleHelloFlag, TestNoPeerTitleRoute, TestNoPeerTitleRelayRefused, TestNoPeerTitlesFlagAndEnv",
+   "note": "Not in v0.5.0. A list of IDs, not a per-title profile file. Hole punching itself is client-side: it stops because the server never learns the endpoint. Tested on loopback with a client written for the tests, not with a real title.",
+   "status_label": "available",
+   "status_class": "ok"
+  },
+  {
    "id": "net-peer-keys",
    "area": "Network",
    "feature": "Peer keys (server side)",
@@ -985,6 +997,7 @@
    "status-server-state",
    "status-latency",
    "net-relay-force",
+   "net-no-peer-titles",
    "net-peer-keys",
    "net-lan-public-addr",
    "net-lan-discover",
@@ -1152,6 +1165,12 @@
    "variable": "RE_PSN_RELAY_FORCE",
    "default": "off",
    "description": "With -relay, send every stream through the relay, even between players who could connect directly. For testing the relay from one network; uses the host's bandwidth"
+  },
+  {
+   "flag": "-no-peer-titles",
+   "variable": "RE_PSN_NO_PEER_TITLES",
+   "default": "none",
+   "description": "Comma-separated communication IDs of titles that use no peer traffic. For their players the server answers no UDP probe, relays nothing and routes nothing, and HELLO_ACK says the relay is off; rooms and scores work as usual. Other titles are unaffected; not in v0.5.0"
   },
   {
    "flag": "-db",

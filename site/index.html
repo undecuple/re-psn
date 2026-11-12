@@ -34,7 +34,7 @@
 <h2>Overview</h2>
 <p>re-psn answers the matchmaking and leaderboard calls of a statically recompiled PS3 game, for a group running its own server: a LAN, a VPN, or friends connecting to one person&#x27;s machine. The server keeps rooms and leaderboards and tells each player where the others are. Game traffic goes directly between players, and through the server only when two players cannot reach each other and the host has turned the relay on.</p>
 <p>It is a fork of <a href="https://github.com/sp00nznet/psnr">psnr</a> by sp00nz: a Go server and a one-file C client, with no accounts and no public instance.</p>
-<p class="status-line">Version 0.5.0 (pre-release). 77 features: 40 available, 3 not yet verified, 9 partial, 15 planned, 9 later, 1 declined.</p>
+<p class="status-line">Version 0.5.0 (pre-release). 78 features: 41 available, 3 not yet verified, 9 partial, 15 planned, 9 later, 1 declined.</p>
 <p class="notice">Unofficial; not affiliated with Sony. No game files, keys or firmware are in the repository or needed from it. Play only games you own.</p>
 </section>
 <section id="features">
@@ -157,6 +157,7 @@
 <tr id="f-net-checks"><td data-label="Feature"><strong>Connection checks</strong> <code>net-checks</code><br>A check for players and hosts that says where a connection fails (server reachable, HELLO accepted, UDP probe answered, NAT behaviour, peer reachable, relay available) and shows round trip, loss and whether each peer is up.<br><span class="note">Not designed yet.</span></td><td data-label="Status"><span class="tag plan">planned</span></td><td data-label="Since">not released</td></tr>
 <tr id="f-net-upnp"><td data-label="Feature"><strong>UPnP</strong> <code>net-upnp</code><br>Open a player&#x27;s P2P port on their router automatically.<br><span class="note">Not started.</span></td><td data-label="Status"><span class="tag dim">later</span></td><td data-label="Since">not released</td></tr>
 <tr id="f-net-relay-force"><td data-label="Feature"><strong>Force the relay (testing)</strong> <code>net-relay-force</code><br><code>-relay-force</code> (<code>RE_PSN_RELAY_FORCE</code>, off by default, needs <code>-relay</code>) sends every stream through the relay, even between players who could connect directly, so the relay can be tested from one network. Datagrams are not forced.<br><span class="note">Not in v0.4.0. For testing only: it uses the host&#x27;s bandwidth.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
+<tr id="f-net-no-peer-titles"><td data-label="Feature"><strong>Per-title peer traffic off</strong> <code>net-no-peer-titles</code><br><code>-no-peer-titles</code> lists communication IDs of titles that use no peer traffic: their players get no UDP probe reply, no relay for datagrams or streams, no relay route and no relay flag in HELLO_ACK, and still use rooms and scores. Other titles on the server are unaffected.<br><span class="note">Not in v0.5.0. A list of IDs, not a per-title profile file. Hole punching itself is client-side: it stops because the server never learns the endpoint. Tested on loopback with a client written for the tests, not with a real title.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
 <tr id="f-net-peer-keys"><td data-label="Feature"><strong>Peer keys (server side)</strong> <code>net-peer-keys</code><br>A client may ask with <code>PEER_AUTH</code>; each pair of members who both asked then gets one new random 16-byte key in a <code>PEER_KEY</code> push, for tagging their direct packets. Opt-in; clients that do not ask are unaffected.<br><span class="note">Not in v0.4.0. No client uses the keys yet, and nothing is tagged on the wire. The keys travel over plain TCP, so this gives no confidentiality and no protection from someone who can read a player&#x27;s network traffic.</span></td><td data-label="Status"><span class="tag warn">partial</span></td><td data-label="Since">main</td></tr>
 <tr id="f-net-lan-public-addr"><td data-label="Feature"><strong>Public address for LAN players</strong> <code>net-lan-public-addr</code><br><code>-lan-public-addr IP</code> (<code>RE_PSN_LAN_PUBLIC_ADDR</code>, IPv4, off by default) gives players on public addresses the host&#x27;s address and the member&#x27;s P2P port for a player who connected from a private, CGNAT or link-local address. The host forwards each such P2P port. Players on private addresses are unaffected.<br><span class="note">Not in v0.4.0. Off by default. Several LAN players behind one forward need distinct P2P ports; the relay covers a failed connection.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
 <tr id="f-net-lan-discover"><td data-label="Feature"><strong>LAN discovery (server side)</strong> <code>net-lan-discover</code><br><code>-discover</code> (<code>RE_PSN_DISCOVER</code>, off by default) answers a 64-byte DISCOVER sent to the game UDP port with a 52-byte reply: TCP and UDP ports, relay flag, player count, name (<code>-name</code>) and version. Only private, carrier-grade NAT, link-local and loopback senders are answered, under the UDP rate limit.<br><span class="note">Not in v0.4.0. Off by default. Server side only: no client helper yet. A broadcast does not cross subnets or Wi-Fi client isolation.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
@@ -236,7 +237,7 @@
 <h2>Roadmap</h2>
 <p>The same list grouped by status. No dates are promised; <a href="https://github.com/undecuple/re-psn/blob/main/ROADMAP.md">ROADMAP.md</a> has the order and the scope.</p>
 <div class="cols">
-<div><h3>Done <span class="count">(52)</span></h3>
+<div><h3>Done <span class="count">(53)</span></h3>
 <ul>
 <li><a href="#f-rooms-basic">Rooms and search</a></li>
 <li><a href="#f-rooms-data">Room and member data</a></li>
@@ -283,6 +284,7 @@
 <li><a href="#f-status-server-state">Server state in /api/stats</a></li>
 <li><a href="#f-status-latency">Player-reported latency</a></li>
 <li><a href="#f-net-relay-force">Force the relay (testing)</a></li>
+<li><a href="#f-net-no-peer-titles">Per-title peer traffic off</a></li>
 <li><a href="#f-net-peer-keys">Peer keys (server side)</a> <span class="tag warn">partial</span></li>
 <li><a href="#f-net-lan-public-addr">Public address for LAN players</a></li>
 <li><a href="#f-net-lan-discover">LAN discovery (server side)</a></li>
@@ -370,7 +372,7 @@
 </section>
 <section id="settings">
 <h2>Settings</h2>
-<p>Each of the 24 flags can also be set as a <code>RE_PSN_&lt;FLAG&gt;</code> variable. A flag on the command line wins, then the variable; a value that does not parse stops the server at start. It runs with no settings at all. <a href="https://github.com/undecuple/re-psn/blob/main/docs/running.md">docs/running.md</a> has the full text.</p>
+<p>Each of the 25 flags can also be set as a <code>RE_PSN_&lt;FLAG&gt;</code> variable. A flag on the command line wins, then the variable; a value that does not parse stops the server at start. It runs with no settings at all. <a href="https://github.com/undecuple/re-psn/blob/main/docs/running.md">docs/running.md</a> has the full text.</p>
 <table class="stack set">
 <thead><tr><th>Flag</th><th>Variable</th><th>Default</th><th>What it does</th></tr></thead>
 <tbody>
@@ -395,6 +397,7 @@
 <tr><td data-label="Flag"><code>-relay</code></td><td data-label="Variable"><code>RE_PSN_RELAY</code></td><td data-label="Default"><code>off</code></td><td data-label="What it does">Carry traffic for players who cannot reach each other (uses the host&#x27;s bandwidth)</td></tr>
 <tr><td data-label="Flag"><code>-relay-idle</code></td><td data-label="Variable"><code>RE_PSN_RELAY_IDLE</code></td><td data-label="Default"><code>600</code></td><td data-label="What it does">With -relay, close a relay stream after this many seconds with no bytes in either direction (0: never); not in v0.5.0</td></tr>
 <tr><td data-label="Flag"><code>-relay-force</code></td><td data-label="Variable"><code>RE_PSN_RELAY_FORCE</code></td><td data-label="Default"><code>off</code></td><td data-label="What it does">With -relay, send every stream through the relay, even between players who could connect directly. For testing the relay from one network; uses the host&#x27;s bandwidth</td></tr>
+<tr><td data-label="Flag"><code>-no-peer-titles</code></td><td data-label="Variable"><code>RE_PSN_NO_PEER_TITLES</code></td><td data-label="Default"><code>none</code></td><td data-label="What it does">Comma-separated communication IDs of titles that use no peer traffic. For their players the server answers no UDP probe, relays nothing and routes nothing, and HELLO_ACK says the relay is off; rooms and scores work as usual. Other titles are unaffected; not in v0.5.0</td></tr>
 <tr><td data-label="Flag"><code>-db</code></td><td data-label="Variable"><code>RE_PSN_DB</code></td><td data-label="Default"><code>off</code></td><td data-label="What it does">Score storage: off or memory</td></tr>
 <tr><td data-label="Flag"><code>-db-file</code></td><td data-label="Variable"><code>RE_PSN_DB_FILE</code></td><td data-label="Default"><code>none</code></td><td data-label="What it does">Read the -db setting from this file instead</td></tr>
 <tr><td data-label="Flag"><code>-replace</code></td><td data-label="Variable"><code>RE_PSN_REPLACE</code></td><td data-label="Default"><code>off</code></td><td data-label="What it does">If an earlier re-psn of this user holds the game port, stop it (SIGTERM) and start in its place (Linux only)</td></tr>
