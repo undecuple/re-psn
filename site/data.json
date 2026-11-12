@@ -1178,6 +1178,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "**Deploy:** `deploy/re-psn.service` sets `LimitNOFILE=16384`, so a server at the default `-max-conns` (4096, a relayed stream counting two sockets) stays under the file-descriptor limit.",
      "**Network:** `-relay-idle` (`RE_PSN_RELAY_IDLE`, default 600 seconds; 0 for never) closes a relay TCP stream that has carried no bytes in either direction for that long, and a write to a stream leg that the peer does ...",
      "**Docs and tooling:** `docs/integrating.md` has a \"Mapping the NP calls\" section: suggested NP call families to re-psn message tables, a list of what the protocol does not cover (world lists included), and a recommended ...",
      "**Server:** `-max-conns` (`RE_PSN_MAX_CONNS`, default 4096; 0 for no limit) caps the open TCP connections in total, players and relay legs together.",
@@ -1205,7 +1206,7 @@
     ]
    },
    "counts": {
-    "Added": 10,
+    "Added": 11,
     "Fixed": 9,
     "Changed": 1
    }

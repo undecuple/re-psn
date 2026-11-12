@@ -41,6 +41,7 @@ grep -qx 'ExecStart=/usr/local/bin/re-psn' "$unit" || { echo "deploy/re-psn.serv
 envfiles="$(sed -n 's/^EnvironmentFile=//p' "$unit" | tr '\n' ' ')"
 [ "$envfiles" = "-/etc/psnr/psnr.env -/etc/re-psn/re-psn.env " ] || {
   echo "deploy/re-psn.service must read -/etc/psnr/psnr.env then -/etc/re-psn/re-psn.env, got: $envfiles" >&2; exit 1; }
+grep -qx 'LimitNOFILE=16384' "$unit" || { echo "deploy/re-psn.service must set LimitNOFILE=16384 (default -max-conns is 4096, two sockets per relayed stream)" >&2; exit 1; }
 if grep -rEn '([0-9]{1,3}\.){3}[0-9]{1,3}' "$root/deploy" | grep -Ev '127\.0\.0\.1|0\.0\.0\.0' ; then
   echo "deploy/ names an address other than localhost" >&2; exit 1
 fi
