@@ -34,7 +34,7 @@
 <h2>Overview</h2>
 <p>re-psn answers the matchmaking and leaderboard calls of a statically recompiled PS3 game, for a group running its own server: a LAN, a VPN, or friends connecting to one person&#x27;s machine. The server keeps rooms and leaderboards and tells each player where the others are. Game traffic goes directly between players, and through the server only when two players cannot reach each other and the host has turned the relay on.</p>
 <p>It is a fork of <a href="https://github.com/sp00nznet/psnr">psnr</a> by sp00nz: a Go server and a one-file C client, with no accounts and no public instance.</p>
-<p class="status-line">Version 0.5.0 (pre-release). 79 features: 42 available, 3 not yet verified, 9 partial, 15 planned, 9 later, 1 declined.</p>
+<p class="status-line">Version 0.5.0 (pre-release). 80 features: 43 available, 3 not yet verified, 9 partial, 15 planned, 9 later, 1 declined.</p>
 <p class="notice">Unofficial; not affiliated with Sony. No game files, keys or firmware are in the repository or needed from it. Play only games you own.</p>
 </section>
 <section id="features">
@@ -158,6 +158,7 @@
 <tr id="f-net-upnp"><td data-label="Feature"><strong>UPnP</strong> <code>net-upnp</code><br>Open a player&#x27;s P2P port on their router automatically.<br><span class="note">Not started.</span></td><td data-label="Status"><span class="tag dim">later</span></td><td data-label="Since">not released</td></tr>
 <tr id="f-net-relay-force"><td data-label="Feature"><strong>Force the relay (testing)</strong> <code>net-relay-force</code><br><code>-relay-force</code> (<code>RE_PSN_RELAY_FORCE</code>, off by default, needs <code>-relay</code>) sends every stream through the relay, even between players who could connect directly, so the relay can be tested from one network. Datagrams are not forced.<br><span class="note">Not in v0.4.0. For testing only: it uses the host&#x27;s bandwidth.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
 <tr id="f-net-no-peer-titles"><td data-label="Feature"><strong>Per-title peer traffic off</strong> <code>net-no-peer-titles</code><br><code>-no-peer-titles</code> lists communication IDs of titles that use no peer traffic: their players get no UDP probe reply, no relay for datagrams or streams, no relay route and no relay flag in HELLO_ACK, and still use rooms and scores. Other titles on the server are unaffected.<br><span class="note">Not in v0.5.0. A list of IDs, not a per-title profile file. Hole punching itself is client-side: it stops because the server never learns the endpoint. Tested on loopback with a client written for the tests, not with a real title.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
+<tr id="f-net-caps"><td data-label="Feature"><strong>Capability report</strong> <code>net-caps</code><br><code>GET_CAPS</code> (0x04) after HELLO returns <code>CAPS</code> (0x94): a bit set of what this server offers this player (rooms, scores, room codes, peer keys, the UDP probe, the relay, LAN discovery) and the server version. The probe and relay bits are per title, so a title in <code>-no-peer-titles</code> sees them clear. The C client has the constants and <code>psnr_caps_parse</code>.<br><span class="note">Not in v0.5.0. A server before this answers the request with ERROR 1. Tested on loopback with a test client and the C client; no real title asks for it yet.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
 <tr id="f-net-peer-keys"><td data-label="Feature"><strong>Peer keys (server side)</strong> <code>net-peer-keys</code><br>A client may ask with <code>PEER_AUTH</code>; each pair of members who both asked then gets one new random 16-byte key in a <code>PEER_KEY</code> push, for tagging their direct packets. Opt-in; clients that do not ask are unaffected.<br><span class="note">Not in v0.4.0. No client uses the keys yet, and nothing is tagged on the wire. The keys travel over plain TCP, so this gives no confidentiality and no protection from someone who can read a player&#x27;s network traffic.</span></td><td data-label="Status"><span class="tag warn">partial</span></td><td data-label="Since">main</td></tr>
 <tr id="f-net-lan-public-addr"><td data-label="Feature"><strong>Public address for LAN players</strong> <code>net-lan-public-addr</code><br><code>-lan-public-addr IP</code> (<code>RE_PSN_LAN_PUBLIC_ADDR</code>, IPv4, off by default) gives players on public addresses the host&#x27;s address and the member&#x27;s P2P port for a player who connected from a private, CGNAT or link-local address. The host forwards each such P2P port. Players on private addresses are unaffected.<br><span class="note">Not in v0.4.0. Off by default. Several LAN players behind one forward need distinct P2P ports; the relay covers a failed connection.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
 <tr id="f-net-lan-discover"><td data-label="Feature"><strong>LAN discovery (server side)</strong> <code>net-lan-discover</code><br><code>-discover</code> (<code>RE_PSN_DISCOVER</code>, off by default) answers a 64-byte DISCOVER sent to the game UDP port with a 52-byte reply: TCP and UDP ports, relay flag, player count, name (<code>-name</code>) and version. Only private, carrier-grade NAT, link-local and loopback senders are answered, under the UDP rate limit.<br><span class="note">Not in v0.4.0. Off by default. Server side only: no client helper yet. A broadcast does not cross subnets or Wi-Fi client isolation.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
@@ -238,7 +239,7 @@
 <h2>Roadmap</h2>
 <p>The same list grouped by status. No dates are promised; <a href="https://github.com/undecuple/re-psn/blob/main/ROADMAP.md">ROADMAP.md</a> has the order and the scope.</p>
 <div class="cols">
-<div><h3>Done <span class="count">(54)</span></h3>
+<div><h3>Done <span class="count">(55)</span></h3>
 <ul>
 <li><a href="#f-rooms-basic">Rooms and search</a></li>
 <li><a href="#f-rooms-data">Room and member data</a></li>
@@ -286,6 +287,7 @@
 <li><a href="#f-status-latency">Player-reported latency</a></li>
 <li><a href="#f-net-relay-force">Force the relay (testing)</a></li>
 <li><a href="#f-net-no-peer-titles">Per-title peer traffic off</a></li>
+<li><a href="#f-net-caps">Capability report</a></li>
 <li><a href="#f-net-peer-keys">Peer keys (server side)</a> <span class="tag warn">partial</span></li>
 <li><a href="#f-net-lan-public-addr">Public address for LAN players</a></li>
 <li><a href="#f-net-lan-discover">LAN discovery (server side)</a></li>
@@ -337,6 +339,7 @@
 <h4>Added</h4>
 <ul>
 <li>**Client:** <code>psnr_set_connect_policy(fn, user)</code> (<code>client/psnr.h</code>): the host registers one callback that the C client asks before it opens a TCP connection, so a runtime that restricts where a game may connect can refuse ...</li>
+<li>**Server:** a capability report (#77, item 3): <code>GET_CAPS</code> (0x04, no body, after HELLO) is answered with <code>CAPS</code> (0x94): <code>bits u32</code> and the server version as a blob.</li>
 <li>**Deploy:** <code>docker/docker-compose.yml</code> and <code>docker/docker-compose.host.yml</code> now run the container as user 10001 with all capabilities dropped, <code>no-new-privileges</code> and a read-only root filesystem with a 16 MB tmpfs on ...</li>
 <li>**Deploy:** <code>deploy/re-psn.service</code> sets <code>LimitNOFILE=16384</code>, so a server at the default <code>-max-conns</code> (4096, a relayed stream counting two sockets) stays under the file-descriptor limit.</li>
 <li>**Network:** <code>-relay-idle</code> (<code>RE_PSN_RELAY_IDLE</code>, default 600 seconds; 0 for never) closes a relay TCP stream that has carried no bytes in either direction for that long, and a write to a stream leg that the peer does ...</li>

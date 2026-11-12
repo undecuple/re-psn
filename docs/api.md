@@ -64,6 +64,7 @@ server carries it only with `-relay` (see [Relay](#relay)).
 | 0x01 | HELLO | `comm_id [12]` `online_id [16]` `p2p_port u16` | HELLO_ACK |
 | 0x02 | HEARTBEAT | optional `rtt_ms u16` | none |
 | 0x03 | PEER_AUTH | none | OK |
+| 0x04 | GET_CAPS | none | CAPS (after 0.5.0; a server from 0.5.0 or before answers ERROR 1) |
 
 **HEARTBEAT `rtt_ms`:** a client may add the round trip it last measured to the server, in milliseconds (`u16`, big endian;
 `0xFFFF` means unknown). The server keeps the latest value, shows it on the status page and in `/api/stats` (`rtt_ms`, parallel to
@@ -102,8 +103,23 @@ client's `psnr_poll` sends a HEARTBEAT every 20 seconds.
 | Type | Name | Payload (after `req`) |
 |---|---|---|
 | 0x81 | HELLO_ACK | `user_id u32` `public_ip [4]` `token u32` (the token UDP PROBEs carry; 0.3 on) `flags u8` (bit 0: the server relays; 0.3 on. Clear for a title in `-no-peer-titles`, after 0.5.0. bit 1: invite-only rooms, see below; 0.4 on. bit 2: the server issues peer keys, see "Peer keys"; after 0.4) |
+| 0x94 | CAPS | `bits u32` `version blob`: which features the server offers this player (bits below), and the server version text |
 | 0x93 | OK | — |
 | 0x8F | ERROR | `code u32` |
+
+**Capabilities (GET_CAPS, after 0.5.0).** A title that needs only some features can ask, after HELLO, what the server offers it before it relies on one. The reply's `bits` are:
+
+| Bit | Name | Set when |
+|---|---|---|
+| 0 | rooms | always: create, search, join and leave rooms |
+| 1 | scores | always: record and read scores |
+| 2 | room codes | always: invite-only rooms and join by code |
+| 3 | peer keys | always: PEER_AUTH and PEER_KEY pushes |
+| 4 | probe | the server answers a UDP PROBE from this player's P2P socket; clear for a title in `-no-peer-titles` |
+| 5 | relay | the server relays streams and datagrams for this player: `-relay` is on and the title is not in `-no-peer-titles` |
+| 6 | discover | the server answers LAN discovery (`-discover`) |
+
+A clear bit means the server does not offer the feature to this player. Ignore bits you do not know: later versions may add them. GET_CAPS before HELLO gets ERROR 7 (no hello). A server that predates GET_CAPS answers it with ERROR 1 (bad request); treat that as "nothing reported". The relay bit repeats HELLO_ACK's bit 0.
 
 **Error codes:**
 
