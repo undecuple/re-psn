@@ -20,7 +20,7 @@ checked on the way. Pre-releases come often and on no schedule, whenever there i
 
 ## Versions and tags
 
-- [`VERSION`](../VERSION) holds the version, `X.Y.Z`. The default of `var version` in `server/main.go`, the newest numbered
+- [`VERSION`](../VERSION) holds the version, `X.Y.Z`. The default of `var version` in `server/main.go` and in `app/cmd/re-psn-app/main.go`, the newest numbered
   heading in [CHANGELOG.md](../CHANGELOG.md) and the `<!-- version -->...<!-- /version -->` span in the
   [README](../README.md) status line state the same number; `TestVersionAgrees` fails when they differ. Release builds
   also set the version with `-ldflags -X main.version=...` from the tag.
@@ -46,13 +46,13 @@ checked on the way. Pre-releases come often and on no schedule, whenever there i
    scripts/bump-version.sh 0.2.0
    ```
 
-   It changes exactly four files: `VERSION`, the `var version` default in `server/main.go`, `CHANGELOG.md` (the
+   It changes exactly five files: `VERSION`, the `var version` default in `server/main.go` and in `app/cmd/re-psn-app/main.go`, `CHANGELOG.md` (the
    Unreleased entries move under `## [0.2.0] - <today, UTC>`, a fresh empty Unreleased stays above, and an
    `[Unreleased]: .../compare/...` link moves on if the file has one) and the version span in `README.md`. It refuses a
    version that is not `X.Y.Z` or not newer than `VERSION`, an empty Unreleased section, a CHANGELOG whose newest version
-   is not `VERSION`, and a dirty working tree. `--date YYYY-MM-DD` sets the heading's date. It writes the four files
+   is not `VERSION`, and a dirty working tree. `--date YYYY-MM-DD` sets the heading's date. It writes the five files
    first and then builds the notes for the new version with `scripts/release-notes.sh`, failing if they do not build; a
-   failure there leaves the four files changed for you to look at (`git diff`, `git checkout -- .` to undo).
+   failure there leaves the five files changed for you to look at (`git diff`, `git checkout -- .` to undo).
 3. Review: `git diff` shows only those version places, the span and the CHANGELOG move. Then run the checks and read the
    notes:
 
@@ -61,7 +61,7 @@ checked on the way. Pre-releases come often and on no schedule, whenever there i
    scripts/release-notes.sh 0.2.0
    ```
 
-4. Commit the four files by name as one commit, with nothing else in it, open a pull request, and merge it once CI is
+4. Commit the five files by name as one commit, with nothing else in it, open a pull request, and merge it once CI is
    green and it is reviewed. The script makes no commit, tag or push.
 5. Tag the merge commit on `main`, and only with the maintainer's word:
 
@@ -189,7 +189,7 @@ How it is built ([`scripts/build-appimage.sh`](../scripts/build-appimage.sh), ru
 
 | Check | Where |
 |---|---|
-| `VERSION`, `server/main.go`, the newest CHANGELOG.md version and the README span agree (`TestVersionAgrees`) | `go test ./...` in CI on pushes to `main` and pull requests; `scripts/check-release.sh`; `scripts/release-build.sh` |
+| `VERSION`, `server/main.go`, `app/cmd/re-psn-app/main.go`, the newest CHANGELOG.md version and the README span agree (`TestVersionAgrees`) | `go test ./...` in CI on pushes to `main` and pull requests; `scripts/check-release.sh`; `scripts/release-build.sh` |
 | The bump and notes scripts on a fixture tree (`TestBumpVersion`, `TestReleaseNotes`) | the same; skipped on Windows, where the scripts do not run |
 | The notes for the current version build from the real CHANGELOG.md | `scripts/check-release.sh`; `release.yml` builds the notes with `scripts/release-notes.sh` |
 | Tag shape `vMAJOR.MINOR.PATCH` | `scripts/release-build.sh`, both release workflows |
