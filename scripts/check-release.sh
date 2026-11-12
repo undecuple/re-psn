@@ -1,6 +1,6 @@
 #!/bin/sh
 # Release checks that need no network: with --tag, that the tag is v + VERSION (checked first, so a wrong tag fails before
-# anything else runs); VERSION, the default in server/main.go, the newest CHANGELOG.md version and the README version spans
+# anything else runs); VERSION, the defaults in server/main.go and app/cmd/re-psn-app/main.go, the newest CHANGELOG.md version and the README version spans
 # agree (TestVersionAgrees); the bump and notes scripts pass their tests; and the notes for the current version build from
 # the real CHANGELOG.md. Run by release-build.sh (without --tag) and by release.yml on a tag (with --tag).
 # With --assets TAG DIR it checks only a built release in DIR (TestCheckReleaseAssets): DIR holds the ten assets and

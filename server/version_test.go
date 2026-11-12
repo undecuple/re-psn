@@ -18,7 +18,7 @@ var (
 )
 
 // versionsAgree checks the places that state the version under root: the VERSION file, the default of `var version` in
-// server/main.go (release builds override it with -ldflags; the source default is what is compared), the newest numbered
+// server/main.go and app/cmd/re-psn-app/main.go (release builds override it with -ldflags; the source default is what is compared), the newest numbered
 // heading in CHANGELOG.md, and every X.Y.Z inside a <!-- version --> span in README.md. scripts/bump-version.sh changes
 // exactly these.
 func versionsAgree(root string) error {
@@ -35,16 +35,18 @@ func versionsAgree(root string) error {
 		return fmt.Errorf("VERSION holds %q, want one X.Y.Z line", raw)
 	}
 
-	src, err := read("server/main.go")
-	if err != nil {
-		return err
-	}
-	m := versionVarRe.FindAllStringSubmatch(src, -1)
-	if len(m) != 1 {
-		return fmt.Errorf("server/main.go: want one plain `var version = \"X.Y.Z\"` line, found %d", len(m))
-	}
-	if m[0][1] != want {
-		return fmt.Errorf("server/main.go says %s, VERSION says %s", m[0][1], want)
+	for _, rel := range []string{"server/main.go", "app/cmd/re-psn-app/main.go"} {
+		src, err := read(rel)
+		if err != nil {
+			return err
+		}
+		m := versionVarRe.FindAllStringSubmatch(src, -1)
+		if len(m) != 1 {
+			return fmt.Errorf("%s: want one plain `var version = \"X.Y.Z\"` line, found %d", rel, len(m))
+		}
+		if m[0][1] != want {
+			return fmt.Errorf("%s says %s, VERSION says %s", rel, m[0][1], want)
+		}
 	}
 
 	cl, err := read("CHANGELOG.md")

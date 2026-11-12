@@ -17,8 +17,9 @@ import (
 
 // A small tree with every file scripts/bump-version.sh touches, at version 0.3.1.
 var fixtureTree = map[string]string{
-	"VERSION":        "0.3.1\n",
-	"server/main.go": "package main\n\nvar version = \"0.3.1\"\n",
+	"VERSION":                    "0.3.1\n",
+	"server/main.go":             "package main\n\nvar version = \"0.3.1\"\n",
+	"app/cmd/re-psn-app/main.go": "package main\n\nvar version = \"0.3.1\"\n",
 	"README.md": "# x\n\n**<!-- version -->v0.3.1<!-- /version -->, alpha.** Get " +
 		"<!-- version -->[0.3.1](https://example.invalid/r/releases/tag/v0.3.1)<!-- /version -->.\n\nLog: version=0.3.1\n",
 	"CHANGELOG.md": `# Changelog
@@ -118,6 +119,8 @@ func TestVersionAgreesCatchesEachPlace(t *testing.T) {
 		"VERSION":        {"VERSION", "0.3.2\n"},
 		"main.go":        {"server/main.go", "package main\n\nvar version = \"0.3.0\"\n"},
 		"main.go ldflag": {"server/main.go", "package main\n\nvar version string\n"},
+		"app main.go":    {"app/cmd/re-psn-app/main.go", "package main\n\nvar version = \"0.3.0\"\n"},
+		"app ldflag":     {"app/cmd/re-psn-app/main.go", "package main\n\nvar version string\n"},
 		"CHANGELOG":      {"CHANGELOG.md", "## [Unreleased]\n\n## [0.3.2] - 2026-11-01\n"},
 		"README span":    {"README.md", "<!-- version -->v0.3.1<!-- /version --> <!-- version -->0.3.0<!-- /version -->\n"},
 		"README none":    {"README.md", "v0.3.1\n"},
@@ -221,7 +224,7 @@ func TestBumpVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dry run: %v: %s", err, errout)
 	}
-	for _, want := range []string{"+++ b/VERSION", "+0.4.0", "+++ b/server/main.go", `+var version = "0.4.0"`,
+	for _, want := range []string{"+++ b/VERSION", "+0.4.0", "+++ b/server/main.go", `+var version = "0.4.0"`, "+++ b/app/cmd/re-psn-app/main.go",
 		"+++ b/CHANGELOG.md", "+## [0.4.0] - 2026-11-05", "+[0.4.0]: https://example.invalid/r/compare/v0.3.1...v0.4.0",
 		"+++ b/README.md", "<!-- version -->v0.4.0<!-- /version -->"} {
 		if !strings.Contains(out, want) {
@@ -253,7 +256,7 @@ func TestBumpVersion(t *testing.T) {
 		t.Errorf("README.md:\n%s\nwant:\n%s", got, wantReadme)
 	}
 	st, _, _ := run(t, root, "git", "status", "--porcelain")
-	if st != " M CHANGELOG.md\n M README.md\n M VERSION\n M server/main.go\n" {
+	if st != " M CHANGELOG.md\n M README.md\n M VERSION\n M app/cmd/re-psn-app/main.go\n M server/main.go\n" {
 		t.Errorf("the bump changed other files:\n%s", st)
 	}
 	notes, errout, err := run(t, root, "sh", "scripts/release-notes.sh", "0.4.0")

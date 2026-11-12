@@ -2,6 +2,7 @@
 # Bump the version in every place that states it, in one go. VERSION is the source; this changes, and only these:
 #   VERSION            the new version;
 #   server/main.go     the default in `var version = "X.Y.Z"` (release builds also set it with -ldflags);
+#   app/cmd/re-psn-app/main.go   the same default in the desktop app;
 #   CHANGELOG.md       the entries under "## [Unreleased]" move under a new "## [X.Y.Z] - YYYY-MM-DD" heading, a fresh empty
 #                      Unreleased stays above it, and a "[Unreleased]: .../compare/vOLD...HEAD" link, if there is one, moves on;
 #   README.md          every X.Y.Z inside a one-line <!-- version -->...<!-- /version --> span.
@@ -51,18 +52,20 @@ fi
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT INT TERM
-mkdir -p "$tmp/server"
-files="VERSION server/main.go CHANGELOG.md README.md"
+mkdir -p "$tmp/server" "$tmp/app/cmd/re-psn-app"
+files="VERSION server/main.go app/cmd/re-psn-app/main.go CHANGELOG.md README.md"
 
 # VERSION
 printf '%s\n' "$new" > "$tmp/VERSION"
 
-# server/main.go: exactly one `var version = "<cur>"` line
+# server/main.go and app/cmd/re-psn-app/main.go: exactly one `var version = "<cur>"` line each
 line="var version = \"$cur\""
-n="$(grep -Fxc "$line" "$root/server/main.go" || true)"
-[ "$n" = 1 ] || die "server/main.go: expected one line '$line', found $n"
-awk -v old="$line" -v new="var version = \"$new\"" '$0 == old { print new; next } { print }' \
-  "$root/server/main.go" > "$tmp/server/main.go"
+for f in server/main.go app/cmd/re-psn-app/main.go; do
+  n="$(grep -Fxc "$line" "$root/$f" || true)"
+  [ "$n" = 1 ] || die "$f: expected one line '$line', found $n"
+  awk -v old="$line" -v new="var version = \"$new\"" '$0 == old { print new; next } { print }' \
+    "$root/$f" > "$tmp/$f"
+done
 
 # CHANGELOG.md
 awk -v cur="$cur" -v new="$new" -v date="$date" '
