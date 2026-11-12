@@ -47,6 +47,11 @@ decides whether to call `psnr_connect` again. The server drops a connection that
 ## What re-psn does not do
 
 - It does not log players in for the title's server, and it has no accounts. Identity is the name sent in HELLO.
+- It offers none of the platform social services: no sign-in ticket, friends list, presence, block list or recent players, stored
+  messages or invites, lookup of a player by online ID, and no account region or age values. A title that keeps its own game
+  server answers these calls itself, locally. Friends, presence and invites for everyone on one server are a planned feature
+  ([ROADMAP.md](../ROADMAP.md), [features](features.md)); they are not built, and this page does not promise them to a title that
+  runs its own server.
 - Today the probe, hole punching and relay are server-wide settings, not per title. A host who wants a server without the relay
   leaves `-relay` off; the probe and UDP stay available but unused unless the title sends them.
 - The server does not report which features it offers beyond the few HELLO_ACK flags documented in [api.md](api.md).

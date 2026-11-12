@@ -37,6 +37,7 @@ All notable changes to this project are documented here. The format follows
   `comm_id` over 12 or an `online_id` over 16 bytes instead of cutting it.
 
 ### Changed
+- **Docs and tooling:** `docs/side-service.md` says re-psn offers none of the platform social services (sign-in ticket, friends, presence, block list, recent players, messages, lookup by online ID, account region and age) and that a title with its own server answers them locally; the planned friends, presence and invites feature is not built.
 - **Docs and tooling:** README no longer says the desktop app has no release binary: from v0.5.0 a release carries the app archives (the "Release archives" section already said so).
 - **Docs and tooling:** README and ROADMAP no longer call ps3recomp#200 a draft: GitHub shows it merged into ps3recomp's `master` on 2026-10-07.
 - The C client's writes give up after `PSNR_SEND_TIMEOUT_MS` in total instead of waiting without a limit. The connection is then dead with `PSNR_DEAD_SEND_TIMEOUT`, as a failed write already was.
