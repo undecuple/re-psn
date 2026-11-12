@@ -190,9 +190,10 @@ setting on GitHub, and the image's source label links it to this repository.
 
 ## A shared test host
 
+`docker-compose.yml` and `docker-compose.host.yml` run the container as user 10001 with all capabilities dropped, no new privileges and a read-only root filesystem with a 16 MB tmpfs on `/tmp`. A log file (`RE_PSN_LOG_FILE`) needs a volume then, and a listen port below 1024 cannot be bound.
+
 For a server you do not own outright, such as a shared machine with VPN links, `docker-compose.test.yml` adds hardening to the host-network
-setup: a non-root user, all capabilities dropped, no new privileges, a read-only root filesystem with a 16 MB tmpfs on `/tmp`, memory, CPU
-and process limits, no volumes, no published ports, and `restart: "no"`.
+setup: the same lines, plus memory, CPU and process limits, no volumes, no published ports, and `restart: "no"`.
 
 ```sh
 RE_PSN_BIND=192.0.2.10:36100 docker compose -f docker/docker-compose.test.yml up --build

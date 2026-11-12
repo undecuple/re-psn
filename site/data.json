@@ -1178,6 +1178,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "**Deploy:** `docker/docker-compose.yml` and `docker/docker-compose.host.yml` now run the container as user 10001 with all capabilities dropped, `no-new-privileges` and a read-only root filesystem with a 16 MB tmpfs on ...",
      "**Deploy:** `deploy/re-psn.service` sets `LimitNOFILE=16384`, so a server at the default `-max-conns` (4096, a relayed stream counting two sockets) stays under the file-descriptor limit.",
      "**Network:** `-relay-idle` (`RE_PSN_RELAY_IDLE`, default 600 seconds; 0 for never) closes a relay TCP stream that has carried no bytes in either direction for that long, and a write to a stream leg that the peer does ...",
      "**Docs and tooling:** `docs/integrating.md` has a \"Mapping the NP calls\" section: suggested NP call families to re-psn message tables, a list of what the protocol does not cover (world lists included), and a recommended ...",
@@ -1206,7 +1207,7 @@
     ]
    },
    "counts": {
-    "Added": 11,
+    "Added": 12,
     "Fixed": 9,
     "Changed": 1
    }

@@ -4,6 +4,13 @@ services:
       context: ..                 # the repository root; the Dockerfile copies go.mod and server/
       dockerfile: docker/Dockerfile
     restart: unless-stopped
+    user: "10001:10001"
+    cap_drop: [ALL]               # the game port is above 1024, so no capability is needed
+    security_opt:
+      - no-new-privileges:true
+    read_only: true               # a log file (RE_PSN_LOG_FILE) then needs a volume
+    tmpfs:
+      - /tmp:size=16m,mode=1777   # the pid file goes here
     environment:
       # Any flag is RE_PSN_<FLAG> (the old PSNR_<FLAG> still works); see docs/running.md. Change a port here and in `ports`.
       RE_PSN_ADDR: ":36100"
