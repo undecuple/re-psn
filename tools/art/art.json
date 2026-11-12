@@ -28,7 +28,7 @@
   }
  },
  "inputs": {
-  "docs/art/palette.json": "c6f87f52cfa0ecf741f524ce1161786c7d1b9a26ae7e9b884ad566d2c71a3c07",
+  "docs/art/palette.json": "b65bf190ed96d489f69bc0afb98da965cab883f0bbbd0fa1bb2dcf6963e5a849",
   "docs/art/transcripts/server.txt": "85e9620bdcb89f509fff60b0df04faf665df14e289cbfd0effcd847aa94d4de7",
   "docs/art/transcripts/alice.txt": "8df7a50877a38c6c1e8358a912dc62a730cf84d26a36c3575170c6e101b29ea0",
   "docs/art/transcripts/bob.txt": "2ccb0db0291e9c556596cf640e1dd2a90852f5fca28ec1505b3bb6a02bdc6738",
@@ -40,48 +40,48 @@
     1280,
     320
    ],
-   "bytes": 12825,
-   "sha256": "d90d2ccc6d9d3e10eefa931f5eca7fcaa86132e6f44e0368f87e9cc80295fedc"
+   "bytes": 13027,
+   "sha256": "51bf8731989df14f8deeb8313608297c54325de741ae29d33f002f0bbca4784a"
   },
   "docs/img/social.png": {
    "size": [
     1280,
     640
    ],
-   "bytes": 19937,
-   "sha256": "0bc3fc26d80679ed51301dd337671d7113107ffba5431a1f4d2a94e109d13d58"
+   "bytes": 20284,
+   "sha256": "7d26e9719ba08a750d522e42228e4d83e3b7e333f3ea58a93766941fa37a521d"
   },
   "docs/img/term-alice.png": {
    "size": [
     1096,
     256
    ],
-   "bytes": 5873,
-   "sha256": "a8f629f502537ba8e748a6794c55742a3886562fe02bbcdc4ca965823840be7f"
+   "bytes": 5898,
+   "sha256": "84f06659b35de3e5b95c7c3f6c6137207f406fb5e4098a467ba1b415b185117b"
   },
   "docs/img/term-bob.png": {
    "size": [
     1096,
     328
    ],
-   "bytes": 10463,
-   "sha256": "2d17f09b4eb9c611c6f48ea278214b6103ce41ef694da3ba4e8e17ac5a89635b"
+   "bytes": 10433,
+   "sha256": "27c6d849755529b9525857310fa47a0299dbe5d6a285c37246888c9cbf7ade33"
   },
   "docs/img/term-client-test.png": {
    "size": [
     1096,
     256
    ],
-   "bytes": 7610,
-   "sha256": "ae9971b5785c8015c3ca500466fecfdaee2977750bfca40ac25c90eadf8402d5"
+   "bytes": 7669,
+   "sha256": "b8d083eb60d32fe216880390338df1382c9c9dc421c096096c66f81f4dd71c58"
   },
   "docs/img/term-server.png": {
    "size": [
     1096,
     1120
    ],
-   "bytes": 51765,
-   "sha256": "018b62bce4e2b5c91a51fa8eae6593a209d15d00ab47b7d9abe61505833f3bd3"
+   "bytes": 50591,
+   "sha256": "f308bfc46cbd6481cfa01468e7350ec83fd6963f14a8cd34bc6ef735952454b3"
   }
  }
 }

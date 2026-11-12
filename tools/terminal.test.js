@@ -22,11 +22,11 @@ function links(res) {
 }
 
 const COMMANDS = ['help', '--help', 'features', 'roadmap', 'settings', 'install', 'connect', 'version', 'changelog', 'about',
-  'credits', 'licence', 'license', 'docs', 'links', 'theme', 'clear', 'history'];
+  'credits', 'licence', 'license', 'docs', 'links', 'clear', 'history'];
 
 test('every command answers and links stay on github.com or in the repository', () => {
   for (const c of COMMANDS) {
-    const res = T.run(c, data, { history: ['x'], theme: 'system' });
+    const res = T.run(c, data, { history: ['x'] });
     assert.ok(!res.error, c);
     if (c !== 'clear') assert.ok(res.lines.length > 0, c);
     for (const h of links(res)) assert.match(h, /^(https:\/\/github\.com\/|#)/, c + ' ' + h);
@@ -40,7 +40,7 @@ test('unknown input', () => {
 
 test('help lists every command', () => {
   const t = text(T.run('--help', data));
-  for (const c of ['features', 'roadmap', 'settings', 'install', 'connect', 'version', 'changelog', 'about', 'credits', 'licence', 'docs', 'links', 'theme', 'clear', 'history']) {
+  for (const c of ['features', 'roadmap', 'settings', 'install', 'connect', 'version', 'changelog', 'about', 'credits', 'licence', 'docs', 'links', 'clear', 'history']) {
     assert.ok(t.includes(c), c);
   }
 });
@@ -74,10 +74,7 @@ test('version, roadmap, install, connect use the data', () => {
   assert.ok(text(T.run('connect', data)).includes(data.connect.intro));
 });
 
-test('theme and history and clear', () => {
-  assert.strictEqual(T.run('theme light', data).theme, 'light');
-  assert.match(text(T.run('theme', data, { theme: 'dark' })), /theme: dark/);
-  assert.match(text(T.run('theme pink', data)), /unknown value pink/);
+test('history and clear', () => {
   assert.match(text(T.run('history', data, { history: ['features', 'roadmap'] })), /1 {2}features\n2 {2}roadmap/);
   assert.strictEqual(T.run('clear', data).clear, true);
 });
@@ -94,7 +91,6 @@ test('tab completion', () => {
   assert.strictEqual(T.complete('fea', data).value, 'features ');
   assert.strictEqual(T.complete('features --st', data).value, 'features --status ');
   assert.strictEqual(T.complete('features --status pl', data).value, 'features --status planned ');
-  assert.strictEqual(T.complete('theme d', data).value, 'theme dark ');
   assert.ok(T.complete('c', data).candidates.includes('connect'));
   assert.deepStrictEqual(T.complete('zzz', data).candidates, []);
 });
@@ -125,7 +121,7 @@ test('suggest: flags and flag values', () => {
   assert.match(p.items[0].desc, /^\d+ features$/);
 });
 
-test('suggest: feature ids, settings names, theme values', () => {
+test('suggest: feature ids, settings names', () => {
   const id = data.features[0].id;
   const f = T.suggest('features ' + id.slice(0, 3), data);
   assert.ok(texts(f).includes(id));
@@ -133,10 +129,6 @@ test('suggest: feature ids, settings names, theme values', () => {
   const s = T.suggest('settings -ad', data);
   assert.ok(texts(s).includes('-addr'));
   assert.ok(s.items.every((i) => i.desc));
-  assert.deepStrictEqual(texts(T.suggest('theme ', data)), ['dark', 'light', 'system']);
-  assert.deepStrictEqual(texts(T.suggest('theme d', data)), ['dark']);
-  assert.strictEqual(T.suggest('theme d', data).items[0].replace, 'theme dark ');
-  assert.deepStrictEqual(T.suggest('theme dark ', data).items, []);
 });
 
 test('suggest: nothing for unknown, empty, exact or finished input', () => {
@@ -179,7 +171,7 @@ test('the autocomplete markup is built with DOM calls and carries the combobox a
   }
 });
 
-test('the script has no dynamic code or HTML strings, one network call and only theme storage', () => {
+test('the script has no dynamic code or HTML strings, and one network call', () => {
   for (const bad of ['eval(', 'new Function', 'innerHTML', 'outerHTML', 'insertAdjacentHTML', 'document.write', 'XMLHttpRequest',
     'WebSocket', 'sendBeacon', 'document.cookie', 'sessionStorage', 'indexedDB', 'import(', 'importScripts', "setAttribute('style'"]) {
     assert.ok(!source.includes(bad), bad);
@@ -192,7 +184,6 @@ test('output carries classes for colour, never styles', () => {
   const cls = (res) => res.lines.flatMap((l) => (Array.isArray(l) ? l : [l])).filter((s) => typeof s === 'object').map((s) => s.c);
   assert.ok(cls(T.run('nonsense', data)).includes('err'));
   assert.ok(cls(T.run('features nope', data)).includes('err'));
-  assert.ok(cls(T.run('theme pink', data)).includes('err'));
   assert.ok(cls(T.run('help', data)).includes('cmd'));
   assert.ok(cls(T.run('features', data)).includes('head'));
   assert.ok(cls(T.run('features', data)).includes('id'));
@@ -201,10 +192,12 @@ test('output carries classes for colour, never styles', () => {
   assert.ok(!/\.style\b/.test(source));
 });
 
-test('the script keeps the theme in one place shared by the command and the switch', () => {
-  assert.ok(source.includes("var STORE = 're-psn-theme'"));
-  assert.ok(source.includes('applyTheme(res.theme, true)'));
-  assert.ok(source.includes('[data-theme-set]'));
+test('there is one dark theme: no theme command, switch or stored choice', () => {
+  assert.ok(T.run('theme', data).error);
+  assert.ok(!source.includes('data-theme'));
+  assert.ok(!source.includes('applyTheme'));
+  assert.ok(!source.includes('setItem'));
+  assert.ok(source.includes("removeItem('re-psn-theme')"));
 });
 
 // ---------------------------------------------------------------- the numbered file

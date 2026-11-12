@@ -137,7 +137,7 @@
    "id": "status-page",
    "area": "Status page",
    "feature": "Status page and /api/stats, with a token",
-   "detail": "A read-only page and JSON on a separate listener, off unless `-http` names an address (`127.0.0.1:36101` keeps it on localhost). `-http-token` requires a token (`Authorization: Bearer`, or `?token=`), and the server warns at start when the page is reachable from elsewhere without one. Since v0.4.0 the page uses gruvbox-material, Rooms/Leaderboards tabs, System/Light/Dark and browser-local text size, spacing and contrast-checked custom colours.",
+   "detail": "A read-only page and JSON on a separate listener, off unless `-http` names an address (`127.0.0.1:36101` keeps it on localhost). `-http-token` requires a token (`Authorization: Bearer`, or `?token=`), and the server warns at start when the page is reachable from elsewhere without one. Since v0.4.0 the page uses the project palette (dark, with the gruvbox-material light mode), Rooms/Leaderboards tabs, System/Light/Dark and browser-local text size, spacing and contrast-checked custom colours.",
    "status": "available",
    "since": "0.2.0",
    "evidence": "server/api.go, TestStatusToken, TestReachable, TestStatusPageOff, TestStatusPageOn, docs/status.png, server/status_theme_test.go, TestStatusTerminalPage, TestStatusThemeAuthenticationAndHeaders, tools/status_browser_check.mjs, docs/running.md",
@@ -557,7 +557,7 @@
    "id": "app-themes",
    "area": "Client",
    "feature": "Colour themes",
-   "detail": "Colour presets in the desktop apps: gruvbox-material by default, then gruvbox, catppuccin, kanagawa and melange. A preset is a data file shared by the apps and the README art.",
+   "detail": "Colour presets in the desktop apps: the project palette by default, then gruvbox, catppuccin, kanagawa and melange. A preset is a data file shared by the apps and the README art.",
    "status": "planned",
    "since": "",
    "evidence": "",
@@ -749,7 +749,7 @@
    "id": "docs-art",
    "area": "Documentation",
    "feature": "Art generator",
-   "detail": "`tools/art/make_art.py` draws the README banner, a social preview image and terminal images in the gruvbox-material palette (`docs/art/palette.json`), with JetBrains Mono fetched from its tagged release and pinned by SHA-256. Terminal images are drawn only from transcripts of real runs (`docs/art/transcripts/`, recorded by `tools/art/capture.sh`). CI renders again and fails when a byte differs.",
+   "detail": "`tools/art/make_art.py` draws the README banner, a social preview image and terminal images in the project palette (`docs/art/palette.json`), with JetBrains Mono fetched from its tagged release and pinned by SHA-256. Terminal images are drawn only from transcripts of real runs (`docs/art/transcripts/`, recorded by `tools/art/capture.sh`). CI renders again and fails when a byte differs.",
    "status": "available",
    "since": "0.2.0",
    "evidence": "tools/art/make_art.py, tools/art/test_make_art.py, tools/art/art.json, tools/art/capture.sh, docs/art/palette.json, docs/img/banner.png, docs/img/social.png, .github/workflows/ci.yml",
@@ -1312,6 +1312,7 @@
      "**Client:** the receive path checks its allocations (a failure now ends the connection instead of dereferencing NULL), a reply frame too short to hold its request id is dropped instead of being delivered as a push, and ..."
     ],
     "Changed": [
+     "**Docs and tooling:** the website, the README images, the favicon, the README badges, the desktop app's dark colours and the status page's dark colours now follow the colours of https://undecuple.github.io/me/ ...",
      "**Docs and tooling:** the features list says `since` 0.5.0, not `main`, for the twelve rows that shipped in v0.5.0 (LAN discovery in the server, the C client and the app, game names, verified player counts, server state ...",
      "**Docs and tooling:** the README settings table now lists all 35 flags (it lacked `-admin`, `-admin-read-token-file`, `-admin-tls-cert`, `-admin-tls-key`, `-discover`, `-name`, `-lan-public-addr`, `-medius`, ...",
      "**Docs and tooling:** `docs/side-service.md` says re-psn offers none of the platform social services (sign-in ticket, friends, presence, block list, recent players, messages, lookup by online ID, account region and age) ...",
@@ -1323,7 +1324,7 @@
    "counts": {
     "Added": 15,
     "Fixed": 10,
-    "Changed": 6
+    "Changed": 7
    }
   },
   "latest": {
@@ -1375,7 +1376,7 @@
   "sp00nz ([sp00nznet](https://github.com/sp00nznet)) wrote [psnr](https://github.com/sp00nznet/psnr): the server, the C client, the protocol, NAT traversal, the relay and the NAT lab.",
   "undecuple ([undecuple](https://github.com/undecuple)) maintains re-psn and wrote everything added since the fork: the release and container tooling, the AppImage, hardening and limits, rooms and invite codes, the desktop app, this website, the documentation and the tests.",
   "[ps3recomp](https://github.com/sp00nznet/ps3recomp) is the recompiler whose NP modules use the client.",
-  "Colours from [gruvbox-material](https://github.com/sainnhe/gruvbox-material) (MIT, Copyright (c) 2020 sainnhe)."
+  "The site's colours follow the [undecuple page](https://undecuple.github.io/me/), which credits them to [guts.nvim](https://github.com/vossenwout/guts.nvim) (that repository states no licence). The light colours of the desktop app and the status page are from [gruvbox-material](https://github.com/sainnhe/gruvbox-material) (MIT, Copyright (c) 2020 sainnhe)."
  ],
  "licence": "MIT, see [LICENSE](LICENSE); upstream's copyright line is kept and a line for the fork's changes is added. PlayStation, PS3 and PSN are trademarks of Sony Interactive Entertainment, used only to say what the server stands in for.",
  "links": [

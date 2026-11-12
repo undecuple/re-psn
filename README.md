@@ -4,8 +4,8 @@
 
 **Run your own matchmaking and leaderboard server for statically recompiled PS3 games: one small binary, no accounts, no cloud.**
 
-[![CI](https://github.com/undecuple/re-psn/actions/workflows/ci.yml/badge.svg)](https://github.com/undecuple/re-psn/actions/workflows/ci.yml) <!-- version -->![version v0.5.0](https://img.shields.io/badge/pre--release-v0.5.0-906f3a?labelColor=45403d&style=flat-square)<!-- /version --> ![status: alpha](https://img.shields.io/badge/status-alpha-a86438?labelColor=45403d&style=flat-square)
-![licence: MIT](https://img.shields.io/badge/licence-MIT-717943?labelColor=45403d&style=flat-square) [![Ask DeepWiki](https://img.shields.io/badge/DeepWiki-Ask-007ac0)](https://deepwiki.com/undecuple/re-psn)
+[![CI](https://github.com/undecuple/re-psn/actions/workflows/ci.yml/badge.svg)](https://github.com/undecuple/re-psn/actions/workflows/ci.yml) <!-- version -->![version v0.5.0](https://img.shields.io/badge/pre--release-v0.5.0-997e95?labelColor=2b2733&style=flat-square)<!-- /version --> ![status: alpha](https://img.shields.io/badge/status-alpha-a86438?labelColor=45403d&style=flat-square)
+![licence: MIT](https://img.shields.io/badge/licence-MIT-a7d8b0?labelColor=2b2733&style=flat-square) [![Ask DeepWiki](https://img.shields.io/badge/DeepWiki-Ask-007ac0)](https://deepwiki.com/undecuple/re-psn)
 
 > [!IMPORTANT]
 > **Bring your own game.** This repository has no game code, assets, keys, firmware or BIOS, and you need none from it. Play

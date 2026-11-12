@@ -2,7 +2,7 @@
 
    Without this file the page is an ordinary document. With it, the page is laid out as menu, content and a command line.
    The commands answer from data.json (the one request, to the same origin); nothing is sent anywhere, no cookies are set,
-   and the only thing stored is the theme choice (localStorage, optional). Text is built with textContent and DOM nodes,
+   and nothing is stored. Text is built with textContent and DOM nodes,
    never HTML strings, and a link is made only for a github.com address or a path in this repository.
 
    Each answer is shown as a numbered file: a name, a line-number gutter and a frame.
@@ -12,7 +12,6 @@
   'use strict';
 
   var HINT = 'type --help for options';
-  var THEMES = ['dark', 'light', 'system'];
   var HELP = [
     ['--help, help', 'this list'],
     ['features [--status S] [id]', 'features with their status; an id gives the detail and evidence'],
@@ -27,12 +26,11 @@
     ['licence', 'the licence'],
     ['docs', 'the documentation'],
     ['links', 'repository and related links'],
-    ['theme [dark|light|system]', 'appearance'],
     ['clear', 'clear the screen'],
     ['history', 'commands typed in this tab']
   ];
   var COMMANDS = ['--help', 'help', 'features', 'roadmap', 'settings', 'install', 'connect', 'version', 'changelog',
-    'about', 'credits', 'licence', 'license', 'docs', 'links', 'theme', 'clear', 'history'];
+    'about', 'credits', 'licence', 'license', 'docs', 'links', 'clear', 'history'];
   var CANONICAL = { '--help': 'help', license: 'licence' };
 
   // ------------------------------------------------------------------ pure part
@@ -247,15 +245,6 @@
       case 'links':
         res = { lines: data.links.map(function (l) { return [l.title + '  ', link(l.url, l.url, data)]; }) };
         break;
-      case 'theme':
-        if (!args.length) {
-          res = { lines: ['theme: ' + (ctx.theme || 'system') + ' (dark, light or system)'] };
-        } else if (THEMES.indexOf(args[0]) < 0) {
-          res = { lines: [err('theme: unknown value ' + args[0].slice(0, 40) + ', use dark, light or system')] };
-        } else {
-          res = { lines: ['theme: ' + args[0]], theme: args[0] };
-        }
-        break;
       case 'clear': res = { lines: [], clear: true }; break;
       case 'history':
         res = { lines: (ctx.history && ctx.history.length) ? ctx.history.map(function (h, i) { return (i + 1) + '  ' + h; }) : ['No history yet.'] };
@@ -310,8 +299,6 @@
         pool = prev === '--status' ? statusList(data) : ['--status'].concat(data.features.map(function (f) { return f.id; }));
       } else if (word === 'settings') {
         pool = data.settings.map(function (s) { return s.flag; });
-      } else if (word === 'theme') {
-        pool = THEMES;
       } else {
         pool = [];
       }
@@ -332,7 +319,6 @@
     h[0].split(', ').forEach(function (n) { CMD_DESC[n.split(' ')[0]] = h[1]; });
   });
   CMD_DESC.license = CMD_DESC.licence;
-  var THEME_DESC = { dark: 'dark colours', light: 'light colours', system: 'follow the system setting' };
 
   function plain(text) { return String(text).replace(/`/g, '').replace(/\[([^\]]+)\]\([^)\s]+\)/g, '$1').replace(/\s+/g, ' ').trim(); }
 
@@ -372,8 +358,6 @@
         }
       } else if (word === 'settings' && tokens.length === 1) {
         pool = data.settings.map(function (s) { return { text: s.flag, desc: plain(s.description) }; });
-      } else if (word === 'theme' && tokens.length === 1) {
-        pool = THEMES.map(function (t) { return { text: t, desc: THEME_DESC[t] }; });
       }
     }
     return pick(pool, cur, head);
@@ -497,7 +481,6 @@
   var MENU = [['about', 'Overview'], ['features', 'Features'], ['roadmap', 'Roadmap'], ['install', 'Install'],
     ['settings', 'Settings'], ['connect', 'Connect'], ['changelog', 'Changelog'], ['docs', 'Docs']];
   var FKEYS = { F1: 'help', F2: 'features', F3: 'install', F4: 'settings', F5: 'connect' };
-  var STORE = 're-psn-theme';
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -506,60 +489,9 @@
     return n;
   }
 
-  function storedTheme() {
-    try {
-      var t = root.localStorage.getItem(STORE);
-      return THEMES.indexOf(t) >= 0 ? t : 'system';
-    } catch (e) { return 'system'; }
-  }
-
-  // The one theme state: data-theme on the root, the stored choice, and every System / Light / Dark control on the page.
-  var theme = 'system';
-
-  function syncControls() {
-    var btns = document.querySelectorAll('[data-theme-set]');
-    for (var i = 0; i < btns.length; i++) {
-      btns[i].setAttribute('aria-pressed', btns[i].getAttribute('data-theme-set') === theme ? 'true' : 'false');
-    }
-  }
-
-  function applyTheme(t, save) {
-    var de = document.documentElement;
-    theme = THEMES.indexOf(t) >= 0 ? t : 'system';
-    if (theme === 'dark' || theme === 'light') { de.setAttribute('data-theme', theme); } else { de.removeAttribute('data-theme'); }
-    if (save) {
-      try {
-        if (theme === 'system') { root.localStorage.removeItem(STORE); } else { root.localStorage.setItem(STORE, theme); }
-      } catch (e) { /* storage is optional */ }
-    }
-    syncControls();
-    root.dispatchEvent(new Event('re-psn-theme-change'));
-  }
-
-  // A System / Light / Dark button group. The one in the page header is generated by tools/site.py; the interface makes its own.
-  function themeControl() {
-    var g = el('div', 'theme');
-    g.setAttribute('role', 'group');
-    g.setAttribute('aria-label', 'Theme');
-    g.appendChild(el('span', 'theme-label', 'Theme'));
-    [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']].forEach(function (o) {
-      var b = el('button', 'theme-btn', o[1]);
-      b.type = 'button';
-      b.setAttribute('data-theme-set', o[0]);
-      b.setAttribute('aria-pressed', 'false');
-      g.appendChild(b);
-    });
-    return g;
-  }
-
-  // Runs as soon as the script does (it is deferred, so after the page is parsed and before data.json arrives).
-  applyTheme(storedTheme(), false);
+  // The site has one theme. A choice stored by an earlier version of this page is removed.
+  try { root.localStorage.removeItem('re-psn-theme'); } catch (e) { /* storage is optional */ }
   document.documentElement.classList.add('js');
-  document.addEventListener('click', function (e) {
-    var b = e.target.closest ? e.target.closest('[data-theme-set]') : null;
-    if (b) { applyTheme(b.getAttribute('data-theme-set'), true); }
-  });
-  syncControls();
 
   function mount(data) {
     var history = [];
@@ -575,7 +507,6 @@
     title.appendChild(el('span', 'tui-ver', 'v' + data.version + ' · ' + data.stage));
     var plain = el('button', 'tui-plain', 'plain view');
     plain.type = 'button';
-    title.appendChild(themeControl());
     title.appendChild(plain);
     tui.appendChild(title);
 
@@ -676,7 +607,7 @@
 
     var chips = el('ul', 'tui-chips');
     chips.setAttribute('aria-label', 'Commands');
-    ['help', 'features', 'roadmap', 'settings', 'install', 'connect', 'changelog', 'docs', 'links', 'theme'].forEach(function (c) {
+    ['help', 'features', 'roadmap', 'settings', 'install', 'connect', 'changelog', 'docs', 'links'].forEach(function (c) {
       var li = el('li');
       var b = el('button', 'chip', c);
       b.type = 'button';
@@ -724,8 +655,7 @@
       if (!t) { return; }
       if (history[history.length - 1] !== t) { history.push(t); }
       histPos = history.length;
-      var res = run(t, data, { history: history, theme: theme });
-      if (res.theme) { applyTheme(res.theme, true); }
+      var res = run(t, data, { history: history });
       paint(res, t);
       if (res.cmd) { current = res.cmd; mark(current); }
       setView('content');
