@@ -1097,6 +1097,30 @@
    "description": "Token the status page requires (Authorization: Bearer, or ?token=)"
   },
   {
+   "flag": "-admin",
+   "variable": "RE_PSN_ADMIN",
+   "default": "none (off)",
+   "description": "**Experimental.** A read-only admin API on its own address; needs -admin-read-token-file, and an address that is not loopback also needs -admin-tls-cert and -admin-tls-key ([admin-api.md](docs/admin-api.md)); not in v0.5.0"
+  },
+  {
+   "flag": "-admin-read-token-file",
+   "variable": "RE_PSN_ADMIN_READ_TOKEN_FILE",
+   "default": "none",
+   "description": "File holding the admin read token (at least 32 characters, mode 0600), read again on SIGHUP; not in v0.5.0"
+  },
+  {
+   "flag": "-admin-tls-cert",
+   "variable": "RE_PSN_ADMIN_TLS_CERT",
+   "default": "none",
+   "description": "Certificate file for the admin listener (TLS 1.2 or newer); not in v0.5.0"
+  },
+  {
+   "flag": "-admin-tls-key",
+   "variable": "RE_PSN_ADMIN_TLS_KEY",
+   "default": "none",
+   "description": "Private key file for the admin listener; not in v0.5.0"
+  },
+  {
    "flag": "-max-rooms",
    "variable": "RE_PSN_MAX_ROOMS",
    "default": "1000",
@@ -1199,6 +1223,42 @@
    "description": "Comma-separated communication IDs of titles that use no peer traffic. For their players the server answers no UDP probe, relays nothing and routes nothing, and HELLO_ACK says the relay is off; rooms and scores work as usual. Other titles are unaffected; not in v0.5.0"
   },
   {
+   "flag": "-discover",
+   "variable": "RE_PSN_DISCOVER",
+   "default": "off",
+   "description": "Answer LAN discovery broadcasts on the game UDP port, from private-network senders only ([connecting.md](docs/connecting.md#finding-a-server-on-the-lan))"
+  },
+  {
+   "flag": "-name",
+   "variable": "RE_PSN_NAME",
+   "default": "none",
+   "description": "Server name shown in LAN discovery: at most 24 printable ASCII bytes; shown only with -discover"
+  },
+  {
+   "flag": "-lan-public-addr",
+   "variable": "RE_PSN_LAN_PUBLIC_ADDR",
+   "default": "none",
+   "description": "IPv4 address given to players outside the LAN as the address of players who connected over a private, carrier-grade NAT or link-local address; the host must forward each such player's P2P port"
+  },
+  {
+   "flag": "-medius",
+   "variable": "RE_PSN_MEDIUS",
+   "default": "off",
+   "description": "Medius compatibility switch. **No Medius protocol is implemented** ([scope](docs/medius-scope.md)): it opens the -medius-port listener, which closes every connection; not in v0.5.0"
+  },
+  {
+   "flag": "-medius-port",
+   "variable": "RE_PSN_MEDIUS_PORT",
+   "default": "10071",
+   "description": "TCP port of the Medius listener; a value other than the default needs -medius; not in v0.5.0"
+  },
+  {
+   "flag": "-medius-addr",
+   "variable": "RE_PSN_MEDIUS_ADDR",
+   "default": "127.0.0.1",
+   "description": "Address of the Medius listener: a loopback, private or link-local IP address, or 0.0.0.0 / :: in a container; a value other than the default needs -medius; not in v0.5.0"
+  },
+  {
    "flag": "-db",
    "variable": "RE_PSN_DB",
    "default": "off",
@@ -1252,6 +1312,7 @@
      "**Client:** the receive path checks its allocations (a failure now ends the connection instead of dereferencing NULL), a reply frame too short to hold its request id is dropped instead of being delivered as a push, and ..."
     ],
     "Changed": [
+     "**Docs and tooling:** the README settings table now lists all 35 flags (it lacked `-admin`, `-admin-read-token-file`, `-admin-tls-cert`, `-admin-tls-key`, `-discover`, `-name`, `-lan-public-addr`, `-medius`, ...",
      "**Docs and tooling:** `docs/side-service.md` says re-psn offers none of the platform social services (sign-in ticket, friends, presence, block list, recent players, messages, lookup by online ID, account region and age) ...",
      "**Docs and tooling:** README no longer says the desktop app has no release binary: from v0.5.0 a release carries the app archives (the \"Release archives\" section already said so).",
      "**Docs and tooling:** README and ROADMAP no longer call ps3recomp#200 a draft: GitHub shows it merged into ps3recomp's `master` on 2026-10-07.",
@@ -1261,7 +1322,7 @@
    "counts": {
     "Added": 15,
     "Fixed": 10,
-    "Changed": 4
+    "Changed": 5
    }
   },
   "latest": {
