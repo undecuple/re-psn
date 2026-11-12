@@ -16,7 +16,7 @@ nginx, HAProxy and Caddy configs. They are text files; nothing here runs by itse
 | File | What it is |
 |---|---|
 | `re-psn.env.example` | Every setting, commented, with its default, as `RE_PSN_*` variables (the old `PSNR_*` names still work and are listed at the end). Copy it to `re-psn.env` and edit; keep it private. |
-| `re-psn.service` | A systemd unit (Linux) for `/usr/local/bin/re-psn`. It reads `/etc/psnr/psnr.env`, then `/etc/re-psn/re-psn.env` (both optional; the second wins), and keeps the state directory `/var/lib/psnr`. |
+| `re-psn.service` | A systemd unit (Linux) for `/usr/local/bin/re-psn`. It reads `/etc/psnr/psnr.env`, then `/etc/re-psn/re-psn.env` (both optional; the second wins), keeps the state directory `/var/lib/psnr`, and allows 16384 open files (`LimitNOFILE`; raise it if you raise `RE_PSN_MAX_CONNS` above 8000). |
 | `traefik/` | Traefik, a TCP router with PROXY protocol v2. Tested with Traefik 3.1 under Podman. |
 | `nginx/psnr.conf` | nginx `stream` with PROXY protocol v1. Not run. |
 | `haproxy/haproxy.cfg` | HAProxy with `send-proxy-v2`. Not run. |

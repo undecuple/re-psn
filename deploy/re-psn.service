@@ -19,6 +19,8 @@ RestartSec=2
 DynamicUser=yes
 # a log file, if you set RE_PSN_LOG_FILE, belongs under /var/lib/psnr (the name is kept for existing installs)
 StateDirectory=psnr
+# open files: the default -max-conns is 4096 and a relayed stream holds two sockets, so keep this above twice the value you set
+LimitNOFILE=16384
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes
