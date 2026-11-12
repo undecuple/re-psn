@@ -94,6 +94,10 @@ tagged source.
    newest release and its image are updated in one pull request: the "newest" line and the container paragraph in `README.md`, and the
    image tag in `docker/README.md` (`docker pull`, and "the current image"). Check that the image exists first (the container run
    passed, and the manifest answers without a login).
+   The same pull request sets `since` in `docs/features.tsv` from `main` to the new version for every row that the tag contains:
+   list the candidates with `awk -F'\t' '$6=="main"{print $1}' docs/features.tsv`, check each against the tagged tree (`git grep` at
+   the tag, and the version's CHANGELOG section), leave a row whose feature is not in the tag at `main`, then run
+   `python3 tools/features.py` and `python3 tools/site.py`. The bump script does not touch this column.
 
 > [!NOTE]
 > One bump is one commit, made by the maintainer. A fix found after the tag goes into the next pre-release, never into a
