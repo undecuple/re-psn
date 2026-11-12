@@ -131,6 +131,15 @@ launcher. Leave tracing unset unless needed: `PS3_NET_TRACE=0` still enables pre
 [Boot runner](https://github.com/sp00nznet/ps3recomp/blob/de4f090328ea08bef6b2f15caec0b85e343a7ece/runtime/ppu/tests/boot_main.cpp#L1093-L1112),
 [template launcher](https://github.com/sp00nznet/ps3recomp/blob/de4f090328ea08bef6b2f15caec0b85e343a7ece/templates/project/main.cpp#L405-L450).
 
+### Let the host refuse a connection
+
+A runtime that restricts where a game may connect can register one callback with `psnr_set_connect_policy(fn, user)` before the first
+`psnr_connect`. The client asks it before it opens a TCP connection: for the server connection (once per resolved address, with the
+host as typed) and for each relay leg. The callback returns nonzero to allow and 0 to refuse. A refused address is skipped; if every
+address is refused, `psnr_connect` returns NULL and `psnr_connect_error()` is `PSNR_E_POLICY`. A refused relay leg returns -1 and opens
+no socket. With no callback registered nothing changes. The registration is process-wide and not locked, so set it from the thread
+that connects, and do not call the library from inside the callback. It does not cover `psnr_discover` or the title's own P2P socket.
+
 ### Preserve callback and connection ownership
 
 Matching2 context start or Score title-context creation initiates the shared connection. It uses the title's NP

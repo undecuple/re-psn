@@ -21,15 +21,15 @@
  * relay stream opens (psnr_stream_connect and psnr_stream_accept return it to
  * the caller, who owns and closes it) and, only if the title calls
  * psnr_discover, one temporary UDP socket that call opens and closes before it
- * returns. It never opens, reads, writes or closes
+ * returns. A host can refuse the first two with psnr_set_connect_policy. It never opens, reads, writes or closes
  * a socket of the title's; the UDP peer socket is the title's, and the library
  * only builds and reads the packets it exchanges. Connecting and disconnecting
  * are explicit: nothing connects until the title calls psnr_connect, nothing
  * reconnects by itself (psnr_poll returns -1 once the connection is lost), and
  * psnr_close closes it. A title that never calls psnr_connect sends nothing.
  * Process-wide effects: on Windows each psnr_connect and psnr_discover calls WSAStartup (2.2) and
- * the library never calls WSACleanup; psnr_connect_error is one process-global
- * value; the library starts no threads and installs no signal handlers or
+ * the library never calls WSACleanup; psnr_connect_error and the connect policy
+ * (psnr_set_connect_policy) are process-global values; the library starts no threads and installs no signal handlers or
  * timers. It sends with plain send(), so on POSIX a write to a connection the
  * server has closed can raise SIGPIPE unless the title ignores that signal. It
  * resolves and connects over IPv4 only.
@@ -73,6 +73,10 @@ enum {
     PSNR_E_NAME_TAKEN = 8, PSNR_E_NO_RELAY = 9
 };
 
+/* Set by the client itself, not sent by a server: the host's connect policy refused every address
+ * (see psnr_set_connect_policy). Reported by psnr_connect_error. */
+#define PSNR_E_POLICY 1000
+
 typedef struct psnr_client psnr_client;
 
 /* One reply or push. req is 0 for pushes. data excludes the request id and
@@ -107,6 +111,27 @@ psnr_client* psnr_connect(const char* host, uint16_t port,
 psnr_client* psnr_connect_timeout(const char* host, uint16_t port,
                                   const char* comm_id, const char* online_id, uint16_t p2p_port,
                                   uint32_t* out_user_id, uint8_t out_public_ip[4], int timeout_ms);
+
+/* Connect policy: lets the host title (or the runtime around it) refuse a TCP connection before the
+ * client opens it. Why a callback: the client opens these sockets itself, so a host that restricts
+ * where a game may connect cannot otherwise see or stop them.
+ *   PSNR_PURPOSE_SERVER  the connection psnr_connect or psnr_connect_timeout makes. host is the name
+ *                        as typed; ip is one address it resolved to. The callback runs once per
+ *                        resolved address, before the socket is made; a refused address is skipped
+ *                        and the next one tried. If every address is refused, the connect returns
+ *                        NULL and psnr_connect_error() is PSNR_E_POLICY.
+ *   PSNR_PURPOSE_STREAM  a relay leg (psnr_stream_connect, psnr_stream_accept) to the server the
+ *                        client is connected to. host is NULL; ip is the server's address. A refusal
+ *                        returns -1 and opens nothing.
+ * The callback returns nonzero to allow and 0 to refuse. No callback registered (the default, or
+ * NULL) allows everything, exactly as before. The registration is process-wide, because
+ * psnr_connect has no client yet: set it before the first connect, from the thread that connects;
+ * the library keeps no lock. The callback must not call back into the library. Not covered:
+ * psnr_discover (its UDP socket exists only if the title calls it) and the title's own P2P socket. */
+enum { PSNR_PURPOSE_SERVER = 1, PSNR_PURPOSE_STREAM = 2 };
+typedef int (*psnr_connect_policy_fn)(void* user, int purpose, const char* host,
+                                      const uint8_t ip[4], uint16_t port);
+void psnr_set_connect_policy(psnr_connect_policy_fn fn, void* user);
 
 /* NAT traversal (docs/api.md, "UDP"). The caller owns the P2P socket; these
  * build and read the packets it exchanges. Every one starts with "PSNR".

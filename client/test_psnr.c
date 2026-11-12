@@ -360,6 +360,69 @@ static void connect_timeout_test(void)
 #endif
 }
 
+/* The host's connect policy (psnr_set_connect_policy). */
+struct policy_log {
+    int calls, server_calls, stream_calls, allow;
+    char host[64];
+    uint8_t ip[4];
+    uint16_t port;
+};
+
+static int policy_cb(void* user, int purpose, const char* host, const uint8_t ip[4], uint16_t port)
+{
+    struct policy_log* l = (struct policy_log*)user;
+    l->calls++;
+    if (purpose == PSNR_PURPOSE_SERVER) {
+        l->server_calls++;
+        snprintf(l->host, sizeof(l->host), "%s", host ? host : "(null)");
+        memcpy(l->ip, ip, 4);
+        l->port = port;
+    } else if (purpose == PSNR_PURPOSE_STREAM) {
+        assert(host == NULL);
+        l->stream_calls++;
+    }
+    return l->allow;
+}
+
+static void policy_connect_tests(const char* host, uint16_t port)
+{
+    struct policy_log l;
+    psnr_client* c;
+    memset(&l, 0, sizeof(l));
+    psnr_set_connect_policy(policy_cb, &l);
+
+    /* refused: no connection is made, and the error says why */
+    c = psnr_connect(host, port, COMM, "policy1", 0, NULL, NULL);
+    assert(c == NULL && psnr_connect_error() == PSNR_E_POLICY);
+    assert(l.server_calls >= 1 && strcmp(l.host, host) == 0 && l.port == port);
+    if (strcmp(host, "127.0.0.1") == 0) assert(l.ip[0] == 127 && l.ip[3] == 1);
+    l.server_calls = 0;
+    c = psnr_connect_timeout(host, port, COMM, "policy1", 0, NULL, NULL, 2000);
+    assert(c == NULL && psnr_connect_error() == PSNR_E_POLICY && l.server_calls >= 1);
+
+    /* allowed: the same call connects, and the callback saw it first */
+    l.allow = 1;
+    l.server_calls = 0;
+    c = psnr_connect(host, port, COMM, "policy1", 0, NULL, NULL);
+    assert(c != NULL && l.server_calls == 1 && psnr_connect_error() == 0);
+    psnr_close(c);
+
+    /* a refused relay leg returns -1 without opening anything; the callback is asked first */
+    c = psnr_connect(host, port, COMM, "policy2", 0, NULL, NULL);
+    assert(c != NULL);
+    l.allow = 0;
+    l.stream_calls = 0;
+    assert(psnr_stream_connect(c, 12345, 1, 500) == -1 && l.stream_calls == 1);
+    assert(psnr_stream_accept(c, 12345, 500) == -1 && l.stream_calls == 2);
+    psnr_close(c);
+
+    /* no callback: everything is allowed again */
+    psnr_set_connect_policy(NULL, NULL);
+    c = psnr_connect(host, port, COMM, "policy3", 0, NULL, NULL);
+    assert(c != NULL);
+    psnr_close(c);
+}
+
 int main(int argc, char** argv)
 {
     const char* host = argc > 1 ? argv[1] : "127.0.0.1";
@@ -371,6 +434,7 @@ int main(int argc, char** argv)
     name_limit_tests(host, port);
     discover_tests();
     connect_timeout_test();
+    policy_connect_tests(host, port);
     psnr_client* a = psnr_connect(host, port, COMM, "alice", 3658, &ida, ip);
     psnr_client* b = psnr_connect_timeout(host, port, COMM, "bob", 3659, &idb, ip, 5000);
     assert(a && b && ida != idb);
