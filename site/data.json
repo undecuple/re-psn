@@ -4,7 +4,7 @@
  "repository": "https://github.com/undecuple/re-psn",
  "go": "1.22",
  "status_counts": {
-  "available": 42,
+  "available": 43,
   "unverified": 3,
   "partial": 9,
   "in-progress": 0,
@@ -866,6 +866,18 @@
    "status_class": "ok"
   },
   {
+   "id": "net-caps",
+   "area": "Network",
+   "feature": "Capability report",
+   "detail": "`GET_CAPS` (0x04) after HELLO returns `CAPS` (0x94): a bit set of what this server offers this player (rooms, scores, room codes, peer keys, the UDP probe, the relay, LAN discovery) and the server version. The probe and relay bits are per title, so a title in `-no-peer-titles` sees them clear. The C client has the constants and `psnr_caps_parse`.",
+   "status": "available",
+   "since": "main",
+   "evidence": "server/caps.go, TestCapsDefault, TestCapsRelayDiscoverAndNoPeer, TestCapsNeedsHello, client/psnr.c, client/test_psnr.c",
+   "note": "Not in v0.5.0. A server before this answers the request with ERROR 1. Tested on loopback with a test client and the C client; no real title asks for it yet.",
+   "status_label": "available",
+   "status_class": "ok"
+  },
+  {
    "id": "net-peer-keys",
    "area": "Network",
    "feature": "Peer keys (server side)",
@@ -1010,6 +1022,7 @@
    "status-latency",
    "net-relay-force",
    "net-no-peer-titles",
+   "net-caps",
    "net-peer-keys",
    "net-lan-public-addr",
    "net-lan-discover",
@@ -1211,6 +1224,7 @@
    "sections": {
     "Added": [
      "**Client:** `psnr_set_connect_policy(fn, user)` (`client/psnr.h`): the host registers one callback that the C client asks before it opens a TCP connection, so a runtime that restricts where a game may connect can refuse ...",
+     "**Server:** a capability report (#77, item 3): `GET_CAPS` (0x04, no body, after HELLO) is answered with `CAPS` (0x94): `bits u32` and the server version as a blob.",
      "**Deploy:** `docker/docker-compose.yml` and `docker/docker-compose.host.yml` now run the container as user 10001 with all capabilities dropped, `no-new-privileges` and a read-only root filesystem with a 16 MB tmpfs on ...",
      "**Deploy:** `deploy/re-psn.service` sets `LimitNOFILE=16384`, so a server at the default `-max-conns` (4096, a relayed stream counting two sockets) stays under the file-descriptor limit.",
      "**Network:** `-relay-idle` (`RE_PSN_RELAY_IDLE`, default 600 seconds; 0 for never) closes a relay TCP stream that has carried no bytes in either direction for that long, and a write to a stream leg that the peer does ...",
@@ -1243,7 +1257,7 @@
     ]
    },
    "counts": {
-    "Added": 13,
+    "Added": 14,
     "Fixed": 9,
     "Changed": 4
    }

@@ -46,14 +46,14 @@ extern "C" {
 
 /* Message types; payloads in docs/api.md. */
 enum {
-    PSNR_HELLO = 0x01, PSNR_HEARTBEAT = 0x02, PSNR_PEER_AUTH = 0x03,
+    PSNR_HELLO = 0x01, PSNR_HEARTBEAT = 0x02, PSNR_PEER_AUTH = 0x03, PSNR_GET_CAPS = 0x04,
     PSNR_CREATE_ROOM = 0x10, PSNR_SEARCH_ROOMS = 0x11, PSNR_JOIN_ROOM = 0x12,
     PSNR_LEAVE_ROOM = 0x13, PSNR_SET_ROOM_DATA = 0x14, PSNR_ROOM_MESSAGE = 0x15,
     PSNR_KICK_MEMBER = 0x16, PSNR_SET_ROOM_ACCESS = 0x17, PSNR_JOIN_BY_CODE = 0x18,
     PSNR_GET_ROOM_ACCESS = 0x19,
     PSNR_RECORD_SCORE = 0x20, PSNR_GET_RANKING = 0x21, PSNR_GET_RANKING_BY_ID = 0x22,
 
-    PSNR_HELLO_ACK = 0x81, PSNR_ROOM_JOINED = 0x90, PSNR_ROOM_LIST = 0x91,
+    PSNR_HELLO_ACK = 0x81, PSNR_CAPS = 0x94, PSNR_ROOM_JOINED = 0x90, PSNR_ROOM_LIST = 0x91,
     PSNR_ROOM_ACCESS = 0x97, PSNR_OK = 0x93, PSNR_SCORE_RECORDED = 0xB0, PSNR_RANKING = 0xB1,
     PSNR_ERROR = 0x8F,
 
@@ -319,6 +319,26 @@ int psnr_room_list_parse(const psnr_msg* m, psnr_cursor* c, uint16_t* total); /*
 int psnr_room_next(psnr_cursor* c, psnr_room* out);
 int psnr_ranking_parse(const psnr_msg* m, psnr_cursor* c, uint32_t* total);   /* RANKING; 1 ok, 0 bad */
 int psnr_rank_next(psnr_cursor* c, psnr_rank* out);
+
+/* Capability report. Send PSNR_GET_CAPS (no body, after HELLO) with psnr_call; the reply is PSNR_CAPS, or a
+ * PSNR_ERROR with PSNR_E_BAD_REQUEST from a server that predates it (treat that as "nothing reported").
+ * A clear bit means the server does not offer the feature to this player; ignore bits you do not know. The
+ * probe and relay bits are per title: a server can turn them off for a title (-no-peer-titles). */
+enum {
+    PSNR_CAP_ROOMS = 1u << 0,      /* create, search, join and leave rooms */
+    PSNR_CAP_SCORES = 1u << 1,     /* record and read scores */
+    PSNR_CAP_ROOM_CODES = 1u << 2, /* invite-only rooms and join by code */
+    PSNR_CAP_PEER_KEYS = 1u << 3,  /* PEER_AUTH and PEER_KEY pushes */
+    PSNR_CAP_PROBE = 1u << 4,      /* the server answers a UDP PROBE from this player's P2P socket */
+    PSNR_CAP_RELAY = 1u << 5,      /* relay streams and datagrams for this player */
+    PSNR_CAP_DISCOVER = 1u << 6    /* the server answers LAN discovery */
+};
+typedef struct {
+    uint32_t bits;
+    const uint8_t* version;   /* the server's version text, not NUL-terminated; points into the message */
+    uint16_t version_len;
+} psnr_caps;
+int psnr_caps_parse(const psnr_msg* m, psnr_caps* out);   /* CAPS; 1 ok, 0 bad (short, or bytes left over) */
 
 /* Big-endian field helpers for building and reading payloads. */
 static inline uint8_t* psnr_put16(uint8_t* p, uint16_t v) { p[0] = (uint8_t)(v >> 8); p[1] = (uint8_t)v; return p + 2; }

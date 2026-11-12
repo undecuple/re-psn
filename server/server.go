@@ -339,6 +339,8 @@ func (s *Server) handle(c *client, t byte, p []byte) {
 		rt, reply = s.hello(c, req, r)
 	case msgPeerAuth:
 		rt, reply, out = s.peerAuth(c, req)
+	case msgGetCaps:
+		rt, reply = s.getCaps(c, req)
 	case msgHeartbeat:
 		// An optional body is the player's own last round trip: rtt_ms u16, 0xFFFF for unknown. It is reported by the
 		// player, not measured here, and is only displayed. Servers before this ignored any body; a HEARTBEAT without

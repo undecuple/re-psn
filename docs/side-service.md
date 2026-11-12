@@ -57,4 +57,6 @@ decides whether to call `psnr_connect` again. The server drops a connection that
   punch toward), relays nothing, sends no relay route and clears the relay flag in HELLO_ACK; they still use rooms and
   scores. A host who wants no relay for any title leaves `-relay` off; the probe and UDP stay available but unused unless
   the title sends them.
-- The server does not report which features it offers beyond the few HELLO_ACK flags documented in [api.md](api.md).
+- A title can ask what the server offers it: GET_CAPS returns a bit set (rooms, scores, room codes, peer keys, probe, relay,
+  LAN discovery) and the server version, per title ([api.md](api.md), "Capabilities"; `psnr_caps_parse` in the C client). A
+  server from v0.5.0 or before does not know the request and answers it with an error.

@@ -291,6 +291,20 @@ static void decoder_tests(void)
     buf[n] = 0; m.len = (uint32_t)n + 1;
     assert(!psnr_room_joined_parse(&m, &rj));   /* a trailing byte */
 
+    {   /* CAPS: bits 0x13, version "0.5" */
+        psnr_caps cp;
+        p = buf;
+        p = psnr_put32(p, 0x13); p = psnr_put16(p, 3); *p++ = '0'; *p++ = '.'; *p++ = '5';
+        n = (size_t)(p - buf);
+        m.type = PSNR_CAPS; m.data = buf; m.len = (uint32_t)n;
+        assert(psnr_caps_parse(&m, &cp) && cp.bits == 0x13 && cp.version_len == 3 && memcmp(cp.version, "0.5", 3) == 0);
+        for (size_t cut = 0; cut < n; cut++) { m.len = (uint32_t)cut; assert(!psnr_caps_parse(&m, &cp)); }
+        buf[n] = 0; m.len = (uint32_t)n + 1;
+        assert(!psnr_caps_parse(&m, &cp));   /* a trailing byte */
+        m.len = (uint32_t)n; m.type = PSNR_OK;
+        assert(!psnr_caps_parse(&m, &cp));   /* the wrong message type */
+    }
+
     /* RANKING: total 5, one row: rank 1, "dave", score -3, comment "hi", recorded 1700000000 */
     p = buf;
     p = psnr_put32(p, 5); p = psnr_put16(p, 1);
@@ -447,6 +461,15 @@ int main(int argc, char** argv)
         assert(psnr_is_control(punch, sizeof(punch)) && !psnr_is_control("hello", 5));
     }
     relay_source_tests(a);
+    {   /* the server's capability report: rooms and scores on, and the probe for a title that uses peer traffic */
+        psnr_msg cm;
+        psnr_caps cp;
+        assert(psnr_call(a, PSNR_GET_CAPS, NULL, 0, &cm, 2000) == 1);
+        assert(psnr_caps_parse(&cm, &cp));
+        assert((cp.bits & (PSNR_CAP_ROOMS | PSNR_CAP_SCORES | PSNR_CAP_PROBE)) == (PSNR_CAP_ROOMS | PSNR_CAP_SCORES | PSNR_CAP_PROBE));
+        assert(cp.version_len > 0);
+        psnr_msg_free(&cm);
+    }
 
     /* alice hosts: max 4 | flags 0 | external "x" | internal "" | member data "" */
     uint8_t body[64], *p = body;

@@ -750,6 +750,16 @@ static int take_blob(const uint8_t* p, size_t len, const uint8_t** data, uint16_
     return 1;
 }
 
+int psnr_caps_parse(const psnr_msg* m, psnr_caps* out)
+{
+    size_t used;
+    if (m->type != PSNR_CAPS || m->len < 4) return 0;
+    if (!take_blob(m->data + 4, m->len - 4, &out->version, &out->version_len, &used)) return 0;
+    if (used != m->len - 4) return 0;
+    out->bits = psnr_get32(m->data);
+    return 1;
+}
+
 int psnr_member_parse(const uint8_t* p, size_t len, psnr_member* out, size_t* used)
 {
     size_t b;
