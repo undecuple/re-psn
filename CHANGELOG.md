@@ -41,6 +41,7 @@ All notable changes to this project are documented here. The format follows
   `comm_id` over 12 or an `online_id` over 16 bytes instead of cutting it.
 
 ### Changed
+- **Docs and tooling:** the features list says `since` 0.5.0, not `main`, for the twelve rows that shipped in v0.5.0 (LAN discovery in the server, the C client and the app, game names, verified player counts, server state and reported latency in the status page, `-relay-force`, peer keys, `-lan-public-addr`, the app Server tab and the app archives), and `docs/releasing.md` has the step that sets this column at each release.
 - **Docs and tooling:** the README settings table now lists all 35 flags (it lacked `-admin`, `-admin-read-token-file`, `-admin-tls-cert`, `-admin-tls-key`, `-discover`, `-name`, `-lan-public-addr`, `-medius`, `-medius-port` and `-medius-addr`, and said 21), and the Flags table in `docs/running.md` lists `-max-player-rooms`, `-max-conns`, `-max-conns-per-addr` and `-max-req-rate`.
 - **Docs and tooling:** `docs/side-service.md` says re-psn offers none of the platform social services (sign-in ticket, friends, presence, block list, recent players, messages, lookup by online ID, account region and age) and that a title with its own server answers them locally; the planned friends, presence and invites feature is not built.
 - **Docs and tooling:** README no longer says the desktop app has no release binary: from v0.5.0 a release carries the app archives (the "Release archives" section already said so).
