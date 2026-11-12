@@ -45,11 +45,37 @@ TAG_CLASS = {
     "available": "ok", "unverified": "unv", "partial": "warn", "in-progress": "info",
     "planned": "plan", "later": "dim", "declined": "bad",
 }
-# The theme switch. Hidden by the stylesheet until site/terminal.js runs (html.js), because it does nothing without script.
-THEME_CONTROL = ('<div class="theme" role="group" aria-label="Theme"><span class="theme-label">Theme</span>'
-                 + "".join(f'<button type="button" class="theme-btn" data-theme-set="{k}" aria-pressed="false">{label}</button>'
-                           for k, label in (("system", "System"), ("light", "Light"), ("dark", "Dark")))
-                 + '</div>\n')
+# The banner: the name in pixel letters inside a double frame, as on the undecuple page. Drawn with classes (the stylesheet sets the
+# colours from the palette tokens, since the page allows no inline style); the title bar below it carries the real text.
+GLYPHS = {
+    "R": ("11110", "10001", "10001", "11110", "10100", "10010", "10001"),
+    "E": ("11111", "10000", "10000", "11110", "10000", "10000", "11111"),
+    ":": ("0", "0", "1", "0", "0", "1", "0"),
+    "P": ("11110", "10001", "10001", "11110", "10000", "10000", "10000"),
+    "S": ("01111", "10000", "10000", "01110", "00001", "00001", "11110"),
+    "N": ("10001", "11001", "10101", "10101", "10011", "10001", "10001"),
+}
+
+
+def banner_svg():
+    cell, x0, y0 = 11, 44, 46
+    x, cells = x0, []
+    for ch in "RE:PSN":
+        rows = GLYPHS[ch]
+        for r, row in enumerate(rows):
+            for c, bit in enumerate(row):
+                if bit == "1":
+                    cells.append(f"M{x + c * cell} {y0 + r * cell}h{cell}v{cell}h-{cell}z")
+        x += (len(rows[0]) + 1) * cell
+    return ('<svg class="banner" viewBox="0 0 671 200" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">'
+            '<rect class="bn-frame" x="3" y="3" width="665" height="194"/><rect class="bn-frame" x="8" y="8" width="655" height="184"/>'
+            '<text class="bn-sub" x="647" y="34" text-anchor="end" font-family="monospace" font-size="14">self-hosted</text>'
+            f'<path class="bn-name" d="{"".join(cells)}"/>'
+            '<path class="bn-rule" d="M8 146H663"/>'
+            '<text class="bn-text" xml:space="preserve" x="335" y="176" text-anchor="middle" font-family="monospace" font-size="16" letter-spacing="8">'
+            'R O O M S   A N D   L E A D E R B O A R D S</text></svg>\n')
+
+
 # roadmap group -> the statuses in it, in the order the page shows them
 ROADMAP = (
     ("Done", ("available", "unverified", "partial")),
@@ -75,7 +101,7 @@ CREDITS = (
     "container tooling, the AppImage, hardening and limits, rooms and invite codes, the desktop app, this website, the documentation "
     "and the tests.",
     "[ps3recomp](https://github.com/sp00nznet/ps3recomp) is the recompiler whose NP modules use the client.",
-    "Colours from [gruvbox-material](https://github.com/sainnhe/gruvbox-material) (MIT, Copyright (c) 2020 sainnhe).",
+    "The site's colours follow the [undecuple page](https://undecuple.github.io/me/), which credits them to [guts.nvim](https://github.com/vossenwout/guts.nvim) (that repository states no licence). The light colours of the desktop app and the status page are from [gruvbox-material](https://github.com/sainnhe/gruvbox-material) (MIT, Copyright (c) 2020 sainnhe).",
 )
 LICENCE = ("MIT, see [LICENSE](LICENSE); upstream's copyright line is kept and a line for the fork's changes is added. PlayStation, PS3 and PSN are "
            "trademarks of Sony Interactive Entertainment, used only to say what the server stands in for.")
@@ -396,14 +422,14 @@ def render_page(data):
     w('<html lang="en">\n<head>\n<meta charset="utf-8">\n')
     w('<meta name="viewport" content="width=device-width, initial-scale=1">\n')
     w(f'<meta http-equiv="Content-Security-Policy" content="{esc(CSP)}">\n')
-    w('<meta name="color-scheme" content="dark light">\n')
+    w('<meta name="color-scheme" content="dark">\n')
     w(f'<meta name="description" content="Matchmaking rooms and leaderboards for statically recompiled PS3 games, with NAT traversal and an optional relay. {esc(UNOFFICIAL)}">\n')
     w(f'<title>{esc(TITLE)}</title>\n')
     w('<link rel="icon" href="favicon.svg" type="image/svg+xml">\n<link rel="stylesheet" href="style.css">\n<script src="terminal.js" defer></script>\n</head>\n<body id="top">\n')
     w('<a class="skip" href="#overview">Skip to the content</a>\n')
+    w(banner_svg())
     w('<header class="bar">\n')
     w(f'<h1 class="title"><strong>re:psn</strong> <span>by undecuple &middot; v{esc(v)} &middot; {esc(data["stage"])}</span></h1>\n')
-    w(THEME_CONTROL)
     w('</header>\n')
     w('<nav class="bar sticky" aria-label="Sections"><ul>\n')
     for slug, label in (("overview", "Overview"), ("features", "Features"), ("roadmap", "Roadmap"), ("changes", "Changes"),
@@ -475,7 +501,7 @@ def render_page(data):
       'added since the fork: the release and container tooling, the AppImage, hardening and limits, rooms and invite codes, '
       'the desktop app, this website, the documentation and the tests.</li>\n')
     w('<li><a href="https://github.com/sp00nznet/ps3recomp">ps3recomp</a> is the recompiler whose NP modules use the client.</li>\n')
-    w('<li>Colours from <a href="https://github.com/sainnhe/gruvbox-material">gruvbox-material</a> (MIT, Copyright (c) 2020 sainnhe).</li>\n')
+    w('<li>The site\'s colours follow the <a href="https://undecuple.github.io/me/">undecuple page</a>, which credits them to <a href="https://github.com/vossenwout/guts.nvim">guts.nvim</a> (that repository states no licence). The light colours of the desktop app and the status page are from <a href="https://github.com/sainnhe/gruvbox-material">gruvbox-material</a> (MIT, Copyright (c) 2020 sainnhe).</li>\n')
     w('</ul>\n')
     w(f'<p>MIT, see <a href="{esc(doc_url("LICENSE"))}">LICENSE</a>; upstream\'s copyright line is kept and a line for the fork\'s changes is added. PlayStation, PS3 and PSN are '
       'trademarks of Sony Interactive Entertainment, used only to say what the server stands in for.</p>\n')
@@ -497,8 +523,7 @@ def check_css(root, problems):
     except (SourceError, ValueError, KeyError) as e:
         problems.append(f"{CSS}: {e}")
         return
-    for mode in ("dark", "light"):
-        # A mode can appear more than once (the system light variant and the one chosen with data-theme); each copy is checked.
+    for mode in ("dark",):  # the site has one theme; palette.json keeps the light mode for the desktop app and the status page
         blocks = re.findall(r"/\* palette:%s \*/(.*?)/\* /palette \*/" % mode, css, re.S)
         if not blocks:
             problems.append(f"{CSS}: no '/* palette:{mode} */ ... /* /palette */' block")

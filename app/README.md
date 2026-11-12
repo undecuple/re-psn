@@ -109,7 +109,7 @@ shown as text on the screen, with the error, and the app keeps running. No HTTP 
 - which boards exist, for one title or across titles (so you type the title and a board id);
 - full rooms and invite-only rooms, which SEARCH_ROOMS leaves out.
 
-**Theme.** Dark by default, light with `t`; the colours are the gruvbox-material values the website uses
+**Theme.** Dark by default, light with `t`; the dark colours are the ones the website uses, the light ones are gruvbox-material values
 ([docs/art/palette.json](../docs/art/palette.json)). In light mode the accents that are too faint as text are replaced by the
 strong text colour in bold. No state is shown by colour alone. With `NO_COLOR` set the UI uses no colour, only bold and reverse.
 

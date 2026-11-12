@@ -6,15 +6,15 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-// palette holds the gruvbox-material tokens the website uses (docs/art/palette.json, site/style.css).
+// palette holds the tokens the website uses (dark: the undecuple page; light: gruvbox-material) (docs/art/palette.json, site/style.css).
 type palette struct {
 	bg0, bg1, bg3, fg0, fg1, grey1, grey2, red, orange, yellow, green, aqua, blue string
 }
 
 var (
 	darkPalette = palette{
-		bg0: "#282828", bg1: "#32302f", bg3: "#45403d", fg0: "#d4be98", fg1: "#ddc7a1", grey1: "#928374", grey2: "#a89984",
-		red: "#ea6962", orange: "#e78a4e", yellow: "#d8a657", green: "#a9b665", aqua: "#89b482", blue: "#7daea3",
+		bg0: "#101113", bg1: "#161719", bg3: "#2b2733", fg0: "#9f9e99", fg1: "#e1ffe5", grey1: "#787487", grey2: "#7a837c",
+		red: "#ac7f7b", orange: "#997e95", yellow: "#997e95", green: "#a7d8b0", aqua: "#a7d8b0", blue: "#8288a0",
 	}
 	lightPalette = palette{
 		bg0: "#fbf1c7", bg1: "#f4e8be", bg3: "#eee0b7", fg0: "#654735", fg1: "#4f3829", grey1: "#928374", grey2: "#7c6f64",

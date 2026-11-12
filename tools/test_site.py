@@ -52,15 +52,10 @@ CHANGELOG = """# Changelog
 CSS = """/* palette:dark */
 :root { --bg0: #000000; --fg0: #ffffff; }
 /* /palette */
-@media (prefers-color-scheme: light) {
-/* palette:light */
-:root { --bg0: #ffffff; --fg0: #000000; }
-/* /palette */
-}
 """
 ICON = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"><title>t</title>'
         '<rect width="8" height="8" fill="#000000"/><rect width="2" height="2" fill="#ffffff"/></svg>')
-PALETTE = {"modes": {"dark": {"bg0": "#000000", "fg0": "#ffffff"}, "light": {"bg0": "#ffffff", "fg0": "#000000"}}}
+PALETTE = {"modes": {"dark": {"bg0": "#000000", "fg0": "#ffffff"}}}
 
 
 class Fixture:
@@ -218,7 +213,7 @@ class SiteTest(unittest.TestCase):
         self.assertFalse((self.f.root / "site/index.html").exists())
 
     def test_css_token_mismatch(self):
-        (self.f.root / "site/style.css").write_text(CSS.replace("#ffffff; }\n/* /palette */\n@media", "#fffffe; }\n/* /palette */\n@media"))
+        (self.f.root / "site/style.css").write_text(CSS.replace("#ffffff; }", "#fffffe; }"))
         code, _, err = self.f.run("--check")
         self.assertEqual(code, 1)
         self.assertIn("--fg0 in the dark block", err)
@@ -300,16 +295,15 @@ class ContrastTest(unittest.TestCase):
     def resolve(self, mode):
         """Map every role to a hex colour for a mode (palette slots, shared roles, mode roles)."""
         start = self.css.index("/* Roles that do not change")
-        shared = dict(re.findall(r"--([a-z0-9-]+):\s*var\(--([a-z0-9]+)\)", self.css[start:self.css.index("/* Text roles per mode")]))
+        shared = dict(re.findall(r"--([a-z0-9-]+):\s*var\(--([a-z0-9]+)\)", self.css[start:self.css.index("/* Text roles.")]))
         blocks, maps = _css_roles(self.css, mode)
-        self.assertEqual(len(blocks), 2, mode)
-        self.assertEqual(maps[0], maps[1], f"the two {mode} copies of the roles differ")
+        self.assertEqual(len(blocks), 1, mode)
         roles = dict(shared, **maps[0])
         palette = self.modes[mode]
         return {r: palette[slot] for r, slot in roles.items() if slot in palette}
 
     def test_every_text_pair_is_at_least_4_5(self):
-        for mode in ("dark", "light"):
+        for mode in ("dark",):
             r = self.resolve(mode)
             for fg, bg in TEXT_PAIRS:
                 self.assertIn(fg, r, f"{mode}: no role {fg}")
@@ -318,7 +312,7 @@ class ContrastTest(unittest.TestCase):
                 self.assertGreaterEqual(ratio, 4.5, f"{mode}: {fg} {r[fg]} on {bg} {r[bg]} is {ratio:.2f}:1")
 
     def test_every_non_text_pair_is_at_least_3(self):
-        for mode in ("dark", "light"):
+        for mode in ("dark",):
             r = self.resolve(mode)
             for fg, bg in NONTEXT_PAIRS:
                 ratio = contrast(r[fg], r[bg])
@@ -346,36 +340,21 @@ class ContrastTest(unittest.TestCase):
         outside = re.sub(r"/\* palette:\w+ \*/.*?/\* /palette \*/", "", self.css, flags=re.S)
         for slot in self.modes["dark"]:
             self.assertIn(f"var(--{slot})", outside, f"--{slot} has no job in site/style.css")
-        self.assertEqual(set(self.modes["dark"]), set(self.modes["light"]))
-
-    def test_light_text_accents_are_only_those_that_pass(self):
-        # An accent that is too faint on the light page may be a border or an underline, never a text role.
-        r = self.resolve("light")
-        accents = {self.modes["light"][a] for a in ("red", "orange", "yellow", "green", "aqua", "blue", "purple")}
-        for fg, bg in TEXT_PAIRS:
-            if r[fg] in accents:
-                self.assertGreaterEqual(contrast(r[fg], r[bg]), 4.5, f"light: {fg} on {bg}")
 
 
-class ThemeSwitchTest(unittest.TestCase):
-    def test_page_has_the_switch_hidden_until_script_runs(self):
+
+class BannerTest(unittest.TestCase):
+    def test_banner_is_decorative_and_has_no_theme_switch(self):
         f = Fixture()
         self.addCleanup(f.tmp.cleanup)
         f.run()
         page = f.read("site/index.html").decode()
-        self.assertIn('<div class="theme" role="group" aria-label="Theme">', page)
-        for k in ("system", "light", "dark"):
-            self.assertIn(f'<button type="button" class="theme-btn" data-theme-set="{k}" aria-pressed="false">', page)
-        css = (ROOT / "site/style.css").read_text(encoding="utf-8")
-        self.assertIn(".theme { display: none; }", css)
-        self.assertIn("html.js .theme", css)
+        self.assertIn('<svg class="banner"', page)
+        self.assertIn('aria-hidden="true"', page.split('<svg class="banner"', 1)[1].split(">", 1)[0])
+        for cls in ("bn-frame", "bn-name", "bn-rule", "bn-text"):
+            self.assertIn(cls, page)
+        self.assertNotIn("theme", page.lower().replace("color-scheme", ""))
         self.assertIsNone(re.search(r"\sstyle=|<script>|\son[a-z]+=", page))
-
-    def test_script_shares_the_storage_key_and_the_attribute(self):
-        js = (ROOT / "site/terminal.js").read_text(encoding="utf-8")
-        for needle in ("'re-psn-theme'", "data-theme-set", "setAttribute('data-theme'", "removeItem(STORE)", "aria-pressed", "'js'"):
-            self.assertIn(needle, js)
-        self.assertIn("syncControls", js)
 
 
 class AutocompleteMarkupTest(unittest.TestCase):

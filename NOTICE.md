@@ -7,7 +7,8 @@ who wrote the changes since the fork. The upstream licence and copyright line ar
 
 Feature page generator adapted from Project Helghast (https://github.com/undecuple/project-helghast, MIT, Copyright (c) 2026 undecuple): tools/features.py.
 Art generator (tools/art/make_art.py) adapted from Project Helghast (https://github.com/undecuple/project-helghast, MIT, Copyright (c) 2026 undecuple): tools/release/installer_art.py, tools/features.py.
-Colour palette from gruvbox-material (https://github.com/sainnhe/gruvbox-material, MIT, Copyright (c) 2020 sainnhe).
+Website, README art and desktop-app dark colours follow the page at https://undecuple.github.io/me/, whose stylesheet credits the guts.nvim colour scheme (https://github.com/vossenwout/guts.nvim); that repository has no licence file, so no licence is stated for it here and the credit names the source only.
+Light colours of the desktop app and the status page from gruvbox-material (https://github.com/sainnhe/gruvbox-material, MIT, Copyright (c) 2020 sainnhe).
 
 | Component | Use | Licence |
 |---|---|---|

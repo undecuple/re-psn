@@ -114,7 +114,7 @@
   });
   byID('reset').addEventListener('click', () => {
     preferences = settings(null);
-    apply(); message('Appearance reset to gruvbox-material.'); save();
+    apply(); message('Appearance reset to the default colours.'); save();
   });
 
   const tabs = [byID('overview-tab'), byID('rooms-tab'), byID('boards-tab')];

@@ -78,7 +78,7 @@ docker compose -f docker/docker-compose.yml up -d
 ## Status page appearance
 
 With `-http 127.0.0.1:36101`, open `http://127.0.0.1:36101/`. The read-only status page uses the same
-gruvbox-material palette and monospace framing as the project website and terminal app. Rooms and Leaderboards
+dark palette and monospace framing as the project website and terminal app. Rooms and Leaderboards
 are tabs; Overview shows both tables together. Use the arrow keys while a tab is focused, or click one.
 Invite-only rooms remain counted without names.
 `/api/stats` keeps its existing JSON fields and token rules, and adds aggregate [`udp_drops` counters](udp-guardrails.md#drop-counters). It also reports the server state (version, relay, limits in force and TCP refusals); see [Server state](api.md#server-state).
