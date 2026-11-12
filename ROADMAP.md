@@ -97,7 +97,7 @@ On the ps3recomp side (upstream's work):
 - **Sockets:** real host sockets behind `PS3_NET_ONLINE`
   ([ps3recomp#196](https://github.com/sp00nznet/ps3recomp/pull/196), merged).
 - **Rooms and leaderboards:** Matching2, Score, Lookup and Avc2 over psnr
-  ([ps3recomp#200](https://github.com/sp00nznet/ps3recomp/pull/200), draft).
+  ([ps3recomp#200](https://github.com/sp00nznet/ps3recomp/pull/200), merged on 2026-10-07).
 - **First online match:** Simpsons Arcade, two instances on one machine, lobby
   to Stage 1 in sync, and later across two machines, with either player behind a NAT
   ([ps3recomp#202](https://github.com/sp00nznet/ps3recomp/pull/202)).

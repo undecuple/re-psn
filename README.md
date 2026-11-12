@@ -138,7 +138,7 @@ Leaderboards use the same TCP connection. More in [docs/architecture.md](docs/ar
 
 Games are recompiled with [ps3recomp](https://github.com/sp00nznet/ps3recomp), whose NP modules talk to re-psn through the C client.
 That side is upstream's work and not part of this repository: it needs a ps3recomp build with
-[ps3recomp#200](https://github.com/sp00nznet/ps3recomp/pull/200) (a draft), where `PS3_NET_ONLINE=1` and `PSNR_SERVER=host[:port]`
+[ps3recomp#200](https://github.com/sp00nznet/ps3recomp/pull/200) (merged into ps3recomp on 2026-10-07), where `PS3_NET_ONLINE=1` and `PSNR_SERVER=host[:port]`
 point a game at the server (its `docs/ONLINE.md` lists the rest). With it, upstream has played Simpsons Arcade online, two players
 from lobby to Stage 1 in sync, on one machine and later across two with either player behind a NAT.
 
