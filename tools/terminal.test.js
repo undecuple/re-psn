@@ -41,7 +41,7 @@ test('action: list, one scenario, errors, completion', () => {
   for (const sc of data.action.scenarios) {
     const res = T.run('action ' + sc.id, data);
     assert.ok(!res.error);
-    assert.strictEqual(res.file, 'action/' + sc.id);
+    assert.strictEqual(res.file, 'action/' + sc.id + '.md');
     const t = text(res);
     assert.ok(t.includes(sc.steps.length + '. '), sc.id);
     for (const st of sc.steps) if (st.message) assert.ok(t.includes(st.message), st.message);
@@ -227,13 +227,13 @@ test('there is one dark theme: no theme command, switch or stored choice', () =>
 // ---------------------------------------------------------------- the numbered file
 
 test('each answer has a file name; errors and clear have none', () => {
-  assert.strictEqual(T.run('features', data).file, 'features');
-  assert.strictEqual(T.run('features --status planned', data).file, 'features/planned');
-  assert.strictEqual(T.run('features ' + data.features[0].id, data).file, 'features/' + data.features[0].id);
-  assert.strictEqual(T.run('settings', data).file, 'settings');
-  assert.strictEqual(T.run('settings -addr', data).file, 'settings/addr');
-  assert.strictEqual(T.run('help', data).file, 'help');
-  assert.strictEqual(T.run('--help', data).file, 'help');
+  assert.strictEqual(T.run('features', data).file, 'features.md');
+  assert.strictEqual(T.run('features --status planned', data).file, 'features/planned.md');
+  assert.strictEqual(T.run('features ' + data.features[0].id, data).file, 'features/' + data.features[0].id + '.md');
+  assert.strictEqual(T.run('settings', data).file, 'settings.md');
+  assert.strictEqual(T.run('settings -addr', data).file, 'settings/addr.md');
+  assert.strictEqual(T.run('help', data).file, 'help.md');
+  assert.strictEqual(T.run('--help', data).file, 'help.md');
   assert.strictEqual(T.run('features nope', data).file, undefined);
   assert.strictEqual(T.run('nonsense', data).file, undefined);
   assert.strictEqual(T.run('clear', data).file, undefined);

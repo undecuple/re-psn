@@ -194,6 +194,18 @@ func (s *Server) Serve(ln net.Listener) error {
 	}
 }
 
+// addrLimitKey is what the per-address connection limit counts by: an IPv4 address (an IPv4-mapped one counts as that IPv4 address),
+// or an IPv6 address cut to its /64, as the UDP guard and the admin failure table already do. One IPv6 network is one source, so
+// changing the low 64 bits does not give a fresh allowance. The address the player is known by is not changed.
+func addrLimitKey(a netip.Addr) string {
+	a = a.Unmap().WithZone("")
+	if a.Is6() {
+		p, _ := a.Prefix(64)
+		return p.String()
+	}
+	return a.String()
+}
+
 // admit works out who the client is, applies the per-address limit and runs
 // the connection. It is a goroutine of its own because a PROXY header has to
 // be read first, and a slow proxy must not stall Accept.
@@ -214,8 +226,9 @@ func (s *Server) admit(conn net.Conn) {
 		} // else a valid header with no client (health check): this connection stays under the proxy's address
 	}
 	host := real.String()
+	limitKey := addrLimitKey(real)
 	s.mu.Lock()
-	if s.maxPerAddr > 0 && s.addrConns[host] >= s.maxPerAddr {
+	if s.maxPerAddr > 0 && s.addrConns[limitKey] >= s.maxPerAddr {
 		s.mu.Unlock()
 		atomic.AddUint64(&s.refusedConns, 1)
 		s.log.Warn("connection refused", "addr", host, "reason", "too many connections", "limit", s.maxPerAddr)
@@ -239,7 +252,7 @@ func (s *Server) admit(conn net.Conn) {
 		conn.Close()
 		return
 	}
-	s.addrConns[host]++
+	s.addrConns[limitKey]++
 	s.openConns++
 	s.nextID++
 	s.conns++
@@ -253,8 +266,8 @@ func (s *Server) admit(conn net.Conn) {
 	s.run(c)
 	s.mu.Lock()
 	s.openConns--
-	if s.addrConns[host]--; s.addrConns[host] <= 0 {
-		delete(s.addrConns, host)
+	if s.addrConns[limitKey]--; s.addrConns[limitKey] <= 0 {
+		delete(s.addrConns, limitKey)
 	}
 	s.mu.Unlock()
 }

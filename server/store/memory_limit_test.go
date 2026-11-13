@@ -23,8 +23,54 @@ func newLimited(boards, entries int) *memory {
 
 func TestMemoryDefaultLimits(t *testing.T) {
 	m := NewMemory().(*memory)
-	if m.maxBoardsPerTitle != 1000 || m.maxEntriesPerBoard != 10000 {
-		t.Fatalf("limits %d and %d, want 1000 and 10000", m.maxBoardsPerTitle, m.maxEntriesPerBoard)
+	if m.maxTitles != 1000 || m.maxBoardsPerTitle != 1000 || m.maxEntriesPerBoard != 10000 {
+		t.Fatalf("limits %d, %d and %d, want 1000, 1000 and 10000", m.maxTitles, m.maxBoardsPerTitle, m.maxEntriesPerBoard)
+	}
+}
+
+// The store keeps boards for a limited number of titles; a refused title leaves no trace, and the titles it has go on working.
+func TestMemoryTitleLimit(t *testing.T) {
+	ctx := context.Background()
+	m := newLimited(5, 10)
+	m.maxTitles = 2
+	put := func(k Key, who string, score int64) (uint32, error) {
+		return m.Put(ctx, k, false, Entry{OnlineID: who, Score: score, At: at(0)})
+	}
+	for _, title := range []string{"A", "B"} {
+		if _, err := put(Key{title, 1}, "a", 1); err != nil {
+			t.Fatalf("title %s: %v", title, err)
+		}
+	}
+	if _, err := put(Key{"C", 1}, "a", 1); !errors.Is(err, ErrFull) {
+		t.Fatalf("third title: err %v, want ErrFull", err)
+	}
+	if len(m.titles) != 2 || len(m.boards) != 2 {
+		t.Fatalf("%d titles and %d boards after a refused title, want 2 and 2", len(m.titles), len(m.boards))
+	}
+	if total, _, _ := m.Range(ctx, Key{"C", 1}, 0, 1); total != 0 {
+		t.Fatalf("refused title has %d entries", total)
+	}
+	// a title the store has still takes new boards, new players and better scores
+	if _, err := put(Key{"A", 2}, "a", 1); err != nil {
+		t.Fatalf("new board of an existing title: %v", err)
+	}
+	if _, err := put(Key{"A", 1}, "b", 5); err != nil {
+		t.Fatalf("new player on an existing board: %v", err)
+	}
+	if rank, err := put(Key{"A", 1}, "a", 9); err != nil || rank != 1 {
+		t.Fatalf("better score: rank %d, err %v", rank, err)
+	}
+}
+
+// The limit counts titles, not boards: many boards of one title are fine under a limit of one title.
+func TestMemoryTitleLimitCountsTitlesNotBoards(t *testing.T) {
+	ctx := context.Background()
+	m := newLimited(10, 10)
+	m.maxTitles = 1
+	for b := uint32(1); b <= 5; b++ {
+		if _, err := m.Put(ctx, Key{"only", b}, false, Entry{OnlineID: "a", Score: 1, At: at(0)}); err != nil {
+			t.Fatalf("board %d of the one title: %v", b, err)
+		}
 	}
 }
 
