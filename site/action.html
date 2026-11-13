@@ -11,21 +11,35 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
 <script src="action.js" defer></script>
+<script src="nav.js" defer></script>
 </head>
 <body id="top">
 <a class="skip" href="#scenarios">Skip to the scenarios</a>
+<h1 class="sr">re:psn in action, v0.5.0, pre-release</h1>
 <svg class="banner" viewBox="0 0 671 130" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><rect class="bn-frame" x="3" y="3" width="665" height="124"/><rect class="bn-frame" x="8" y="8" width="655" height="114"/><path class="bn-name" d="M165 26h11v11h-11zM187 26h11v11h-11zM198 26h11v11h-11zM165 37h11v11h-11zM176 37h11v11h-11zM209 37h11v11h-11zM165 48h11v11h-11zM165 59h11v11h-11zM165 70h11v11h-11zM242 26h11v11h-11zM253 26h11v11h-11zM264 26h11v11h-11zM231 37h11v11h-11zM275 37h11v11h-11zM231 48h11v11h-11zM242 48h11v11h-11zM253 48h11v11h-11zM264 48h11v11h-11zM275 48h11v11h-11zM231 59h11v11h-11zM242 70h11v11h-11zM253 70h11v11h-11zM264 70h11v11h-11zM297 37h11v11h-11zM297 70h11v11h-11zM319 26h11v11h-11zM330 26h11v11h-11zM341 26h11v11h-11zM352 26h11v11h-11zM319 37h11v11h-11zM363 37h11v11h-11zM319 48h11v11h-11zM363 48h11v11h-11zM319 59h11v11h-11zM363 59h11v11h-11zM319 70h11v11h-11zM330 70h11v11h-11zM341 70h11v11h-11zM352 70h11v11h-11zM319 81h11v11h-11zM319 92h11v11h-11zM396 26h11v11h-11zM407 26h11v11h-11zM418 26h11v11h-11zM429 26h11v11h-11zM385 37h11v11h-11zM396 48h11v11h-11zM407 48h11v11h-11zM418 48h11v11h-11zM429 59h11v11h-11zM385 70h11v11h-11zM396 70h11v11h-11zM407 70h11v11h-11zM418 70h11v11h-11zM451 26h11v11h-11zM473 26h11v11h-11zM484 26h11v11h-11zM451 37h11v11h-11zM462 37h11v11h-11zM495 37h11v11h-11zM451 48h11v11h-11zM495 48h11v11h-11zM451 59h11v11h-11zM495 59h11v11h-11zM451 70h11v11h-11zM495 70h11v11h-11z"/></svg>
 <svg class="banner-side" viewBox="0 0 90 464" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><rect class="bn-frame" x="3" y="3" width="84" height="458"/><rect class="bn-frame" x="8" y="8" width="74" height="448"/><path class="bn-name" d="M25 24h8v8h-8zM41 24h8v8h-8zM49 24h8v8h-8zM25 32h8v8h-8zM33 32h8v8h-8zM57 32h8v8h-8zM25 40h8v8h-8zM25 48h8v8h-8zM25 56h8v8h-8zM33 96h8v8h-8zM41 96h8v8h-8zM49 96h8v8h-8zM25 104h8v8h-8zM57 104h8v8h-8zM25 112h8v8h-8zM33 112h8v8h-8zM41 112h8v8h-8zM49 112h8v8h-8zM57 112h8v8h-8zM25 120h8v8h-8zM33 128h8v8h-8zM41 128h8v8h-8zM49 128h8v8h-8zM41 176h8v8h-8zM41 200h8v8h-8zM25 240h8v8h-8zM33 240h8v8h-8zM41 240h8v8h-8zM49 240h8v8h-8zM25 248h8v8h-8zM57 248h8v8h-8zM25 256h8v8h-8zM57 256h8v8h-8zM25 264h8v8h-8zM57 264h8v8h-8zM25 272h8v8h-8zM33 272h8v8h-8zM41 272h8v8h-8zM49 272h8v8h-8zM25 280h8v8h-8zM25 288h8v8h-8zM33 312h8v8h-8zM41 312h8v8h-8zM49 312h8v8h-8zM57 312h8v8h-8zM25 320h8v8h-8zM33 328h8v8h-8zM41 328h8v8h-8zM49 328h8v8h-8zM57 336h8v8h-8zM25 344h8v8h-8zM33 344h8v8h-8zM41 344h8v8h-8zM49 344h8v8h-8zM25 384h8v8h-8zM41 384h8v8h-8zM49 384h8v8h-8zM25 392h8v8h-8zM33 392h8v8h-8zM57 392h8v8h-8zM25 400h8v8h-8zM57 400h8v8h-8zM25 408h8v8h-8zM57 408h8v8h-8zM25 416h8v8h-8zM57 416h8v8h-8z"/></svg>
-<header class="bar">
-<h1 class="title"><strong>re:psn</strong> <span>in action &middot; v0.5.0 &middot; pre-release</span></h1>
-</header>
-<nav class="bar sticky" aria-label="Scenarios"><ul>
-<li><a href="index.html">Home</a></li>
-<li><a href="#direct">Direct</a></li>
-<li><a href="#punch">Hole punch</a></li>
-<li><a href="#relayed">Relayed</a></li>
-<li><a href="#blocked">Blocked</a></li>
-</ul></nav>
+<div class="top">
+<nav class="nfo" aria-label="About this page">
+<span class="k">page</span><span>in action</span>
+<span class="k">version</span><span>0.5.0 (pre-release)</span>
+<span class="k">scenarios</span><span>4, simulated</span>
+</nav>
+<nav class="quick" aria-label="Scenarios">
+<h2 class="qh">SCENARIOS</h2>
+<ul>
+<li><a href="index.html">home</a></li>
+<li><a href="#direct">direct</a></li>
+<li><a href="#punch">hole punch</a></li>
+<li><a href="#relayed">relayed</a></li>
+<li><a href="#blocked">blocked</a></li>
+<li><a href="discuss.html">discuss</a></li>
+</ul>
+</nav>
+</div>
+<nav class="pagenav" aria-label="Return">
+<a class="pn" href="index.html">&larr; Main page</a>
+<button type="button" class="pn prev-page" hidden>&larr; Previous page</button>
+</nav>
 <main>
 <section id="scenarios">
 <h2>How the pieces talk</h2>
@@ -108,6 +122,10 @@
 </ol>
 </section>
 </main>
+<nav class="pagenav" aria-label="Return">
+<a class="pn" href="index.html">&larr; Main page</a>
+<button type="button" class="pn prev-page" hidden>&larr; Previous page</button>
+</nav>
 <footer>
 <p>Unofficial; not affiliated with Sony. Developed with AI agent assistance.</p>
 </footer>

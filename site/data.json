@@ -1283,6 +1283,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "**Docs and tooling:** website: the plain pages (index, in action, discuss) are laid out like the undecuple page: under the banner a box of key and value rows with dotted leaders (project, version, features, repository) ...",
      "**Docs and tooling:** website: the terminal view has a `discuss` command and a \"Discuss\" menu entry.",
      "**Docs and tooling:** website: in the terminal view the name in the header of an answer now ends in `.md` (`about.md`, `features/rooms-basic.md`, `settings/addr.md`), and the newest answer fills the pane, with the ...",
      "**Docs and tooling:** website: a discussion page (`site/discuss.html`, \"Discuss\" in the menu): one GitHub Discussions thread (repository `undecuple/me`, category Announcements, term `re-psn`) shown with giscus.",
@@ -1338,7 +1339,7 @@
     ]
    },
    "counts": {
-    "Added": 20,
+    "Added": 21,
     "Fixed": 18,
     "Changed": 10
    }
