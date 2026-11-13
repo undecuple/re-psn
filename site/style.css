@@ -415,3 +415,25 @@ html.tui-on:not(.plain) body { padding-bottom: 16px; }
   .tui-out .file.gw4 { --gw: 5.5ch; }
   nav.bar ul { gap: 0 1.5ch; }
 }
+
+/* The "see it in action" page (tools/site_action.py): a static diagram and numbered steps per scenario. Colours as in the status tags;
+   the word on each edge and in each step is the cue, the colour is a second one. */
+.action-diagram { display: block; width: 100%; max-width: 660px; height: auto; margin: 1em 0; }
+.action-diagram .node { fill: var(--bg1); stroke: var(--line); stroke-width: 2; }
+.action-diagram .node-name { fill: var(--strong); }
+.action-diagram .node-addr { fill: var(--muted); }
+.action-diagram .edge { fill: none; stroke-width: 3; }
+.action-diagram .e-tcp { stroke: var(--tt-ok); }
+.action-diagram .e-direct { stroke: var(--tt-warn); stroke-dasharray: 2 6; stroke-linecap: round; }
+.action-diagram .e-blocked { stroke: var(--tt-bad); stroke-dasharray: 10 8; }
+.action-diagram .e-relay { stroke: var(--tt-plan); stroke-width: 5; }
+.action-diagram .edge-label { fill: var(--text); font-size: 13px; }
+.legend .lg { margin-right: 2ch; }
+.legend .lg-tcp { color: var(--tt-ok); }
+.legend .lg-direct { color: var(--tt-warn); }
+.legend .lg-blocked { color: var(--tt-bad); }
+.legend .lg-relay { color: var(--tt-plan); }
+.steps { padding-left: 3ch; }
+.steps li { margin: 0.25em 0; }
+.steps .who { color: var(--muted); }
+.steps .msg { color: var(--c-id); }

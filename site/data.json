@@ -1283,6 +1283,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "**Docs and tooling:** website: a \"see it in action\" page (`site/action.html`, linked from the page's menu as \"In action\"): four simulated scenarios (direct, hole punch, relayed, relay off), each a diagram and numbered ...",
      "**Client:** `psnr_set_connect_policy(fn, user)` (`client/psnr.h`): the host registers one callback that the C client asks before it opens a TCP connection, so a runtime that restricts where a game may connect can refuse ...",
      "**Server:** a capability report (#77, item 3): `GET_CAPS` (0x04, no body, after HELLO) is answered with `CAPS` (0x94): `bits u32` and the server version as a blob.",
      "**Deploy:** `docker/docker-compose.yml` and `docker/docker-compose.host.yml` now run the container as user 10001 with all capabilities dropped, `no-new-privileges` and a read-only root filesystem with a 16 MB tmpfs on ...",
@@ -1326,7 +1327,7 @@
     ]
    },
    "counts": {
-    "Added": 15,
+    "Added": 16,
     "Fixed": 11,
     "Changed": 10
    }
