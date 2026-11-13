@@ -51,7 +51,7 @@ func main() {
 	playerRooms := num("max-player-rooms", 8, "rooms one player may be in at once (0 for no limit)")
 	relayIdle := num("relay-idle", int(defaultRelayIdle/time.Second), "close a relay stream after this many seconds with no bytes in either direction (0 for never; needs -relay)")
 	maxConns := num("max-conns", defaultMaxConns, "open TCP connections in total, players and relay legs (0 for no limit)")
-	perAddr := num("max-conns-per-addr", 32, "open connections per remote address (0 for no limit)")
+	perAddr := num("max-conns-per-addr", 32, "open connections per remote address; an IPv6 address counts as its /64 (0 for no limit)")
 	reqRate := num("max-req-rate", 200, "requests per second per connection before it is closed (0 for no limit)")
 	udpRate := flag.String("max-udp-rate", "1000", "UDP datagrams per second per source (IPv4 address or IPv6 /64), with the same burst allowance (0 for no limit)")
 	verbose := toggle("v", false, "same as -log-level debug")
@@ -217,7 +217,7 @@ func main() {
 		if reachable(*httpAddr) && statusToken == "" {
 			logger.Warn("the status page lists every online ID and has no token; set -http-token or bind -http to localhost")
 		}
-		hs = &http.Server{Addr: *httpAddr, Handler: s.HTTP()}
+		hs = newStatusServer(*httpAddr, s.HTTP())
 		go func() { errc <- hs.ListenAndServe() }()
 	} else {
 		logger.Debug("status page off (set -http to turn it on)")

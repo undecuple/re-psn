@@ -378,7 +378,7 @@ Variables are upper case, with dashes as underscores. Defaults are those of `./r
 | `-max-rooms` | `RE_PSN_MAX_ROOMS` | `1000` | Rooms across all titles |
 | `-max-player-rooms` | `RE_PSN_MAX_PLAYER_ROOMS` | `8` | Rooms one player may be in at once (0: no limit) |
 | `-max-conns` | `RE_PSN_MAX_CONNS` | `4096` | Open TCP connections in total, players and relay legs (0: no limit); not in v0.5.0 |
-| `-max-conns-per-addr` | `RE_PSN_MAX_CONNS_PER_ADDR` | `32` | Open connections per remote address (0: no limit) |
+| `-max-conns-per-addr` | `RE_PSN_MAX_CONNS_PER_ADDR` | `32` | Open connections per remote address; an IPv6 address counts as its /64 (0: no limit) |
 | `-max-req-rate` | `RE_PSN_MAX_REQ_RATE` | `200` | Requests per second per connection before it is closed (0: no limit) |
 | `-max-udp-rate` | `RE_PSN_MAX_UDP_RATE` | `1000` | UDP packets per second per source (IPv4 address or IPv6 /64), shared by probes and relay traffic; same-size burst (0: no limit); since v0.4.0 |
 | `-v` | `RE_PSN_V` | off | Same as `-log-level debug` |
