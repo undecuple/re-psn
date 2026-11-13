@@ -315,7 +315,11 @@ func (s *Server) handle(c *client, t byte, p []byte) {
 	if r.err != nil {
 		return
 	}
-	if t != msgHello && c.commID == "" {
+	// commID is cleared under s.mu by another client's HELLO that takes over this player's name, so it is read under s.mu too.
+	s.mu.Lock()
+	noHello := c.commID == ""
+	s.mu.Unlock()
+	if t != msgHello && noHello {
 		s.log.Debug("request before hello", "client", c.id, "type", t)
 		c.send(msgError, errReply(req, errNoHello))
 		return

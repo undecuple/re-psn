@@ -27,6 +27,7 @@ All notable changes to this project are documented here. The format follows
 - **Docs and tooling:** CI compiles the C client (`client/psnr.c`, `client/examples/minimal.c`) with MSVC on Windows and does not run it there; the build instructions in `docs/integrating.md` give the MSVC command.
 
 ### Fixed
+- **Server:** a player's connection no longer reads its title without the server lock while a new connection from the same address takes over its name. The race detector flagged the unlocked read; the takeover itself is unchanged.
 - **Server:** `SET_ROOM_DATA` no longer lets the owner make the room's own join reply too big for one packet: a write to the external or internal blob that would is refused with error 6 and changes nothing, so a member who asks for the room again always gets an answer. Before, such a write was accepted and later joins and re-joins were refused.
 - **Server:** A search no longer disconnects the player when the rooms' data is large: the reply lists only as many rooms as fit in one packet, and the player pages on from there.
 - **Server:** A player whose connection stops reading no longer freezes the other players in its room: the server drops it after 10 seconds of a stuck write (`writeTimeout`), so its room mates' requests get their replies and the stuck player is removed from the room.
