@@ -29,6 +29,7 @@ All notable changes to this project are documented here. The format follows
 - **Docs and tooling:** CI compiles the C client (`client/psnr.c`, `client/examples/minimal.c`) with MSVC on Windows and does not run it there; the build instructions in `docs/integrating.md` give the MSVC command.
 
 ### Fixed
+- **Server:** wrong or malformed invite codes are now also counted by address, so opening a new connection no longer starts the count again: 20 misses in 60 seconds from one address (an IPv6 /64 counts as one) close the connection, besides the existing 5 per connection. The higher limit allows for players sharing a router.
 - **Server:** a player's connection no longer reads its title without the server lock while a new connection from the same address takes over its name. The race detector flagged the unlocked read; the takeover itself is unchanged.
 - **Server:** a connection that sends a frame header declaring a long payload and then stops no longer costs the server the declared size (up to 64 KB). The payload buffer starts at 2 KB and grows with the bytes that arrive, so memory held by idle half-sent frames is bounded by what was sent.
 - **Server:** a relay stream whose accepting side arrived just as the connecting side's 10 second wait ended no longer leaves the accepting connection open. The accepting leg is now used if it had already claimed the stream, and the connection is closed otherwise; before, the accepting player could be told the stream was ready while the connecting player was told it was not.

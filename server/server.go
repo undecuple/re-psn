@@ -76,14 +76,15 @@ type Server struct {
 
 	scores store.Store // leaderboards (scores.go); memory unless -db says otherwise
 
-	maxPlayerRooms int            // rooms one player may be in at once
-	maxConns       int            // open connections in total, players and relay legs (0: no limit)
-	maxPerAddr     int            // open connections per remote address
-	maxReqRate     int            // requests per second per connection
-	addrConns      map[string]int // open connections by remote host
-	openConns      int            // open connections in total
-	lastConnsLog   time.Time      // when a refusal for -max-conns was last logged
-	connsLogSkip   int            // refusals for -max-conns not logged since then
+	maxPlayerRooms int                    // rooms one player may be in at once
+	maxConns       int                    // open connections in total, players and relay legs (0: no limit)
+	maxPerAddr     int                    // open connections per remote address
+	maxReqRate     int                    // requests per second per connection
+	addrConns      map[string]int         // open connections by remote host
+	addrMisses     map[string]*addrMisses // wrong room codes by remote host and window
+	openConns      int                    // open connections in total
+	lastConnsLog   time.Time              // when a refusal for -max-conns was last logged
+	connsLogSkip   int                    // refusals for -max-conns not logged since then
 
 	discover bool   // -discover: answer LAN DISCOVER packets (discover.go)
 	name     string // -name: shown in discovery, at most 24 bytes
@@ -151,6 +152,7 @@ func NewServer(maxRooms int, verbose bool) *Server {
 		maxReqRate:     200,
 		maxUDPRate:     defaultUDPRate,
 		addrConns:      map[string]int{},
+		addrMisses:     map[string]*addrMisses{},
 		stopped:        make(chan struct{}),
 		owned:          map[*ownedConn]struct{}{},
 	}
