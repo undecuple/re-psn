@@ -351,12 +351,14 @@ class BannerTest(unittest.TestCase):
         page = f.read("site/index.html").decode()
         self.assertIn('<svg class="banner"', page)
         self.assertIn('aria-hidden="true"', page.split('<svg class="banner"', 1)[1].split(">", 1)[0])
-        for cls in ("bn-frame", "bn-name", "bn-rule", "bn-text"):
+        for cls in ("bn-frame", "bn-name", "banner-side"):
             self.assertIn(cls, page)
-        # the caption has a fixed width, not letter spacing, so a wider fallback font cannot push it out of the frame
-        svg = page.split('<svg class="banner"', 1)[1].split("</svg>", 1)[0]
-        self.assertIn('textLength="560" lengthAdjust="spacing"', svg)
-        self.assertNotIn("letter-spacing", svg)
+        side = page.split('<svg class="banner-side"', 1)[1].split("</svg>", 1)[0]
+        self.assertIn('aria-hidden="true"', side)
+        # the name is drawn as paths (no text, so no font to cut it off), and there is no caption
+        for svg in (page.split('<svg class="banner"', 1)[1].split("</svg>", 1)[0], side):
+            self.assertNotIn("<text", svg)
+            self.assertNotIn("letter-spacing", svg)
         self.assertNotIn("theme", page.lower().replace("color-scheme", ""))
         self.assertIsNone(re.search(r"\sstyle=|<script>|\son[a-z]+=", page))
 

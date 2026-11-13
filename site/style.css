@@ -86,12 +86,16 @@ body {
   overflow-wrap: anywhere;
 }
 
-/* The banner under the skip link: pixel letters in a double frame (tools/site.py draws it with these classes). */
+/* The banners (tools/site.py draws them with these classes): the wide one under the skip link, and a tall one at the left edge that
+   replaces it on wide screens, where there is room beside the content. */
 .banner { display: block; width: 100%; max-width: 660px; height: auto; margin: 16px auto 0; }
-.bn-frame, .bn-rule { fill: none; stroke: var(--line); stroke-width: 2; }
-.bn-sub { fill: var(--muted); }
+.banner-side { display: none; }
+.bn-frame { fill: none; stroke: var(--line); stroke-width: 2; }
 .bn-name { fill: var(--strong); }
-.bn-text { fill: var(--text); }
+@media (min-width: 1400px) {
+  .banner { display: none; }
+  .banner-side { display: block; position: fixed; left: 24px; top: 16px; width: 90px; height: auto; }
+}
 
 a { color: var(--link); text-decoration: underline; text-underline-offset: 0.2em; }
 a:hover { color: var(--strong); }
