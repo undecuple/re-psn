@@ -1283,6 +1283,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "**Docs and tooling:** website: in the terminal view the name in the header of an answer now ends in `.md` (`about.md`, `features/rooms-basic.md`, `settings/addr.md`), and the newest answer fills the pane, with the ...",
      "**Docs and tooling:** website: a discussion page (`site/discuss.html`, \"Discuss\" in the menu): one GitHub Discussions thread (repository `undecuple/me`, category Announcements, term `re-psn`) shown with giscus.",
      "**Docs and tooling:** website: the terminal view has an `action` command and an \"In action\" menu entry.",
      "**Docs and tooling:** website: a \"see it in action\" page (`site/action.html`, linked from the page's menu as \"In action\"): four simulated scenarios (direct, hole punch, relayed, relay off), each a diagram and numbered ...",
@@ -1330,7 +1331,7 @@
     ]
    },
    "counts": {
-    "Added": 18,
+    "Added": 19,
     "Fixed": 12,
     "Changed": 10
    }
