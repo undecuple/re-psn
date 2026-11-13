@@ -7,6 +7,7 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Docs and tooling:** `BUILDING.md`: a short page that points to where each part is built and tested (the server, the desktop app, the C client, the container image, release archives and the AppImage); the README's document list links it, and the repository layout check allows the file in the root.
 - **Docs and tooling:** `KNOWN_ISSUES.md`: what is known not to work or not to have been checked (early software, binaries and scripts not run on every platform, the experimental admin API, the relay off by default and other limits), each with a link to the page that says it in full; the README's document list links it, and the repository layout check allows the file in the root.
 
 ### Changed

@@ -1,7 +1,7 @@
 {
   "root_files": [
     ".gitattributes", ".gitignore", ".gitleaks.toml", "AGENTS.md",
-    "CHANGELOG.md", "CONTRIBUTING.md", "KNOWN_ISSUES.md", "LICENSE", "NOTICE.md", "README.md",
+    "CHANGELOG.md", "BUILDING.md", "CONTRIBUTING.md", "KNOWN_ISSUES.md", "LICENSE", "NOTICE.md", "README.md",
     "ROADMAP.md", "SECURITY.md", "Setup.cmd", "VERSION", "flake.lock",
     "flake.nix", "go.mod", "setup.sh"
   ],
