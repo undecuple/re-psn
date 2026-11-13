@@ -1283,6 +1283,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "**Docs and tooling:** website: a discussion page (`site/discuss.html`, \"Discuss\" in the menu): one GitHub Discussions thread (repository `undecuple/me`, category Announcements, term `re-psn`) shown with giscus.",
      "**Docs and tooling:** website: the terminal view has an `action` command and an \"In action\" menu entry.",
      "**Docs and tooling:** website: a \"see it in action\" page (`site/action.html`, linked from the page's menu as \"In action\"): four simulated scenarios (direct, hole punch, relayed, relay off), each a diagram and numbered ...",
      "**Client:** `psnr_set_connect_policy(fn, user)` (`client/psnr.h`): the host registers one callback that the C client asks before it opens a TCP connection, so a runtime that restricts where a game may connect can refuse ...",
@@ -1328,7 +1329,7 @@
     ]
    },
    "counts": {
-    "Added": 17,
+    "Added": 18,
     "Fixed": 11,
     "Changed": 10
    }
