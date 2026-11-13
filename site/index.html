@@ -363,6 +363,7 @@
 </ul>
 <h4>Fixed</h4>
 <ul>
+<li>**Server:** wrong or malformed invite codes are now also counted by address, so opening a new connection no longer starts the count again: 20 misses in 60 seconds from one address (an IPv6 /64 counts as one) close the ...</li>
 <li>**Server:** <code>-max-conns-per-addr</code> now counts an IPv6 address as its /64 (an IPv4-mapped address as the IPv4 address), as the UDP limit and the admin failure delay already did.</li>
 <li>**Server:** the <code>-http</code> status page now closes a connection that does not finish its request header within 5 seconds, its request within 10 seconds, does not read its answer within 10 seconds, or sits idle for 30 ...</li>
 <li>**Server:** <code>SET_ROOM_DATA</code> no longer lets the owner make the room&#x27;s own join reply too big for one packet: a write to the external or internal blob that would is refused with error 6 and changes nothing, so a member ...</li>
