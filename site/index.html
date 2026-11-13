@@ -351,6 +351,7 @@
 <h4>Added</h4>
 <ul>
 <li>**Docs and tooling:** website: the plain pages (index, in action, discuss) are laid out like the undecuple page: under the banner a box of key and value rows with dotted leaders (project, version, features, repository) ...</li>
+<li>**Docs and tooling:** website: the terminal view has a <code>discuss</code> command and a &quot;Discuss&quot; menu entry.</li>
 <li>**Docs and tooling:** website: in the terminal view the name in the header of an answer now ends in <code>.md</code> (<code>about.md</code>, <code>features/rooms-basic.md</code>, <code>settings/addr.md</code>), and the newest answer fills the pane, with the ...</li>
 <li>**Docs and tooling:** website: a discussion page (<code>site/discuss.html</code>, &quot;Discuss&quot; in the menu): one GitHub Discussions thread (repository <code>undecuple/me</code>, category Announcements, term <code>re-psn</code>) shown with giscus.</li>
 <li>**Docs and tooling:** website: the terminal view has an <code>action</code> command and an &quot;In action&quot; menu entry.</li>
@@ -373,6 +374,7 @@
 </ul>
 <h4>Fixed</h4>
 <ul>
+<li>**Server:** wrong or malformed invite codes are now also counted by address, so opening a new connection no longer starts the count again: 20 misses in 60 seconds from one address (an IPv6 /64 counts as one) close the ...</li>
 <li>**Server:** a player&#x27;s connection no longer reads its title without the server lock while a new connection from the same address takes over its name.</li>
 <li>**Server:** a connection that sends a frame header declaring a long payload and then stops no longer costs the server the declared size (up to 64 KB).</li>
 <li>**Server:** a relay stream whose accepting side arrived just as the connecting side&#x27;s 10 second wait ended no longer leaves the accepting connection open.</li>

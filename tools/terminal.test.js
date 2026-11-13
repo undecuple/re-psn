@@ -21,7 +21,7 @@ function links(res) {
   return out;
 }
 
-const COMMANDS = ['help', '--help', 'features', 'roadmap', 'settings', 'install', 'connect', 'action', 'version', 'changelog', 'about',
+const COMMANDS = ['help', '--help', 'features', 'roadmap', 'settings', 'install', 'connect', 'action', 'discuss', 'version', 'changelog', 'about',
   'credits', 'licence', 'license', 'docs', 'links', 'clear', 'history'];
 
 test('every command answers and links stay on github.com or in the repository', () => {
@@ -29,8 +29,20 @@ test('every command answers and links stay on github.com or in the repository', 
     const res = T.run(c, data, { history: ['x'] });
     assert.ok(!res.error, c);
     if (c !== 'clear') assert.ok(res.lines.length > 0, c);
-    for (const h of links(res)) assert.match(h, /^(https:\/\/github\.com\/|#|action\.html$)/, c + ' ' + h);
+    for (const h of links(res)) assert.match(h, /^(https:\/\/github\.com\/|#|action\.html$|discuss\.html$)/, c + ' ' + h);
   }
+});
+
+test('discuss: links the page, the Discussions and the issues; nothing else', () => {
+  const res = T.run('discuss', data);
+  assert.ok(!res.error);
+  assert.deepStrictEqual(links(res), ['discuss.html', 'https://github.com/undecuple/me/discussions', data.repository + '/issues']);
+  assert.strictEqual(res.file, 'discuss.md');
+  assert.strictEqual(T.hrefFor('discuss.html', data), 'discuss.html');
+  assert.strictEqual(T.hrefFor('discuss.html.evil', data), data.repository + '/blob/main/discuss.html.evil');
+  assert.strictEqual(T.hrefFor('//discuss.html', data), null);
+  assert.deepStrictEqual(T.complete('disc', data).value, 'discuss ');
+  assert.ok(T.run('help', data).lines.some((l) => JSON.stringify(l).includes('discuss')));
 });
 
 test('action: list, one scenario, errors, completion', () => {

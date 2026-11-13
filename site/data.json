@@ -1284,6 +1284,7 @@
    "sections": {
     "Added": [
      "**Docs and tooling:** website: the plain pages (index, in action, discuss) are laid out like the undecuple page: under the banner a box of key and value rows with dotted leaders (project, version, features, repository) ...",
+     "**Docs and tooling:** website: the terminal view has a `discuss` command and a \"Discuss\" menu entry.",
      "**Docs and tooling:** website: in the terminal view the name in the header of an answer now ends in `.md` (`about.md`, `features/rooms-basic.md`, `settings/addr.md`), and the newest answer fills the pane, with the ...",
      "**Docs and tooling:** website: a discussion page (`site/discuss.html`, \"Discuss\" in the menu): one GitHub Discussions thread (repository `undecuple/me`, category Announcements, term `re-psn`) shown with giscus.",
      "**Docs and tooling:** website: the terminal view has an `action` command and an \"In action\" menu entry.",
@@ -1305,6 +1306,7 @@
      "**Docs and tooling:** CI compiles the C client (`client/psnr.c`, `client/examples/minimal.c`) with MSVC on Windows and does not run it there; the build instructions in `docs/integrating.md` give the MSVC command."
     ],
     "Fixed": [
+     "**Server:** wrong or malformed invite codes are now also counted by address, so opening a new connection no longer starts the count again: 20 misses in 60 seconds from one address (an IPv6 /64 counts as one) close the ...",
      "**Server:** a player's connection no longer reads its title without the server lock while a new connection from the same address takes over its name.",
      "**Server:** a connection that sends a frame header declaring a long payload and then stops no longer costs the server the declared size (up to 64 KB).",
      "**Server:** a relay stream whose accepting side arrived just as the connecting side's 10 second wait ended no longer leaves the accepting connection open.",
@@ -1337,8 +1339,8 @@
     ]
    },
    "counts": {
-    "Added": 20,
-    "Fixed": 17,
+    "Added": 21,
+    "Fixed": 18,
     "Changed": 10
    }
   },

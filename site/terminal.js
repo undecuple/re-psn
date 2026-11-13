@@ -20,6 +20,7 @@
     ['install', 'archives, container, from source'],
     ['connect', 'the ways to connect'],
     ['action [scenario]', 'simulated runs: direct, punch, relayed, blocked; a name gives its steps'],
+    ['discuss', 'the discussion page: where to talk about re-psn'],
     ['version', 'the version'],
     ['changelog', 'the latest changes'],
     ['about', 'what re-psn is'],
@@ -30,7 +31,7 @@
     ['clear', 'clear the screen'],
     ['history', 'commands typed in this tab']
   ];
-  var COMMANDS = ['--help', 'help', 'features', 'roadmap', 'settings', 'install', 'connect', 'action', 'version', 'changelog',
+  var COMMANDS = ['--help', 'help', 'features', 'roadmap', 'settings', 'install', 'connect', 'action', 'discuss', 'version', 'changelog',
     'about', 'credits', 'licence', 'license', 'docs', 'links', 'clear', 'history'];
   var CANONICAL = { '--help': 'help', license: 'licence' };
 
@@ -42,7 +43,7 @@
     if (/^https:\/\/github\.com\//.test(url)) { return url; }
     if (/^[a-z][a-z0-9+.-]*:/i.test(url) || url.slice(0, 2) === '//') { return null; }
     if (url.charAt(0) === '#') { return url; }
-    if (url === 'action.html') { return url; }
+    if (url === 'action.html' || url === 'discuss.html') { return url; }
     return (data && data.repository ? data.repository : 'https://github.com/undecuple/re-psn') + '/blob/main/' + url.replace(/^\/+/, '');
   }
 
@@ -87,6 +88,17 @@
     HELP.forEach(function (h) { lines.push([{ t: h[0], c: 'cmd' }, '  ' + h[1]]); });
     lines.push('', 'Keys: arrows move, Enter opens, Tab switches pane, / jumps to the command line, Esc goes back, F1 to F4 are shortcuts for help, features, install and settings (F5 still reloads the page). While you type, matches are listed above the prompt: Tab or Right accepts, Up and Down choose, Esc closes.');
     return lines;
+  }
+
+  // The discussion page: one GitHub Discussions thread shown with giscus, loaded only after a click on that page.
+  function cmdDiscuss(data) {
+    return [
+      'Talk about re-psn: questions, setups that worked or did not, ideas.',
+      '',
+      ['The ', link('discussion page', 'discuss.html', data), ' shows one thread. It loads nothing from another site until you press its button; writing in it needs a GitHub account.'],
+      ['Without the button, use the ', link('Discussions on GitHub', 'https://github.com/undecuple/me/discussions', data), '.'],
+      ['Bugs and feature requests belong in the ', link('issues', ((data && data.repository) || 'https://github.com/undecuple/re-psn') + '/issues', data), '.']
+    ];
   }
 
   function actionData(data) { return (data && data.action && data.action.scenarios) || []; }
@@ -259,6 +271,7 @@
       case 'install': res = { lines: cmdInstall(data) }; break;
       case 'connect': res = { lines: cmdConnect(data) }; break;
       case 'action': res = cmdAction(args, data); break;
+      case 'discuss': res = { lines: cmdDiscuss(data) }; break;
       case 'version':
         res = { lines: ['re-psn v' + data.version + ' (' + data.stage + ')', data.go ? 'Go ' + data.go + ' or newer to build.' : ''].filter(Boolean) };
         break;
@@ -517,7 +530,7 @@
   if (typeof document === 'undefined' || typeof fetch !== 'function') { return; }
 
   var MENU = [['about', 'Overview'], ['features', 'Features'], ['roadmap', 'Roadmap'], ['install', 'Install'],
-    ['settings', 'Settings'], ['connect', 'Connect'], ['action', 'In action'], ['changelog', 'Changelog'], ['docs', 'Docs']];
+    ['settings', 'Settings'], ['connect', 'Connect'], ['action', 'In action'], ['discuss', 'Discuss'], ['changelog', 'Changelog'], ['docs', 'Docs']];
   var FKEYS = { F1: 'help', F2: 'features', F3: 'install', F4: 'settings', F5: 'connect' };
 
   function el(tag, cls, text) {
