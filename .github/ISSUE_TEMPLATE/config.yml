@@ -5,4 +5,4 @@ contact_links:
     about: Report security problems privately (see SECURITY.md), not as an issue.
   - name: Bug in upstream psnr
     url: https://github.com/sp00nznet/psnr/issues
-    about: This is a fork. A bug that is also in sp00nznet/psnr belongs there too.
+    about: re-psn began as a fork of psnr. A bug that is also in sp00nznet/psnr belongs there too.
