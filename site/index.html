@@ -45,7 +45,7 @@
 <section id="overview">
 <h2>Overview</h2>
 <p>re-psn answers the matchmaking and leaderboard calls of a statically recompiled PS3 game, for a group running its own server: a LAN, a VPN, or friends connecting to one person&#x27;s machine. The server keeps rooms and leaderboards and tells each player where the others are. Game traffic goes directly between players, and through the server only when two players cannot reach each other and the host has turned the relay on.</p>
-<p>It is a fork of <a href="https://github.com/sp00nznet/psnr">psnr</a> by sp00nz: a Go server and a one-file C client, with no accounts and no public instance.</p>
+<p>It began as a fork of <a href="https://github.com/sp00nznet/psnr">psnr</a> by sp00nz: a Go server and a one-file C client, with no accounts and no public instance.</p>
 <p class="status-line">Version 0.6.0 (pre-release). 80 features: 43 available, 3 not yet verified, 9 partial, 15 planned, 9 later, 1 declined.</p>
 <p class="notice">Unofficial; not affiliated with Sony. No game files, keys or firmware are in the repository or needed from it. Play only games you own.</p>
 </section>
@@ -350,6 +350,7 @@
 <h3>Unreleased</h3>
 <h4>Changed</h4>
 <ul>
+<li>**Docs and tooling:** the wording that called re-psn &quot;a fork&quot; in <code>CONTRIBUTING.md</code>, <code>AGENTS.md</code>, <code>NOTICE.md</code>, <code>SECURITY.md</code> and the website now says it began as a fork of psnr and is a repository of its own; the credit ...</li>
 <li>**Docs and tooling:** the README&#x27;s first screen is centred (banner, one-line description, badges) with a links line (Download, Quick start, Features, Install, Configuration, Documentation, Website, Report an issue), and ...</li>
 <li>**Docs and tooling:** the README and <code>docker/README.md</code> name v0.6.0 and its container image as the newest, and the features list says <code>since</code> 0.6.0, not <code>main</code>, for four rows that shipped in it (<code>-no-peer-titles</code>, the ...</li>
 </ul>
@@ -451,11 +452,11 @@ docker run --rm -p 36100:36100 -p 36100:36100/udp ghcr.io/undecuple/re-psn:0.6.0
 <h2>Credits and licence</h2>
 <ul>
 <li><strong>sp00nz</strong> (<a href="https://github.com/sp00nznet">sp00nznet</a>) wrote <a href="https://github.com/sp00nznet/psnr">psnr</a>: the server, the C client, the protocol, NAT traversal, the relay and the NAT lab.</li>
-<li><strong>undecuple</strong> (<a href="https://github.com/undecuple">undecuple</a>) maintains re-psn and wrote everything added since the fork: the release and container tooling, the AppImage, hardening and limits, rooms and invite codes, the desktop app, this website, the documentation and the tests.</li>
+<li><strong>undecuple</strong> (<a href="https://github.com/undecuple">undecuple</a>) maintains re-psn and wrote everything added since the fork began: the release and container tooling, the AppImage, hardening and limits, rooms and invite codes, the desktop app, this website, the documentation and the tests.</li>
 <li><a href="https://github.com/sp00nznet/ps3recomp">ps3recomp</a> is the recompiler whose NP modules use the client.</li>
 <li>The site's colours follow the <a href="https://undecuple.github.io/me/">undecuple page</a>, which credits them to <a href="https://github.com/vossenwout/guts.nvim">guts.nvim</a> (that repository states no licence). The light colours of the desktop app and the status page are from <a href="https://github.com/sainnhe/gruvbox-material">gruvbox-material</a> (MIT, Copyright (c) 2020 sainnhe).</li>
 </ul>
-<p>MIT, see <a href="https://github.com/undecuple/re-psn/blob/main/LICENSE">LICENSE</a>; upstream's copyright line is kept and a line for the fork's changes is added. PlayStation, PS3 and PSN are trademarks of Sony Interactive Entertainment, used only to say what the server stands in for.</p>
+<p>MIT, see <a href="https://github.com/undecuple/re-psn/blob/main/LICENSE">LICENSE</a>; upstream's copyright line is kept and a line for re-psn's own changes is added. PlayStation, PS3 and PSN are trademarks of Sony Interactive Entertainment, used only to say what the server stands in for.</p>
 </section>
 </main>
 <footer>

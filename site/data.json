@@ -1283,12 +1283,13 @@
    "date": "",
    "sections": {
     "Changed": [
+     "**Docs and tooling:** the wording that called re-psn \"a fork\" in `CONTRIBUTING.md`, `AGENTS.md`, `NOTICE.md`, `SECURITY.md` and the website now says it began as a fork of psnr and is a repository of its own; the credit ...",
      "**Docs and tooling:** the README's first screen is centred (banner, one-line description, badges) with a links line (Download, Quick start, Features, Install, Configuration, Documentation, Website, Report an issue), and ...",
      "**Docs and tooling:** the README and `docker/README.md` name v0.6.0 and its container image as the newest, and the features list says `since` 0.6.0, not `main`, for four rows that shipped in it (`-no-peer-titles`, the ..."
     ]
    },
    "counts": {
-    "Changed": 2
+    "Changed": 3
    }
   },
   "latest": {
@@ -1305,7 +1306,7 @@
  "about": {
   "paragraphs": [
    "re-psn answers the matchmaking and leaderboard calls of a statically recompiled PS3 game, for a group running its own server: a LAN, a VPN, or friends connecting to one person's machine. The server keeps rooms and leaderboards and tells each player where the others are. Game traffic goes directly between players, and through the server only when two players cannot reach each other and the host has turned the relay on.",
-   "It is a fork of [psnr](https://github.com/sp00nznet/psnr) by sp00nz: a Go server and a one-file C client, with no accounts and no public instance."
+   "It began as a fork of [psnr](https://github.com/sp00nznet/psnr) by sp00nz: a Go server and a one-file C client, with no accounts and no public instance."
   ],
   "notice": "Unofficial; not affiliated with Sony. No game files, keys or firmware are in the repository or needed from it. Play only games you own."
  },
@@ -2216,11 +2217,11 @@
  },
  "credits": [
   "sp00nz ([sp00nznet](https://github.com/sp00nznet)) wrote [psnr](https://github.com/sp00nznet/psnr): the server, the C client, the protocol, NAT traversal, the relay and the NAT lab.",
-  "undecuple ([undecuple](https://github.com/undecuple)) maintains re-psn and wrote everything added since the fork: the release and container tooling, the AppImage, hardening and limits, rooms and invite codes, the desktop app, this website, the documentation and the tests.",
+  "undecuple ([undecuple](https://github.com/undecuple)) maintains re-psn and wrote everything added since the fork began: the release and container tooling, the AppImage, hardening and limits, rooms and invite codes, the desktop app, this website, the documentation and the tests.",
   "[ps3recomp](https://github.com/sp00nznet/ps3recomp) is the recompiler whose NP modules use the client.",
   "The site's colours follow the [undecuple page](https://undecuple.github.io/me/), which credits them to [guts.nvim](https://github.com/vossenwout/guts.nvim) (that repository states no licence). The light colours of the desktop app and the status page are from [gruvbox-material](https://github.com/sainnhe/gruvbox-material) (MIT, Copyright (c) 2020 sainnhe)."
  ],
- "licence": "MIT, see [LICENSE](LICENSE); upstream's copyright line is kept and a line for the fork's changes is added. PlayStation, PS3 and PSN are trademarks of Sony Interactive Entertainment, used only to say what the server stands in for.",
+ "licence": "MIT, see [LICENSE](LICENSE); upstream's copyright line is kept and a line for re-psn's own changes is added. PlayStation, PS3 and PSN are trademarks of Sony Interactive Entertainment, used only to say what the server stands in for.",
  "links": [
   {
    "title": "Repository",
