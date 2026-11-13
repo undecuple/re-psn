@@ -68,7 +68,7 @@ has short guides for players and hosts.
 
 ## Coming soon
 
-Not built yet; each is in the [features list](docs/features.md) and the [roadmap](ROADMAP.md) with its status: friends,
+Not built yet. Each is in the [features list](docs/features.md) and the [roadmap](ROADMAP.md) with its status: friends,
 presence and invites, private rooms, an opt-in SQLite store, connection checks, a graphical desktop
 client, a metrics endpoint, signed releases.
 
@@ -97,11 +97,11 @@ client, a metrics endpoint, signed releases.
 ## About this project
 
 re-psn began as a fork of [psnr](https://github.com/sp00nznet/psnr) by sp00nz, who wrote the original server, the C client and the
-protocol; [LICENSE](LICENSE) keeps upstream's MIT licence and copyright line, and [NOTICE.md](NOTICE.md) credits the upstream work.
+protocol. [LICENSE](LICENSE) keeps upstream's MIT licence and copyright line, and [NOTICE.md](NOTICE.md) credits the upstream work.
 re-psn adds hardened CI and fuzz tests, invite-only rooms, limits, logging, reverse proxy support, a UDP source check, container
-files and release tooling; the [features list](docs/features.md) and [CHANGELOG.md](CHANGELOG.md) have the details. v0.5.0
-added a lobby view with game names, verified player counts and player-reported latency, `-relay-force` for testing the relay from
-one network, LAN discovery (`-discover`), the server half of opt-in peer keys, and archives of the desktop app.
+files and release tooling. The [features list](docs/features.md) and [CHANGELOG.md](CHANGELOG.md) have the details. v0.5.0
+added a lobby view with game names, verified player counts and player-reported latency. It also added `-relay-force` for testing
+the relay from one network, LAN discovery (`-discover`), the server half of opt-in peer keys, and archives of the desktop app.
 
 ---
 
@@ -109,7 +109,7 @@ one network, LAN discovery (`-discover`), the server half of opt-in peer keys, a
 
 A recompiled PS3 game that wants to play online needs someone to answer its matchmaking and leaderboard calls. re-psn is that
 someone, for a group running its own server: a LAN, a VPN, or friends connecting to one person's machine. The server keeps rooms
-and leaderboards and tells each player where the others are; the game traffic itself goes directly between players, and through
+and leaderboards and tells each player where the others are. The game traffic itself goes directly between players, and through
 the server only when two players cannot reach each other and the host has turned the relay on.
 
 <details>
@@ -139,8 +139,8 @@ sequenceDiagram
 ### A session, step by step
 
 1. **The host starts re-psn**, listening on TCP and UDP 36100 (and, with `-http 127.0.0.1:36101`, a status page there).
-2. **A game connects** through the C client (`client/psnr.c`): HELLO with the game's ID, the player's name and P2P port; HELLO_ACK
-   returns a user id, the address the server sees, a token and flags (relay on, invite-only rooms).
+2. **A game connects** through the C client (`client/psnr.c`): it sends HELLO with the game's ID, the player's name and P2P port.
+   HELLO_ACK returns a user id, the address the server sees, a token and flags (relay on, invite-only rooms).
 3. **A UDP PROBE** from the game's P2P socket tells the server its public address and port (accepted only from the TCP address).
 4. **Rooms:** one player creates a room, others search and join, or join with a code. Each member entry carries the address and
    P2P port that work from where the receiving player is.
@@ -153,8 +153,8 @@ Leaderboards use the same TCP connection. More in [docs/architecture.md](docs/ar
 ### Using it from a game
 
 Games are recompiled with [ps3recomp](https://github.com/sp00nznet/ps3recomp), whose NP modules talk to re-psn through the C client.
-That side is upstream's work and not part of this repository: it needs a ps3recomp build with
-[ps3recomp#200](https://github.com/sp00nznet/ps3recomp/pull/200) (merged into ps3recomp on 2026-10-07), where `PS3_NET_ONLINE=1` and `PSNR_SERVER=host[:port]`
+That side is upstream's work and not part of this repository. It needs a ps3recomp build with
+[ps3recomp#200](https://github.com/sp00nznet/ps3recomp/pull/200) (merged into ps3recomp on 2026-10-07). There, `PS3_NET_ONLINE=1` and `PSNR_SERVER=host[:port]`
 point a game at the server (its `docs/ONLINE.md` lists the rest). With it, upstream has played Simpsons Arcade online, two players
 from lobby to Stage 1 in sync, on one machine and later across two with either player behind a NAT.
 
@@ -252,11 +252,11 @@ desktop apps and more) is in [ROADMAP.md](ROADMAP.md) too.
 
 ## Desktop app
 
-[app/](app/README.md) holds the start of the desktop app, a separate Go module: a Go client for the protocol, tested against the
-real server, a settings file reader, `re-psn-app check HOST:PORT`, which connects, says HELLO and reports what the server answered,
-and a terminal UI (`re-psn-app` with no arguments). The UI asks on first start whether this machine plays, hosts or both, then
-shows the server's rooms and one leaderboard at a time over the game protocol, and edits the settings; dark or light theme in the
-website's colours. The server's version, uptime and connection counts are not available over the protocol, so the UI says so.
+[app/](app/README.md) holds the start of the desktop app, a separate Go module. It has a Go client for the protocol, tested against the
+real server; a settings file reader; `re-psn-app check HOST:PORT`, which connects, says HELLO and reports what the server answered;
+and a terminal UI (`re-psn-app` with no arguments). The UI asks on first start whether this machine plays, hosts or both. It then
+shows the server's rooms and one leaderboard at a time over the game protocol, and edits the settings. The theme is dark or light,
+in the website's colours. The server's version, uptime and connection counts are not available over the protocol, so the UI says so.
 An explicitly configured [HTTP status source](app/README.md#optional-native-http-status) adds uptime, connection totals,
 public-room members and board summaries natively, with the existing token rules and no browser. It falls back to the
 game protocol when HTTP is unavailable; the server version remains unshared.
@@ -320,7 +320,7 @@ This installs the server only (`re-psn.exe` into `%LOCALAPPDATA%\re-psn\bin`, no
 ### From source
 
 Prerequisites: Go 1.22 or newer (as in `go.mod`); a C compiler only for the C client and its tests. The quick way is `Setup.cmd`
-(Windows; it offers to install Go with winget) or `./setup.sh` (Linux, macOS): both build the server in `server/` and leave a
+(Windows; it offers to install Go with winget) or `./setup.sh` (Linux, macOS). Both build the server in `server/` and leave a
 `Start re-psn.cmd` or `start-re-psn.sh` launcher, which turns the status page on at `127.0.0.1:36101`. By hand from the repository root, captured from a local run on loopback (the
 build prints nothing when it succeeds):
 
@@ -489,10 +489,10 @@ What to set before the server goes behind a proxy or on the internet.
 
 ## Security and privacy
 
-- **What the server stores:** nothing on disk. Rooms, names and scores live in memory; the only file is the log, if you set
+- **What the server stores:** nothing on disk. Rooms, names and scores live in memory. The only file is the log, if you set
   `-log-file` (it holds online IDs and addresses, never tokens).
 - **What other players learn:** everyone in a room receives the other members' IP addresses and P2P ports, because that is how they
-  connect. The status page lists every connected online ID, which is why it is off unless `-http` is set, and then
+  connect. The status page lists every connected online ID. That is why it is off unless `-http` is set, and then
   stays on localhost or behind a token.
 - **No accounts:** a name is not authenticated; anyone who can reach TCP 36100 can join. Run it for people you would let onto your
   network.
@@ -504,7 +504,7 @@ Limits, the UDP source check and how to report a vulnerability privately are in 
 ## More
 
 [ROADMAP.md](ROADMAP.md) lists what is done, what is planned (storage, health checks, desktop apps, private rooms and more) and what
-is out of scope: re-psn is for groups running their own server, not a public PSN replacement. Issues and pull requests are
+is out of scope. re-psn is for groups running their own server, not a public PSN replacement. Issues and pull requests are
 welcome; [CONTRIBUTING.md](CONTRIBUTING.md) has the ground rules and the tests to run.
 
 | Document | What is in it |
@@ -556,6 +556,6 @@ Entertainment, used only to say what the server stands in for.
 
 ## How AI was used
 
-Developed with AI agent assistance. Every change is reviewed and tested before it is merged: CI runs gofmt, go vet, the Go tests with
+Developed with AI agent assistance. Every change is reviewed and tested before it is merged. CI runs gofmt, go vet, the Go tests with
 the race detector on Linux (including the C client against the server) and on Windows, the features list check, a vulnerability
-scan, a secret scan over the full history and the NAT lab, and code scanning runs on its own workflow.
+scan, a secret scan over the full history and the NAT lab. Code scanning runs on its own workflow.
