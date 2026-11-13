@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use re-psn, please cite it using the metadata in this file."
+title: "re-psn"
+type: software
+abstract: "A matchmaking and leaderboard server for statically recompiled PS3 games: one small binary, no accounts, no cloud. It began as a fork of psnr by sp00nz."
+authors:
+  - name: "undecuple"
+repository-code: "https://github.com/undecuple/re-psn"
+url: "https://undecuple.github.io/re-psn/"
+license: MIT
+keywords:
+  - matchmaking
+  - leaderboards
+  - NAT traversal
+  - PS3
+references:
+  - type: software
+    title: "psnr"
+    authors:
+      - name: "sp00nz"
+    repository-code: "https://github.com/sp00nznet/psnr"
+    license: MIT
