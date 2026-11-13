@@ -73,12 +73,26 @@ func readPacket(r io.Reader) (byte, []byte, error) {
 	if _, err := io.ReadFull(r, hdr[:]); err != nil {
 		return 0, nil, err
 	}
-	p := make([]byte, binary.BigEndian.Uint16(hdr[1:]))
-	if _, err := io.ReadFull(r, p); err != nil {
-		return 0, nil, err
+	n := int(binary.BigEndian.Uint16(hdr[1:]))
+	// The payload buffer grows with the bytes that arrive, so a header that declares a long payload and sends none costs
+	// only readChunk, not the declared length.
+	p := make([]byte, 0, min(n, readChunk))
+	for len(p) < n {
+		if len(p) == cap(p) {
+			p = append(p, make([]byte, min(n-len(p), len(p)))...)[:len(p)]
+		}
+		k := min(n, cap(p))
+		m, err := io.ReadFull(r, p[len(p):k])
+		p = p[:len(p)+m]
+		if err != nil {
+			return 0, nil, err
+		}
 	}
 	return hdr[0], p, nil
 }
+
+// readChunk is the first buffer size readPacket allocates for a payload.
+const readChunk = 2048
 
 func writePacket(w io.Writer, t byte, p []byte) error {
 	if len(p) > maxPayload {
