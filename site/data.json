@@ -1304,6 +1304,7 @@
      "**Docs and tooling:** CI compiles the C client (`client/psnr.c`, `client/examples/minimal.c`) with MSVC on Windows and does not run it there; the build instructions in `docs/integrating.md` give the MSVC command."
     ],
     "Fixed": [
+     "**Server:** a relay stream whose accepting side arrived just as the connecting side's 10 second wait ended no longer leaves the accepting connection open.",
      "**Server:** the in-memory score store now keeps boards for at most 1000 titles, next to its existing 1000 boards per title and 10000 players per board.",
      "**Server:** `-max-conns-per-addr` now counts an IPv6 address as its /64 (an IPv4-mapped address as the IPv4 address), as the UDP limit and the admin failure delay already did.",
      "**Server:** the `-http` status page now closes a connection that does not finish its request header within 5 seconds, its request within 10 seconds, does not read its answer within 10 seconds, or sits idle for 30 ...",
@@ -1334,7 +1335,7 @@
    },
    "counts": {
     "Added": 19,
-    "Fixed": 14,
+    "Fixed": 15,
     "Changed": 10
    }
   },
