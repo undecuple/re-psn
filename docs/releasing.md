@@ -5,8 +5,9 @@ checked on the way. Pre-releases come often and on no schedule, whenever there i
 
 > [!NOTE]
 > The first release, v0.2.0, was cut by this process on 2026-11-06 as a pre-release. The tag step and the draft job ran on that
-> tag and passed; the draft was published by hand after its assets were read back. What has still not been checked is listed in
-> [Not checked yet](#not-checked-yet).
+> tag and passed; the draft was published by hand after its assets were read back. v0.5.0 (2026-11-11) is the first release with
+> the ten assets: the `release` workflow built and drafted them on the tag push, and `release-check.yml` read the ten back
+> after the draft was published. What has still not been checked is listed in [Not checked yet](#not-checked-yet).
 
 ## Contents
 
@@ -207,9 +208,8 @@ How it is built ([`scripts/build-appimage.sh`](../scripts/build-appimage.sh), ru
 - That the Windows and arm64 binaries run; they are cross-built. The exe, the AppImage and `SHA256SUMS` are unsigned.
 - The AppImage on other distributions: it was built and run (with FUSE and with `--appimage-extract-and-run`) on one
   x86_64 Linux machine only.
-- The ten-asset release: v0.4.0 carries seven assets, v0.3.0 five and v0.2.0 nine. The upload of the three app archives to a
-  draft, and `release-check.yml` reading ten assets back and comparing the scripts with the tag
-  through the contents API, run for the first time on the next tag. The app archives have never been built by the release
-  workflow, and the Windows and arm64 app binaries have not been run. A manual run of the release workflow builds and checks
-  the ten files but creates no draft.
+- The Windows and arm64 app binaries have not been run; they are cross-built. v0.5.0 is the first release whose `release`
+  workflow built the three app archives and drafted ten assets, and `release-check.yml` passed on it (the asset names equal
+  the expected ten, the scripts equal the tag's). v0.4.0 carries seven assets, v0.3.0 five and v0.2.0 nine. A manual run of
+  the release workflow builds and checks the ten files but creates no draft.
 - Sample log output in the README and `docs/running.md` (`version=0.1.0`) is an example and is not changed by the bump.
