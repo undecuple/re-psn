@@ -1304,6 +1304,7 @@
      "**Docs and tooling:** CI compiles the C client (`client/psnr.c`, `client/examples/minimal.c`) with MSVC on Windows and does not run it there; the build instructions in `docs/integrating.md` give the MSVC command."
     ],
     "Fixed": [
+     "**Server:** a player's connection no longer reads its title without the server lock while a new connection from the same address takes over its name.",
      "**Server:** a connection that sends a frame header declaring a long payload and then stops no longer costs the server the declared size (up to 64 KB).",
      "**Server:** a relay stream whose accepting side arrived just as the connecting side's 10 second wait ended no longer leaves the accepting connection open.",
      "**Server:** the in-memory score store now keeps boards for at most 1000 titles, next to its existing 1000 boards per title and 10000 players per board.",
@@ -1336,7 +1337,7 @@
    },
    "counts": {
     "Added": 19,
-    "Fixed": 16,
+    "Fixed": 17,
     "Changed": 10
    }
   },

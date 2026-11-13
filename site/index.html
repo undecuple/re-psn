@@ -363,6 +363,7 @@
 </ul>
 <h4>Fixed</h4>
 <ul>
+<li>**Server:** a player&#x27;s connection no longer reads its title without the server lock while a new connection from the same address takes over its name.</li>
 <li>**Server:** a connection that sends a frame header declaring a long payload and then stops no longer costs the server the declared size (up to 64 KB).</li>
 <li>**Server:** a relay stream whose accepting side arrived just as the connecting side&#x27;s 10 second wait ended no longer leaves the accepting connection open.</li>
 <li>**Server:** the in-memory score store now keeps boards for at most 1000 titles, next to its existing 1000 boards per title and 10000 players per board.</li>
