@@ -309,6 +309,7 @@ def build_data(root):
             "client": "A game reaches the server through the C client in `client/psnr.c`, via ps3recomp's NP modules. That side is "
                       "upstream's work; [docs/connecting.md](docs/connecting.md) covers each way to connect.",
         },
+        "action": site_action.build_action_data(),
         "credits": list(CREDITS),
         "licence": LICENCE,
         "links": [
@@ -550,7 +551,7 @@ def render_action_page(data):
     w('<meta name="color-scheme" content="dark">\n')
     w(f'<meta name="description" content="How a re:psn server introduces players, and when it carries their traffic: four simulated scenarios. {esc(UNOFFICIAL)}">\n')
     w('<title>re:psn in action</title>\n')
-    w('<link rel="icon" href="favicon.svg" type="image/svg+xml">\n<link rel="stylesheet" href="style.css">\n</head>\n<body id="top">\n')
+    w('<link rel="icon" href="favicon.svg" type="image/svg+xml">\n<link rel="stylesheet" href="style.css">\n<script src="action.js" defer></script>\n</head>\n<body id="top">\n')
     w('<a class="skip" href="#scenarios">Skip to the scenarios</a>\n')
     w(banner_svg())
     w(banner_side_svg())

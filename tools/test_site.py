@@ -383,9 +383,11 @@ class ActionPageTest(unittest.TestCase):
             self.assertGreaterEqual(sec.count("<li>"), 8)
         self.assertEqual(page.count("<section "), 5)
 
-    def test_no_script_no_inline_style_no_remote_load(self):
+    def test_one_same_origin_script_no_inline_style_no_remote_load(self):
         page = self.page()
-        self.assertNotIn("<script", page)
+        self.assertEqual(page.count("<script"), 1)
+        self.assertIn('<script src="action.js" defer></script>', page)
+        self.assertIn("script-src &#x27;self&#x27;", page)
         self.assertIsNone(re.search(r"\sstyle=|\son[a-z]+=", page))
         self.assertIsNone(re.search(r"(?:src|href)=\"https?://(?!github\.com/)", page))
 
@@ -410,6 +412,34 @@ class ActionPageTest(unittest.TestCase):
                 self.assertRegex(msg, r"^([A-Z][A-Z_]*)?$")
             for key in s["edges"]:
                 self.assertIn(key, site_action.EDGES)
+
+    def test_script_data_is_complete_and_inside_the_diagram(self):
+        f = Fixture()
+        self.addCleanup(f.tmp.cleanup)
+        f.run()
+        scenarios = json.loads(f.read("site/data.json"))["action"]["scenarios"]
+        self.assertEqual([s["id"] for s in scenarios], [s["id"] for s in site_action.SCENARIOS])
+        for s in scenarios:
+            for st in s["steps"]:
+                self.assertIn(st["kind"], ("tcp", "udp", "direct", "relay", "note"), s["id"])
+                self.assertEqual(len(st["path"]) == 0, st["kind"] == "note", f"{s['id']}: {st['message']}")
+                for x, y in st["path"]:
+                    self.assertTrue(0 <= x <= 660 and 0 <= y <= 260, f"{s['id']}: {st['message']} leaves the diagram")
+                if st["lost"]:
+                    self.assertEqual(st["message"], "PUNCH")
+        lost = [(s["id"], st["message"]) for s in scenarios for st in s["steps"] if st["lost"]]
+        self.assertEqual(lost, [("relayed", "PUNCH"), ("blocked", "PUNCH")])
+
+    def test_script_has_no_dynamic_code_or_style_writes(self):
+        js = (ROOT / "site/action.js").read_text(encoding="utf-8")
+        for bad in ("eval(", "new Function", "innerHTML", "outerHTML", "insertAdjacentHTML", "document.write", "XMLHttpRequest", "WebSocket",
+                    "sendBeacon", "document.cookie", "localStorage", "sessionStorage", "indexedDB", "import(", "setAttribute('style'", ".style."):
+            self.assertNotIn(bad, js)
+        self.assertEqual(js.count("fetch("), 1)
+        self.assertIn("fetch('data.json'", js)
+        # a hash such as #constructor must not find a scenario in an object's prototype
+        self.assertIn("views = Object.create(null)", js)
+        self.assertIn("tabBtns = Object.create(null)", js)
 
     def test_home_page_links_to_it(self):
         f = Fixture()

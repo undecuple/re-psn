@@ -437,3 +437,22 @@ html.tui-on:not(.plain) body { padding-bottom: 16px; }
 .steps li { margin: 0.25em 0; }
 .steps .who { color: var(--muted); }
 .steps .msg { color: var(--c-id); }
+.action-diagram .packet { stroke: var(--bg0); stroke-width: 2; }
+.action-diagram .p-tcp { fill: var(--tt-ok); }
+.action-diagram .p-udp, .action-diagram .p-direct { fill: var(--tt-warn); }
+.action-diagram .p-relay { fill: var(--tt-plan); }
+.action-diagram .p-lost { fill: var(--tt-bad); }
+.action-diagram .packet-label { fill: var(--strong); font-size: 13px; }
+.action-diagram .off { display: none; }
+.action-controls { margin: 1em 0; }
+.ctl-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5ch 1ch; margin: 0.5em 0; }
+.ctl { font: inherit; color: var(--text); background: var(--bg1); border: 1px solid var(--line); padding: 0.1em 1ch; cursor: pointer; }
+.ctl[aria-pressed="true"] { color: var(--strong); border-color: var(--strong); font-weight: bold; }
+.ctl:disabled { cursor: default; }
+.ctl:focus-visible, .jump:focus-visible { outline: 2px solid var(--strong); outline-offset: 2px; }
+.ctl-speed { color: var(--text); }
+.action-caption { min-height: 3em; color: var(--text); }
+.action-hint { color: var(--muted); }
+.steps .jump { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; text-align: left; }
+.steps li.now { border-left: 3px solid var(--strong); padding-left: 1ch; margin-left: -1ch; font-weight: bold; }
+[hidden] { display: none !important; }

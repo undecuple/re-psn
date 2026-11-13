@@ -82,7 +82,7 @@ jobs:
       # The website's script: its command logic is tested with Node's own test runner (Node is on the runner image).
       - name: site script tests
         if: runner.os == 'Linux'
-        run: node --test tools/terminal.test.js tools/status.test.js
+        run: node --test tools/terminal.test.js tools/status.test.js tools/action.test.js
       # The README art: with the pinned Pillow and the fonts checked against their pinned SHA-256, a fresh render must
       # equal docs/img/*.png and tools/art/art.json byte for byte (tools/art/make_art.py).
       - name: art
