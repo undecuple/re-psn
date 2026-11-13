@@ -1,11 +1,17 @@
 # re-psn
 
+<div align="center">
+
 ![re-psn: matchmaking rooms and leaderboards for recompiled PS3 games; self-hosted, with NAT traversal, an optional relay and a desktop app](docs/img/banner.png)
 
 **Run your own matchmaking and leaderboard server for statically recompiled PS3 games: one small binary, no accounts, no cloud.**
 
 [![CI](https://github.com/undecuple/re-psn/actions/workflows/ci.yml/badge.svg)](https://github.com/undecuple/re-psn/actions/workflows/ci.yml) <!-- version -->![version v0.6.0](https://img.shields.io/badge/pre--release-v0.6.0-997e95?labelColor=2b2733&style=flat-square)<!-- /version --> ![status: alpha](https://img.shields.io/badge/status-alpha-a86438?labelColor=45403d&style=flat-square)
 ![licence: MIT](https://img.shields.io/badge/licence-MIT-a7d8b0?labelColor=2b2733&style=flat-square) [![Ask DeepWiki](https://img.shields.io/badge/DeepWiki-Ask-007ac0)](https://deepwiki.com/undecuple/re-psn)
+
+**[Download](https://github.com/undecuple/re-psn/releases)** · [Quick start](#quick-start-host-a-server) · [Features](docs/features.md) · [Install](#install) · [Configuration](#configuration) · [Documentation](#more) · [Website](https://undecuple.github.io/re-psn/) · [Report an issue](https://github.com/undecuple/re-psn/issues/new/choose)
+
+</div>
 
 > [!IMPORTANT]
 > **Bring your own game.** This repository has no game code, assets, keys, firmware or BIOS, and you need none from it. Play
@@ -44,6 +50,8 @@ claimed to work yet; see the [features list](docs/features.md) for what is teste
 More ways to install (container, install script, from source) are under [Install](#install); the [wiki](https://github.com/undecuple/re-psn/wiki)
 has short guides for players and hosts.
 
+---
+
 ## What makes it different
 
 | Claim | Proof |
@@ -56,18 +64,22 @@ has short guides for players and hosts.
 | A lobby you can read: games by name, verified player counts and player-reported latency | in v0.5.0: [features list](docs/features.md), [`/api/stats`](docs/api.md#http) |
 | Every feature says how far it got | [features list](docs/features.md) with status and evidence |
 
+---
+
 ## Coming soon
 
 Not built yet; each is in the [features list](docs/features.md) and the [roadmap](ROADMAP.md) with its status: friends,
 presence and invites, private rooms, an opt-in SQLite store, connection checks, a graphical desktop
 client, a metrics endpoint, signed releases.
 
+---
+
 ## Contents
 
 - [Quick start: host a server](#quick-start-host-a-server)
 - [What makes it different](#what-makes-it-different)
 - [Coming soon](#coming-soon)
-- [About this fork](#about-this-fork)
+- [About this project](#about-this-project)
 - [Overview](#overview)
 - [Example](#example)
 - [Features](#features)
@@ -80,14 +92,18 @@ client, a metrics endpoint, signed releases.
 - [Website](#website)
 - [Credits](#credits), [Licence](#licence), [How AI was used](#how-ai-was-used)
 
-## About this fork
+---
 
-re-psn is a fork of [psnr](https://github.com/sp00nznet/psnr) by sp00nz, who wrote the original server, the C client and the
+## About this project
+
+re-psn began as a fork of [psnr](https://github.com/sp00nznet/psnr) by sp00nz, who wrote the original server, the C client and the
 protocol; [LICENSE](LICENSE) keeps upstream's MIT licence and copyright line, and [NOTICE.md](NOTICE.md) credits the upstream work.
-This fork adds hardened CI and fuzz tests, invite-only rooms, limits, logging, reverse proxy support, a UDP source check, container
+re-psn adds hardened CI and fuzz tests, invite-only rooms, limits, logging, reverse proxy support, a UDP source check, container
 files and release tooling; the [features list](docs/features.md) and [CHANGELOG.md](CHANGELOG.md) have the details. v0.5.0
 added a lobby view with game names, verified player counts and player-reported latency, `-relay-force` for testing the relay from
 one network, LAN discovery (`-discover`), the server half of opt-in peer keys, and archives of the desktop app.
+
+---
 
 ## Overview
 
@@ -141,6 +157,8 @@ That side is upstream's work and not part of this repository: it needs a ps3reco
 [ps3recomp#200](https://github.com/sp00nznet/ps3recomp/pull/200) (merged into ps3recomp on 2026-10-07), where `PS3_NET_ONLINE=1` and `PSNR_SERVER=host[:port]`
 point a game at the server (its `docs/ONLINE.md` lists the rest). With it, upstream has played Simpsons Arcade online, two players
 from lobby to Stage 1 in sync, on one machine and later across two with either player behind a NAT.
+
+---
 
 ## Example
 
@@ -209,6 +227,8 @@ Routers and the relay are tested in Docker by the
 
 ![Terminal-style server status in dark mode: alice's room and her leaderboard score of 100, shown together in Overview](docs/status.png)
 
+---
+
 ## Features
 
 Available on `main` today; [docs/features.md](docs/features.md) has every feature with its status, evidence and notes.
@@ -228,6 +248,8 @@ Available on `main` today; [docs/features.md](docs/features.md) has every featur
 Partial, unverified and planned work (release archives and the AppImage, the nginx and HAProxy examples, storage backends, the
 desktop apps and more) is in [ROADMAP.md](ROADMAP.md) too.
 
+---
+
 ## Desktop app
 
 [app/](app/README.md) holds the start of the desktop app, a separate Go module: a Go client for the protocol, tested against the
@@ -244,12 +266,16 @@ The terminal UI uses [Bubble Tea](https://github.com/charmbracelet/bubbletea) an
 (MIT); the server module stays standard-library only. The app module needs Go 1.26 or newer; the server and the C client keep
 their own requirements.
 
+---
+
 ## For recomp developers
 
 Start with [Integrating re-psn into a recompiled game](docs/integrating.md): existing ps3recomp bridge setup, direct
 C/C++ integration, callback ownership, peer/relay transport and failure handling. The [minimal C example](client/examples/minimal.c)
 is compiled and exercised against a loopback server by the required native-client check. Source-level runtime findings
 are pinned; synthetic checks do not certify a title's gameplay or NAT behavior.
+
+---
 
 ## Install
 
@@ -348,6 +374,8 @@ without it, add `--appimage-extract-and-run` as the first argument. The tarball 
 [docs/releasing.md](docs/releasing.md#the-appimage).
 
 </details>
+
+---
 
 ## Configuration
 
@@ -457,6 +485,8 @@ What to set before the server goes behind a proxy or on the internet.
 
 </details>
 
+---
+
 ## Security and privacy
 
 - **What the server stores:** nothing on disk. Rooms, names and scores live in memory; the only file is the log, if you set
@@ -468,6 +498,8 @@ What to set before the server goes behind a proxy or on the internet.
   network.
 
 Limits, the UDP source check and how to report a vulnerability privately are in [SECURITY.md](SECURITY.md).
+
+---
 
 ## More
 
@@ -490,6 +522,8 @@ welcome; [CONTRIBUTING.md](CONTRIBUTING.md) has the ground rules and the tests t
 | [lab/README.md](lab/README.md) | The NAT lab: players behind routers in Docker |
 | [CHANGELOG.md](CHANGELOG.md), [NOTICE.md](NOTICE.md) | What changed; third-party components and credits |
 
+---
+
 ## Website
 
 The project page is built from `site/` by [tools/site.py](tools/site.py) out of the features list, `VERSION`, the settings table above and
@@ -497,21 +531,27 @@ The project page is built from `site/` by [tools/site.py](tools/site.py) out of 
 
 Command output has a file header, line-number gutter and syntax-style colours. See [docs/website.md](docs/website.md) for controls and contributor browser checks.
 
+---
+
 ## Credits
 
 - **sp00nz** ([sp00nznet](https://github.com/sp00nznet)) wrote [psnr](https://github.com/sp00nznet/psnr): the server, the C client,
   the protocol, NAT traversal, the relay and the NAT lab. Thanks to everyone in
   [upstream's contributors](https://github.com/sp00nznet/psnr/graphs/contributors).
-- **undecuple** ([undecuple](https://github.com/undecuple)) maintains re-psn and wrote everything added since the fork, listed in
+- **undecuple** ([undecuple](https://github.com/undecuple)) maintains re-psn and wrote everything added since the fork began, listed in
   [CHANGELOG.md](CHANGELOG.md): the release and container tooling, the AppImage, hardening and limits, rooms and invite codes, the
   desktop app, the website, the documentation and the tests.
 - [ps3recomp](https://github.com/sp00nznet/ps3recomp) is the recompiler whose NP modules use the client, and re-psn follows the
   model of [xlive](https://github.com/sp00nznet/xlive): the server handles discovery, game traffic goes peer to peer.
 
+---
+
 ## Licence
 
-MIT, see [LICENSE](LICENSE); upstream's copyright line is kept and a line for the fork's changes is added. PlayStation, PS3 and PSN are trademarks of Sony Interactive
+MIT, see [LICENSE](LICENSE); upstream's copyright line is kept and a line for re-psn's own changes is added. PlayStation, PS3 and PSN are trademarks of Sony Interactive
 Entertainment, used only to say what the server stands in for.
+
+---
 
 ## How AI was used
 
