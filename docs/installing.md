@@ -2,7 +2,7 @@
 
 Two optional scripts install the re-psn server from a GitHub release for the current user: `scripts/install.sh` on Linux
 (amd64, arm64) and `scripts/install.ps1` on Windows (amd64). They do what the
-[release archives](../README.md#release-archives) section of the README says to do by hand: download the archive and
+[release archives](../README.md#release-archives) section of the README says to do by hand. They download the archive and
 `SHA256SUMS`, check the one against the other, and put the binary in a folder of your own. macOS is not supported: there are
 no macOS builds, and the Linux script says so and stops.
 
@@ -13,11 +13,54 @@ no macOS builds, and the Linux script says so and stops.
 
 ## Contents
 
+- [Install, step by step](#install-step-by-step)
 - [Get the script, then read it](#get-the-script-then-read-it)
 - [Linux](#linux)
 - [Windows](#windows)
 - [What the scripts never do](#what-the-scripts-never-do)
 - [Tests](#tests)
+
+## Install, step by step
+
+Replace `vX.Y.Z` with a release from the [releases page](https://github.com/undecuple/re-psn/releases). Later sections
+explain each step.
+
+**Linux**
+
+1. Download the script and the checksum list:
+
+   ```sh
+   curl -fsSL --proto '=https' --tlsv1.2 -O https://github.com/undecuple/re-psn/releases/download/vX.Y.Z/install.sh
+   curl -fsSL --proto '=https' --tlsv1.2 -O https://github.com/undecuple/re-psn/releases/download/vX.Y.Z/SHA256SUMS
+   ```
+
+   You see nothing printed; `install.sh` and `SHA256SUMS` are now in the current folder.
+2. Check the script: `sha256sum -c SHA256SUMS --ignore-missing`. It must print `install.sh: OK`. Stop if it does not.
+3. Read the script: `less install.sh`. Press `q` to leave.
+4. Run it: `sh install.sh`. It prints the release it found, `Checksum OK:` with a hash, `Installed` with the path of the
+   binary (`~/.local/bin/re-psn` unless you gave `--dir`), and a `Start the server:` line.
+5. If it says the folder is not on your `PATH`, add the `export PATH=...` line it prints to `~/.profile`, and run that line once in this terminal (or log in again).
+6. Start the server with `re-psn`. It listens on TCP and UDP 36100.
+
+If a step fails, the script prints a line that starts with `re-psn install:` and installs nothing. `sh install.sh --dry-run`
+shows what a run would do without downloading or writing anything.
+
+**Windows (PowerShell)**
+
+1. Download the script and the checksum list:
+
+   ```powershell
+   Invoke-WebRequest -UseBasicParsing -OutFile install.ps1 https://github.com/undecuple/re-psn/releases/download/vX.Y.Z/install.ps1
+   Invoke-WebRequest -UseBasicParsing -OutFile SHA256SUMS https://github.com/undecuple/re-psn/releases/download/vX.Y.Z/SHA256SUMS
+   ```
+
+   You see nothing printed; the two files are now in the current folder.
+2. Check the script with the `Get-FileHash` command in the next section. It must print `True`. Stop if it does not.
+3. Read the script: `notepad install.ps1`.
+4. Run it: `powershell -ExecutionPolicy Bypass -File install.ps1`. It prints the release it found, `Checksum OK:` with a hash,
+   `Installed` with the path of `re-psn.exe`, and a line that says how to start the server.
+5. If it says the folder is not on your `PATH`, run the command it prints, or run the script again with `-AddToPath`.
+6. Open a new PowerShell window and start the server with `re-psn`. It listens on TCP and UDP 36100.
 
 ## Get the script, then read it
 
@@ -26,9 +69,9 @@ shell.
 
 > [!NOTE]
 > The scripts are release assets, listed in `SHA256SUMS`, from v0.4.0; v0.3.0 and earlier do not
-> carry them. Use the versioned link below (replace `vX.Y.Z` with a release from the
-> [releases page](https://github.com/undecuple/re-psn/releases)): every release so far is a pre-release, and GitHub's
-> `releases/latest/download/...` link does not point at pre-releases, so it gives a 404.
+> carry them. Use the versioned link below, with a release from the
+> [releases page](https://github.com/undecuple/re-psn/releases) in place of `vX.Y.Z`. Every release so far is a pre-release,
+> and GitHub's `releases/latest/download/...` link does not point at pre-releases, so it gives a 404.
 
 Linux:
 
@@ -48,7 +91,7 @@ Invoke-WebRequest -UseBasicParsing -OutFile SHA256SUMS https://github.com/undecu
 notepad install.ps1
 ```
 
-The release's `install.sh` and `install.ps1` are byte for byte the files in [scripts/](../scripts/) at the release's tag; the
+The release's `install.sh` and `install.ps1` are byte for byte the files in [scripts/](../scripts/) at the release's tag. The
 release workflow checks that before the draft is made, and again once it is published. `SHA256SUMS` is unsigned, so a match
 shows the script is the one the release lists, not who made the release: read it before running it. What the script then
 downloads is checked against the same `SHA256SUMS`. From a clone, `git show vX.Y.Z:scripts/install.sh > install.sh` gives the
@@ -70,11 +113,12 @@ It reads the release list from `api.github.com` only when no version is pinned, 
 `https://github.com/undecuple/re-psn/releases/download/`, over HTTPS with TLS 1.2 or newer; GitHub redirects downloads to its own
 file servers. BusyBox wget is refused, since it cannot be limited to HTTPS.
 
-The binary goes to `~/.local/bin/re-psn` with mode 0755: it is written under a temporary name in the same folder and then renamed
-over the old one, so a running server keeps its file and a failed run leaves nothing half-written. The archive's `LICENSE`,
-`NOTICE.md` and `examples/` (the settings file, the systemd unit and the proxy examples) go to
-`~/.local/share/re-psn/vX.Y.Z/` (under `XDG_DATA_HOME` if set), and an existing folder for that version is kept as it is. When
-the folder is not on `PATH`, the script prints the line to add to `~/.profile`, for example:
+The binary goes to `~/.local/bin/re-psn` with mode 0755. It is written under a temporary name in the same folder and then
+renamed over the old one, so a running server keeps its file and a failed run leaves nothing half-written.
+
+The archive's `LICENSE`, `NOTICE.md` and `examples/` go to `~/.local/share/re-psn/vX.Y.Z/` (under `XDG_DATA_HOME` if set).
+The examples are the settings file, the systemd unit and the proxy examples. An existing folder for that version is kept as it
+is. When the folder is not on `PATH`, the script prints the line to add to `~/.profile`, for example:
 
 ```sh
 export PATH="$HOME/.local/bin:$PATH"
@@ -99,8 +143,8 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -App           # the deskto
 powershell -ExecutionPolicy Bypass -File install.ps1 -DryRun
 ```
 
-It is written for Windows PowerShell 5.1 and PowerShell 7 (`pwsh -File install.ps1`) but has been tested on PowerShell 7 only; it needs no administrator rights, turns on TLS 1.2,
-and checks the zip with `Get-FileHash` against `SHA256SUMS`. `-Dir` picks another folder. `re-psn.exe` is copied under a
+It is written for Windows PowerShell 5.1 and PowerShell 7 (`pwsh -File install.ps1`), but it has been tested on PowerShell 7
+only. It needs no administrator rights, turns on TLS 1.2, and checks the zip with `Get-FileHash` against `SHA256SUMS`. `-Dir` picks another folder. `re-psn.exe` is copied under a
 temporary name and moved over the old one; a running server has to be stopped first, and the script says so. `LICENSE`,
 `NOTICE.md` and `examples\` go to `%LOCALAPPDATA%\re-psn\vX.Y.Z\`. Without `-AddToPath` it changes no PATH and prints the
 command that would add the folder to the user PATH. `-AddToPath` rewrites the user PATH as plain text, so an entry that used `%VARIABLE%` references loses its expansion.
@@ -119,8 +163,8 @@ so Windows SmartScreen may warn about a downloaded `.exe`; the script checks the
 
 ## Tests
 
-`sh scripts/test-install.sh [SHELL]` runs the Linux script against a fake release with stub `curl`, `uname` and `id` commands
-and no network: both CPUs, a checksum mismatch, a missing line, macOS and an unknown CPU, `--dry-run`, `--dir`, the PATH hint,
+`sh scripts/test-install.sh [SHELL]` runs the Linux script against a fake release, with stub `curl`, `uname` and `id` commands
+and no network. It covers both CPUs, a checksum mismatch, a missing line, macOS and an unknown CPU, `--dry-run`, `--dir`, the PATH hint,
 root, an existing binary replaced by a rename, the AppImage, `--app` (both CPUs, an old release without app archives, the dry run), and the `shasum` and `openssl` fallbacks.
 `pwsh -NoProfile -File scripts/test-install.ps1` does the same for the Windows script, with the downloads and the user PATH
 replaced by test functions.
