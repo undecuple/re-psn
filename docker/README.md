@@ -1,7 +1,7 @@
 # Running re-psn in a container
 
 How to build the re-psn image from this repository and run it with Docker or Podman, which ports to publish, and how
-to set it up. The current image is `ghcr.io/undecuple/re-psn:0.5.0` (0.4.0, 0.3.0 and 0.2.0 are still available), or you build it from this repository.
+to set it up. The current image is `ghcr.io/undecuple/re-psn:0.6.0` (0.5.0, 0.4.0, 0.3.0 and 0.2.0 are still available), or you build it from this repository.
 
 ## Contents
 
@@ -180,7 +180,7 @@ not a pre-release, so while every release is a 0.x pre-release only the exact ve
 the amd64 image and checks that it reports the version and runs as uid 10001; the arm64 image is built under emulation and not run.
 
 ```sh
-docker pull ghcr.io/undecuple/re-psn:0.5.0
+docker pull ghcr.io/undecuple/re-psn:0.6.0
 ```
 
 The first image, `0.2.0`, was pushed by a manual run of the workflow (the release it belongs to was tagged before the workflow existed): both

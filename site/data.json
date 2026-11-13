@@ -859,7 +859,7 @@
    "feature": "Per-title peer traffic off",
    "detail": "`-no-peer-titles` lists communication IDs of titles that use no peer traffic: their players get no UDP probe reply, no relay for datagrams or streams, no relay route and no relay flag in HELLO_ACK, and still use rooms and scores. Other titles on the server are unaffected.",
    "status": "available",
-   "since": "main",
+   "since": "0.6.0",
    "evidence": "server/title_peer.go, TestNoPeerTitleProbe, TestNoPeerTitleHelloFlag, TestNoPeerTitleRoute, TestNoPeerTitleRelayRefused, TestNoPeerTitlesFlagAndEnv",
    "note": "Not in v0.5.0. A list of IDs, not a per-title profile file. Hole punching itself is client-side: it stops because the server never learns the endpoint. Tested on loopback with a client written for the tests, not with a real title.",
    "status_label": "available",
@@ -871,7 +871,7 @@
    "feature": "Capability report",
    "detail": "`GET_CAPS` (0x04) after HELLO returns `CAPS` (0x94): a bit set of what this server offers this player (rooms, scores, room codes, peer keys, the UDP probe, the relay, LAN discovery) and the server version. The probe and relay bits are per title, so a title in `-no-peer-titles` sees them clear. The C client has the constants and `psnr_caps_parse`.",
    "status": "available",
-   "since": "main",
+   "since": "0.6.0",
    "evidence": "server/caps.go, TestCapsDefault, TestCapsRelayDiscoverAndNoPeer, TestCapsNeedsHello, client/psnr.c, client/test_psnr.c",
    "note": "Not in v0.5.0. A server before this answers the request with ERROR 1. Tested on loopback with a test client and the C client; no real title asks for it yet.",
    "status_label": "available",
@@ -931,7 +931,7 @@
    "feature": "Host connect policy in the C client",
    "detail": "`psnr_set_connect_policy` registers one callback that the client asks before it opens a TCP connection: the connection `psnr_connect` and `psnr_connect_timeout` make (once per resolved address, with the host as typed) and each relay leg (`psnr_stream_connect`, `psnr_stream_accept`). A refusal skips that address, or returns -1 for a relay leg; refusing every address gives NULL and `psnr_connect_error()` is `PSNR_E_POLICY`. No callback means today's behaviour.",
    "status": "available",
-   "since": "main",
+   "since": "0.6.0",
    "evidence": "client/psnr.c, client/psnr.h, client/test_psnr.c",
    "note": "Not in v0.5.0. Process-wide, set before the first connect; not covered: `psnr_discover` and the title's own P2P socket. IPv4 only, like the client. Tested against a real server on loopback; each check fails with its hook removed.",
    "status_label": "available",
@@ -955,9 +955,9 @@
    "feature": "Experimental admin API, read-only part",
    "detail": "An opt-in listener of its own (`-admin`, `-admin-read-token-file`, TLS for a non-loopback address) with one route, `GET /admin/v1/state`, for a read token: version, uptime, relay, limits, TCP and UDP refusal counts and the ban count (always 0 for now), no address or player. Failed requests get a growing capped delay and one fail2ban-shaped log line; the token file is read again on SIGHUP.",
    "status": "partial",
-   "since": "main",
+   "since": "0.6.0",
    "evidence": "server/admin.go, server/admin_test.go, docs/admin-api.md",
-   "note": "Experimental and not in a release. Read-only: no action, no ban, no limit change, and no app view yet; those are separate changes. Not run against a reverse proxy, on Windows, or on a container secret mount.",
+   "note": "Experimental, first in v0.6.0. Read-only: no action, no ban, no limit change, and no app view yet; those are separate changes. Not run against a reverse proxy, on Windows, or on a container secret mount.",
    "status_label": "partial",
    "status_class": "warn"
   },
@@ -1281,8 +1281,14 @@
   "unreleased": {
    "version": "Unreleased",
    "date": "",
-   "sections": {},
-   "counts": {}
+   "sections": {
+    "Changed": [
+     "**Docs and tooling:** the README and `docker/README.md` name v0.6.0 and its container image as the newest, and the features list says `since` 0.6.0, not `main`, for four rows that shipped in it (`-no-peer-titles`, the ..."
+    ]
+   },
+   "counts": {
+    "Changed": 1
+   }
   },
   "latest": {
    "version": "0.6.0",
