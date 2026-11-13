@@ -21,7 +21,7 @@ function links(res) {
   return out;
 }
 
-const COMMANDS = ['help', '--help', 'features', 'roadmap', 'settings', 'install', 'connect', 'version', 'changelog', 'about',
+const COMMANDS = ['help', '--help', 'features', 'roadmap', 'settings', 'install', 'connect', 'action', 'version', 'changelog', 'about',
   'credits', 'licence', 'license', 'docs', 'links', 'clear', 'history'];
 
 test('every command answers and links stay on github.com or in the repository', () => {
@@ -29,8 +29,30 @@ test('every command answers and links stay on github.com or in the repository', 
     const res = T.run(c, data, { history: ['x'] });
     assert.ok(!res.error, c);
     if (c !== 'clear') assert.ok(res.lines.length > 0, c);
-    for (const h of links(res)) assert.match(h, /^(https:\/\/github\.com\/|#)/, c + ' ' + h);
+    for (const h of links(res)) assert.match(h, /^(https:\/\/github\.com\/|#|action\.html$)/, c + ' ' + h);
   }
+});
+
+test('action: list, one scenario, errors, completion', () => {
+  const ids = data.action.scenarios.map((x) => x.id);
+  const list = text(T.run('action', data));
+  for (const id of ids) assert.ok(list.includes(id), id);
+  assert.deepStrictEqual(links(T.run('action', data)), ['action.html']);
+  for (const sc of data.action.scenarios) {
+    const res = T.run('action ' + sc.id, data);
+    assert.ok(!res.error);
+    assert.strictEqual(res.file, 'action/' + sc.id + '.md');
+    const t = text(res);
+    assert.ok(t.includes(sc.steps.length + '. '), sc.id);
+    for (const st of sc.steps) if (st.message) assert.ok(t.includes(st.message), st.message);
+  }
+  assert.match(text(T.run('action nope', data)), /^action: no scenario nope, use direct, punch, relayed, blocked$/);
+  assert.match(text(T.run('action __proto__', data)), /^action: no scenario/);
+  assert.match(text(T.run('action dir', data)), /^action: no scenario dir,/);
+  assert.deepStrictEqual(T.complete('action re', data).value, 'action relayed ');
+  assert.deepStrictEqual(T.suggest('action ', data).items.map((i) => i.text), ids);
+  assert.strictEqual(T.hrefFor('action.html', data), 'action.html');
+  assert.strictEqual(T.hrefFor('action.html.evil', data), data.repository + '/blob/main/action.html.evil');
 });
 
 test('unknown input', () => {
@@ -205,13 +227,13 @@ test('there is one dark theme: no theme command, switch or stored choice', () =>
 // ---------------------------------------------------------------- the numbered file
 
 test('each answer has a file name; errors and clear have none', () => {
-  assert.strictEqual(T.run('features', data).file, 'features');
-  assert.strictEqual(T.run('features --status planned', data).file, 'features/planned');
-  assert.strictEqual(T.run('features ' + data.features[0].id, data).file, 'features/' + data.features[0].id);
-  assert.strictEqual(T.run('settings', data).file, 'settings');
-  assert.strictEqual(T.run('settings -addr', data).file, 'settings/addr');
-  assert.strictEqual(T.run('help', data).file, 'help');
-  assert.strictEqual(T.run('--help', data).file, 'help');
+  assert.strictEqual(T.run('features', data).file, 'features.md');
+  assert.strictEqual(T.run('features --status planned', data).file, 'features/planned.md');
+  assert.strictEqual(T.run('features ' + data.features[0].id, data).file, 'features/' + data.features[0].id + '.md');
+  assert.strictEqual(T.run('settings', data).file, 'settings.md');
+  assert.strictEqual(T.run('settings -addr', data).file, 'settings/addr.md');
+  assert.strictEqual(T.run('help', data).file, 'help.md');
+  assert.strictEqual(T.run('--help', data).file, 'help.md');
   assert.strictEqual(T.run('features nope', data).file, undefined);
   assert.strictEqual(T.run('nonsense', data).file, undefined);
   assert.strictEqual(T.run('clear', data).file, undefined);

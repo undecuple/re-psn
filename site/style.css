@@ -298,7 +298,8 @@ html.tui-on:not(.plain) body { padding-bottom: 16px; }
 .tui-menu .mi[aria-current]::before { content: "> "; }
 .tui-content { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 .tui .chip.tui-back { display: none; }
-.tui-out { flex: 1; overflow: auto; padding: 0.5em 1ch; min-height: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tui-out { flex: 1; overflow: auto; padding: 0.5em 1ch; min-height: 0; white-space: pre-wrap; overflow-wrap: anywhere; display: flex; flex-direction: column; }
+.tui-out > * { flex: 0 0 auto; }
 .tui-out .ln { min-height: 1.5em; }
 .tui-out { scrollbar-color: var(--thumb) var(--panel); scrollbar-gutter: stable; }
 .tui-out .ps { color: var(--c-prompt); font-weight: bold; }
@@ -323,6 +324,11 @@ html.tui-on:not(.plain) body { padding-bottom: 16px; }
 .tui-out .gut { border-right: 1px solid var(--line); padding-right: var(--gp); text-align: right; color: var(--muted); user-select: none; -webkit-user-select: none; }
 .tui-out .gut::before { content: attr(data-n); }
 .tui-out .tx { min-width: 0; padding-left: var(--gp); white-space: pre-wrap; overflow-wrap: anywhere; }
+/* The newest answer fills what is left of the pane, and the gutter rule runs to the bottom of it, like a file open in a viewer. */
+.tui-out .file-body { background: linear-gradient(var(--line), var(--line)) calc(var(--gw) - 1px) 0 / 1px 100% no-repeat; }
+.tui-out .file:last-child { flex: 1 0 auto; display: flex; flex-direction: column; }
+.tui-out .file:last-child .file-body { flex: 1; }
+.tui-out .file-head .tx { padding-top: 0.4em; padding-bottom: 0.4em; }
 .tui-out .file-label { color: var(--muted); }
 .tui-out .file-name { color: var(--strong); font-weight: bold; }
 .tui-out .num { color: var(--c-num); }

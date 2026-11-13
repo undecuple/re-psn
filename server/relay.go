@@ -118,6 +118,7 @@ func (s *Server) streamLeg(conn net.Conn, t byte, p []byte) (handedOff bool) {
 			return fail(errNotFound)
 		}
 		if ready() != nil {
+			st.accept <- nil
 			return false
 		}
 		st.accept <- conn
@@ -149,18 +150,13 @@ func (s *Server) streamLeg(conn net.Conn, t byte, p []byte) (handedOff bool) {
 	s.flush([]push{{to, msgStreamOffer, w.b}})
 	s.log.Debug("relay stream", "stream", st.id, "from", from.onlineID, "to", to.onlineID, "vport", vport)
 
-	var other net.Conn
-	select {
-	case other = <-st.accept:
-	case <-s.stopped:
-		s.mu.Lock()
-		delete(s.streams, st.id)
-		s.mu.Unlock()
-		return false
-	case <-time.After(streamAcceptTimeout):
-		s.mu.Lock()
-		delete(s.streams, st.id)
-		s.mu.Unlock()
+	other := s.awaitAccept(st, streamAcceptTimeout)
+	if other == nil {
+		select {
+		case <-s.stopped:
+			return false
+		default:
+		}
 		return fail(errNotFound)
 	}
 	if ready() != nil {
@@ -171,6 +167,28 @@ func (s *Server) streamLeg(conn net.Conn, t byte, p []byte) (handedOff bool) {
 	other.SetDeadline(time.Time{})
 	s.splice(conn, other)
 	return false
+}
+
+// awaitAccept waits up to d for the target's leg of st. It returns nil if there is none: the server is stopping, the wait ran out,
+// or the accepting side failed. An accepting side that had already taken the stream out of s.streams when the wait ran out is
+// waited for (it always sends a leg or nil), so its connection is used and not left behind.
+func (s *Server) awaitAccept(st *stream, d time.Duration) net.Conn {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case other := <-st.accept:
+		return other
+	case <-s.stopped:
+	case <-timer.C:
+	}
+	s.mu.Lock()
+	_, waiting := s.streams[st.id]
+	delete(s.streams, st.id)
+	s.mu.Unlock()
+	if waiting {
+		return nil
+	}
+	return <-st.accept
 }
 
 // relayWriteTimeout bounds one write of a relayed chunk to a leg: a peer that stops reading cannot hold the leg open.
