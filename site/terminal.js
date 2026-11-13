@@ -287,7 +287,13 @@
 
   // The name in the header of an answer, like a file name: the command, and the item asked for. An answer that is only an error,
   // and clear, have none (they are not framed).
+  // The name is shown like a file's, with the .md of the text it holds.
   function fileName(word, args, res) {
+    var base = fileBase(word, args, res);
+    return base ? base + '.md' : null;
+  }
+
+  function fileBase(word, args, res) {
     if (!res.lines.length || (res.lines.length === 1 && isErrorLine(res.lines[0]))) { return null; }
     if (word === 'features') {
       var i = args.indexOf('--status');

@@ -9,6 +9,7 @@ import (
 // The memory backend's limits: a Put that would go past one returns ErrFull.
 // An update of a player already on the board is never refused.
 const (
+	maxTitles          = 1000  // titles that may have boards
 	maxBoardsPerTitle  = 1000  // boards one title may have
 	maxEntriesPerBoard = 10000 // players on one board
 )
@@ -21,6 +22,7 @@ type memory struct {
 	titles map[string]int // boards per title
 
 	// The limits are fields so tests can lower them; NewMemory sets the defaults.
+	maxTitles          int
 	maxBoardsPerTitle  int
 	maxEntriesPerBoard int
 }
@@ -36,6 +38,7 @@ func NewMemory() Store {
 	return &memory{
 		boards:             map[Key]*board{},
 		titles:             map[string]int{},
+		maxTitles:          maxTitles,
 		maxBoardsPerTitle:  maxBoardsPerTitle,
 		maxEntriesPerBoard: maxEntriesPerBoard,
 	}
@@ -122,6 +125,9 @@ func (m *memory) Put(ctx context.Context, k Key, ascending bool, e Entry) (uint3
 		}
 		if b == nil && m.titles[k.Title] >= m.maxBoardsPerTitle {
 			return 0, ErrFull
+		}
+		if b == nil && m.titles[k.Title] == 0 && len(m.titles) >= m.maxTitles {
+			return 0, ErrFull // a new title, and the store already has the most it keeps
 		}
 	}
 	if b == nil {

@@ -50,7 +50,7 @@ docker compose -f docker/docker-compose.yml up -d
 | `-max-rooms` | `1000` | Room limit across all titles |
 | `-max-player-rooms` | `8` | Rooms one player may be in at once (0: no limit) |
 | `-max-conns` | `4096` | Open TCP connections in total, players and relay legs together (0: no limit). Not in v0.5.0. A relayed stream holds two sockets, so a server near this limit needs a file-descriptor limit above it (the systemd unit sets `LimitNOFILE=16384`). |
-| `-max-conns-per-addr` | `32` | Open connections per remote address (0: no limit) |
+| `-max-conns-per-addr` | `32` | Open connections per remote address; an IPv6 address counts as its /64 (0: no limit) |
 | `-max-req-rate` | `200` | Requests per second per connection before it is closed (0: no limit) |
 | `-max-udp-rate` | `1000` | UDP packets per second per source (IPv4 address or IPv6 /64), including invalid packets, with the same-size burst allowance. Probes and UDP relay traffic share it; 0 disables the limiter, negative values stop startup. Players behind one NAT share one allowance. See [UDP guardrails](udp-guardrails.md). |
 | `-discover` | off | Answer LAN discovery broadcasts on the game UDP port, from private-network senders only. See [Finding a server on the LAN](connecting.md#finding-a-server-on-the-lan). With it off, a discovery packet is treated like any other unknown UDP packet. |
@@ -272,9 +272,8 @@ file's contents: errors name the variable, the scheme and the file's path only. 
 request gets ERROR 6 and the failure is logged at warn level.
 
 `-max-req-rate` only limits requests per second on each connection; it does not bound the in-memory score store. The
-store has its own fixed limits: at most 1000 boards per title and 10000 players per board. A score past either gets
-ERROR 6 (see [docs/api.md](api.md#leaderboards)). Across titles the store can still grow, because the number of titles
-is not limited.
+store has its own fixed limits: at most 1000 titles, 1000 boards per title and 10000 players per board. A score past
+any of them gets ERROR 6 (see [docs/api.md](api.md#leaderboards)).
 
 ## Stopping and replacing
 
