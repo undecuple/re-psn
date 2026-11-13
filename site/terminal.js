@@ -838,12 +838,12 @@
       if (e.key === 'Escape' && !typing) { menuFocus(); }
     });
 
-    var anchor = document.querySelector('.skip');
+    // The terminal view goes right under the banner (after the skip link when there is none).
+    var anchor = document.querySelector('.banner') || document.querySelector('.skip');
     document.body.insertBefore(toTui, anchor ? anchor.nextSibling : document.body.firstChild);
     toTui.parentNode.insertBefore(tui, toTui.nextSibling);
     document.documentElement.classList.add('tui-on');
     syncCursor();
-    syncControls();
     paint(run('about', data, {}), null);
     current = 'about';
     mark(current);

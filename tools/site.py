@@ -72,8 +72,8 @@ def banner_svg():
             '<text class="bn-sub" x="647" y="34" text-anchor="end" font-family="monospace" font-size="14">self-hosted</text>'
             f'<path class="bn-name" d="{"".join(cells)}"/>'
             '<path class="bn-rule" d="M8 146H663"/>'
-            '<text class="bn-text" xml:space="preserve" x="335" y="176" text-anchor="middle" font-family="monospace" font-size="16" letter-spacing="8">'
-            'R O O M S   A N D   L E A D E R B O A R D S</text></svg>\n')
+            '<text class="bn-text" x="335" y="176" text-anchor="middle" font-family="monospace" font-size="16" textLength="560" lengthAdjust="spacing">'
+            'ROOMS AND LEADERBOARDS</text></svg>\n')
 
 
 # roadmap group -> the statuses in it, in the order the page shows them

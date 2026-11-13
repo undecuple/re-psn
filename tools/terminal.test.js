@@ -196,6 +196,8 @@ test('there is one dark theme: no theme command, switch or stored choice', () =>
   assert.ok(T.run('theme', data).error);
   assert.ok(!source.includes('data-theme'));
   assert.ok(!source.includes('applyTheme'));
+  assert.ok(!source.includes('syncControls'));
+  assert.ok(source.includes("document.querySelector('.banner') || document.querySelector('.skip')"));
   assert.ok(!source.includes('setItem'));
   assert.ok(source.includes("removeItem('re-psn-theme')"));
 });
