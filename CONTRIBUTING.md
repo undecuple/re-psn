@@ -1,7 +1,7 @@
 # Contributing
 
 How to report a problem or send a change to re-psn: the ground rules, what a pull request should hold, and which tests to run.
-re-psn is a fork of [sp00nznet/psnr](https://github.com/sp00nznet/psnr), by sp00nz. Bug reports, fixes and ideas are welcome here, through
+re-psn began as a fork of [sp00nznet/psnr](https://github.com/sp00nznet/psnr), by sp00nz, and is now a repository of its own. Bug reports, fixes and ideas are welcome here, through
 the issue forms (bug report, feature request) or a pull request. Something that is also wrong in upstream may be worth
 reporting there too.
 

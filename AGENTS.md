@@ -3,8 +3,8 @@
 This file is for AI coding agents working in this repository. People can read it too: it is the short version of
 [CONTRIBUTING.md](CONTRIBUTING.md) with the commands and layout an agent needs. If the two disagree, CONTRIBUTING.md wins.
 
-re-psn is a fork of [sp00nznet/psnr](https://github.com/sp00nznet/psnr): a Go server for matchmaking rooms and leaderboards, and a
-C client, for statically recompiled PS3 games.
+re-psn is a Go server for matchmaking rooms and leaderboards, and a C client, for statically recompiled PS3 games. It began as a
+fork of [sp00nznet/psnr](https://github.com/sp00nznet/psnr) and is now a repository of its own.
 
 ## Layout
 

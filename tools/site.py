@@ -126,20 +126,20 @@ ABOUT = (
     "server: a LAN, a VPN, or friends connecting to one person's machine. The server keeps rooms and leaderboards and tells "
     "each player where the others are. Game traffic goes directly between players, and through the server only when two "
     "players cannot reach each other and the host has turned the relay on.",
-    "It is a fork of [psnr](https://github.com/sp00nznet/psnr) by sp00nz: a Go server and a one-file C client, "
+    "It began as a fork of [psnr](https://github.com/sp00nznet/psnr) by sp00nz: a Go server and a one-file C client, "
     "with no accounts and no public instance.",
 )
 NOTICE = UNOFFICIAL + " No game files, keys or firmware are in the repository or needed from it. Play only games you own."
 CREDITS = (
     "sp00nz ([sp00nznet](https://github.com/sp00nznet)) wrote [psnr](https://github.com/sp00nznet/psnr): the server, the C client, "
     "the protocol, NAT traversal, the relay and the NAT lab.",
-    "undecuple ([undecuple](https://github.com/undecuple)) maintains re-psn and wrote everything added since the fork: the release and "
+    "undecuple ([undecuple](https://github.com/undecuple)) maintains re-psn and wrote everything added since the fork began: the release and "
     "container tooling, the AppImage, hardening and limits, rooms and invite codes, the desktop app, this website, the documentation "
     "and the tests.",
     "[ps3recomp](https://github.com/sp00nznet/ps3recomp) is the recompiler whose NP modules use the client.",
     "The site's colours follow the [undecuple page](https://undecuple.github.io/me/), which credits them to [guts.nvim](https://github.com/vossenwout/guts.nvim) (that repository states no licence). The light colours of the desktop app and the status page are from [gruvbox-material](https://github.com/sainnhe/gruvbox-material) (MIT, Copyright (c) 2020 sainnhe).",
 )
-LICENCE = ("MIT, see [LICENSE](LICENSE); upstream's copyright line is kept and a line for the fork's changes is added. PlayStation, PS3 and PSN are "
+LICENCE = ("MIT, see [LICENSE](LICENSE); upstream's copyright line is kept and a line for re-psn's own changes is added. PlayStation, PS3 and PSN are "
            "trademarks of Sony Interactive Entertainment, used only to say what the server stands in for.")
 # (path, title, what is in it); each path must exist
 DOCS = (
@@ -555,12 +555,12 @@ def render_page(data):
       '<a href="https://github.com/sp00nznet/psnr">psnr</a>: the server, the C client, the protocol, NAT traversal, the relay and '
       'the NAT lab.</li>\n')
     w('<li><strong>undecuple</strong> (<a href="https://github.com/undecuple">undecuple</a>) maintains re-psn and wrote everything '
-      'added since the fork: the release and container tooling, the AppImage, hardening and limits, rooms and invite codes, '
+      'added since the fork began: the release and container tooling, the AppImage, hardening and limits, rooms and invite codes, '
       'the desktop app, this website, the documentation and the tests.</li>\n')
     w('<li><a href="https://github.com/sp00nznet/ps3recomp">ps3recomp</a> is the recompiler whose NP modules use the client.</li>\n')
     w('<li>The site\'s colours follow the <a href="https://undecuple.github.io/me/">undecuple page</a>, which credits them to <a href="https://github.com/vossenwout/guts.nvim">guts.nvim</a> (that repository states no licence). The light colours of the desktop app and the status page are from <a href="https://github.com/sainnhe/gruvbox-material">gruvbox-material</a> (MIT, Copyright (c) 2020 sainnhe).</li>\n')
     w('</ul>\n')
-    w(f'<p>MIT, see <a href="{esc(doc_url("LICENSE"))}">LICENSE</a>; upstream\'s copyright line is kept and a line for the fork\'s changes is added. PlayStation, PS3 and PSN are '
+    w(f'<p>MIT, see <a href="{esc(doc_url("LICENSE"))}">LICENSE</a>; upstream\'s copyright line is kept and a line for re-psn\'s own changes is added. PlayStation, PS3 and PSN are '
       'trademarks of Sony Interactive Entertainment, used only to say what the server stands in for.</p>\n')
     w('</section>\n')
 

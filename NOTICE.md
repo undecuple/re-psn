@@ -1,8 +1,8 @@
 # Third-party components and credits
 
-re-psn is a fork of [sp00nznet/psnr](https://github.com/sp00nznet/psnr) (MIT), written by sp00nz, and is maintained by [undecuple](https://github.com/undecuple),
+re-psn began as a fork of [sp00nznet/psnr](https://github.com/sp00nznet/psnr) (MIT), written by sp00nz, and is maintained by [undecuple](https://github.com/undecuple),
 who wrote the changes since the fork. The upstream licence and copyright line are in
-[LICENSE](LICENSE) and stay in this fork, with a second line for the fork's changes; the server, the C client and the protocol are upstream's work, and this fork's changes are listed in
+[LICENSE](LICENSE) and stay in re-psn, with a second line for its own changes; the server, the C client and the protocol are upstream's work, and re-psn's changes are listed in
 [CHANGELOG.md](CHANGELOG.md).
 
 Feature page generator adapted from Project Helghast (https://github.com/undecuple/project-helghast, MIT, Copyright (c) 2026 undecuple): tools/features.py.

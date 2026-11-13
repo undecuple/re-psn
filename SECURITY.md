@@ -23,7 +23,7 @@ address, the same as on real PSN P2P.
   ([docs/api.md](docs/api.md), HELLO). Behind such a proxy, `-max-conns-per-addr` counts every player together, so the
   limit applies to the whole server ([docs/running.md](docs/running.md#behind-a-reverse-proxy)).
 
-## What this fork changes
+## What re-psn changes
 
 See [docs/running.md](docs/running.md) for the flags.
 
