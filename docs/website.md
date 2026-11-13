@@ -27,7 +27,7 @@ and loads its data from the same origin.
 python3 tools/features.py --check
 python3 tools/site.py --check
 python3 -m unittest
-node --test tools/terminal.test.js
+node --test tools/terminal.test.js tools/status.test.js tools/action.test.js
 ```
 
 The optional browser check requires Node 22 or newer and a locally installed Chromium-compatible browser. It adds no

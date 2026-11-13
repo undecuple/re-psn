@@ -1377,6 +1377,883 @@
   ],
   "client": "A game reaches the server through the C client in `client/psnr.c`, via ps3recomp's NP modules. That side is upstream's work; [docs/connecting.md](docs/connecting.md) covers each way to connect."
  },
+ "action": {
+  "scenarios": [
+   {
+    "id": "direct",
+    "title": "Direct: players on one LAN or VPN",
+    "summary": "Both players can reach each other, so the server only introduces them. Game traffic never touches it.",
+    "steps": [
+     {
+      "from": "A",
+      "to": "S",
+      "message": "HELLO",
+      "caption": "Player A says who it is and which UDP port its game listens on.",
+      "kind": "tcp",
+      "path": [
+       [
+        114,
+        176
+       ],
+       [
+        270,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "S",
+      "to": "A",
+      "message": "HELLO_ACK",
+      "caption": "The server answers with a user id, the address it sees, a token and a flags byte.",
+      "kind": "tcp",
+      "path": [
+       [
+        270,
+        80
+       ],
+       [
+        114,
+        176
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "A",
+      "to": "S",
+      "message": "CREATE_ROOM",
+      "caption": "Player A opens a room.",
+      "kind": "tcp",
+      "path": [
+       [
+        114,
+        176
+       ],
+       [
+        270,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "S",
+      "to": "A",
+      "message": "ROOM_JOINED",
+      "caption": "The room exists, and A is its first member.",
+      "kind": "tcp",
+      "path": [
+       [
+        270,
+        80
+       ],
+       [
+        114,
+        176
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "B",
+      "to": "S",
+      "message": "HELLO",
+      "caption": "Player B connects the same way.",
+      "kind": "tcp",
+      "path": [
+       [
+        546,
+        176
+       ],
+       [
+        390,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "S",
+      "to": "B",
+      "message": "HELLO_ACK",
+      "caption": "The server answers B.",
+      "kind": "tcp",
+      "path": [
+       [
+        390,
+        80
+       ],
+       [
+        546,
+        176
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "B",
+      "to": "S",
+      "message": "SEARCH_ROOMS",
+      "caption": "B asks for rooms of its title that are not full.",
+      "kind": "tcp",
+      "path": [
+       [
+        546,
+        176
+       ],
+       [
+        390,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "S",
+      "to": "B",
+      "message": "ROOM_LIST",
+      "caption": "A's room is in the list.",
+      "kind": "tcp",
+      "path": [
+       [
+        390,
+        80
+       ],
+       [
+        546,
+        176
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "B",
+      "to": "S",
+      "message": "JOIN_ROOM",
+      "caption": "B joins it.",
+      "kind": "tcp",
+      "path": [
+       [
+        546,
+        176
+       ],
+       [
+        390,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "S",
+      "to": "B",
+      "message": "ROOM_JOINED",
+      "caption": "The reply carries every member's address and game port, so B knows where A is.",
+      "kind": "tcp",
+      "path": [
+       [
+        390,
+        80
+       ],
+       [
+        546,
+        176
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "B",
+      "to": "A",
+      "message": "",
+      "caption": "B sends game datagrams straight to A. The server is not on the path.",
+      "kind": "direct",
+      "path": [
+       [
+        456,
+        206
+       ],
+       [
+        204,
+        206
+       ]
+      ],
+      "lost": false
+     }
+    ]
+   },
+   {
+    "id": "punch",
+    "title": "Hole punch: two ordinary home routers",
+    "summary": "Each player is behind a router. The server learns each router's public address from a probe, the players punch through, and then talk directly.",
+    "steps": [
+     {
+      "from": "A",
+      "to": "S",
+      "message": "HELLO",
+      "caption": "Player A connects and gives its game port.",
+      "kind": "tcp",
+      "path": [
+       [
+        114,
+        176
+       ],
+       [
+        270,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "S",
+      "to": "A",
+      "message": "HELLO_ACK",
+      "caption": "The answer includes the token that A's probes will carry.",
+      "kind": "tcp",
+      "path": [
+       [
+        270,
+        80
+       ],
+       [
+        114,
+        176
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "A",
+      "to": "S",
+      "message": "CREATE_ROOM",
+      "caption": "A opens a room.",
+      "kind": "tcp",
+      "path": [
+       [
+        114,
+        176
+       ],
+       [
+        270,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "S",
+      "to": "A",
+      "message": "ROOM_JOINED",
+      "caption": "A is its first member.",
+      "kind": "tcp",
+      "path": [
+       [
+        270,
+        80
+       ],
+       [
+        114,
+        176
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "A",
+      "to": "S",
+      "message": "PROBE",
+      "caption": "From its game socket, A sends a UDP probe, so the server sees A's router's public address and port.",
+      "kind": "udp",
+      "path": [
+       [
+        114,
+        176
+       ],
+       [
+        270,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "S",
+      "to": "A",
+      "message": "PROBE_REPLY",
+      "caption": "The server tells A what it saw.",
+      "kind": "udp",
+      "path": [
+       [
+        270,
+        80
+       ],
+       [
+        114,
+        176
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "B",
+      "to": "S",
+      "message": "HELLO",
+      "caption": "Player B connects.",
+      "kind": "tcp",
+      "path": [
+       [
+        546,
+        176
+       ],
+       [
+        390,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "S",
+      "to": "B",
+      "message": "HELLO_ACK",
+      "caption": "The server answers B.",
+      "kind": "tcp",
+      "path": [
+       [
+        390,
+        80
+       ],
+       [
+        546,
+        176
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "B",
+      "to": "S",
+      "message": "PROBE",
+      "caption": "B probes from its game socket too.",
+      "kind": "udp",
+      "path": [
+       [
+        546,
+        176
+       ],
+       [
+        390,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "S",
+      "to": "B",
+      "message": "PROBE_REPLY",
+      "caption": "The server tells B what it saw.",
+      "kind": "udp",
+      "path": [
+       [
+        390,
+        80
+       ],
+       [
+        546,
+        176
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "B",
+      "to": "S",
+      "message": "JOIN_ROOM",
+      "caption": "B joins A's room.",
+      "kind": "tcp",
+      "path": [
+       [
+        546,
+        176
+       ],
+       [
+        390,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "S",
+      "to": "B",
+      "message": "ROOM_JOINED",
+      "caption": "The member entry for A carries the router address and port from A's probe.",
+      "kind": "tcp",
+      "path": [
+       [
+        390,
+        80
+       ],
+       [
+        546,
+        176
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "A",
+      "to": "B",
+      "message": "PUNCH",
+      "caption": "Both players send PUNCH packets to each other's router address, which opens each router for the other.",
+      "kind": "udp",
+      "path": [
+       [
+        204,
+        206
+       ],
+       [
+        456,
+        206
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "B",
+      "to": "A",
+      "message": "",
+      "caption": "Game datagrams now go directly between the players.",
+      "kind": "direct",
+      "path": [
+       [
+        456,
+        206
+       ],
+       [
+        204,
+        206
+       ]
+      ],
+      "lost": false
+     }
+    ]
+   },
+   {
+    "id": "relayed",
+    "title": "Relayed: one player behind a symmetric NAT",
+    "summary": "B's router picks a new port for every destination, so the punch cannot work. A server run with -relay carries the game traffic instead. The room steps are as in the scenarios above and are left out here; the server sends ROUTE to both players, and only A's copy is shown.",
+    "steps": [
+     {
+      "from": "A",
+      "to": "S",
+      "message": "HELLO",
+      "caption": "Player A connects.",
+      "kind": "tcp",
+      "path": [
+       [
+        114,
+        176
+       ],
+       [
+        270,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "S",
+      "to": "A",
+      "message": "HELLO_ACK",
+      "caption": "The flags byte says the server relays.",
+      "kind": "tcp",
+      "path": [
+       [
+        270,
+        80
+       ],
+       [
+        114,
+        176
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "B",
+      "to": "S",
+      "message": "HELLO",
+      "caption": "Player B connects.",
+      "kind": "tcp",
+      "path": [
+       [
+        546,
+        176
+       ],
+       [
+        390,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "S",
+      "to": "B",
+      "message": "HELLO_ACK",
+      "caption": "The server answers B.",
+      "kind": "tcp",
+      "path": [
+       [
+        390,
+        80
+       ],
+       [
+        546,
+        176
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "A",
+      "to": "S",
+      "message": "PROBE",
+      "caption": "A probes; its router keeps one port, so the server sees a usable address.",
+      "kind": "udp",
+      "path": [
+       [
+        114,
+        176
+       ],
+       [
+        270,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "B",
+      "to": "S",
+      "message": "PROBE",
+      "caption": "B probes; its router maps a new port for each destination.",
+      "kind": "udp",
+      "path": [
+       [
+        546,
+        176
+       ],
+       [
+        390,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "A",
+      "to": "B",
+      "message": "PUNCH",
+      "caption": "A punches towards the address the server saw for B. It does not reach B.",
+      "kind": "udp",
+      "path": [
+       [
+        204,
+        206
+       ],
+       [
+        456,
+        206
+       ]
+      ],
+      "lost": true
+     },
+     {
+      "from": "S",
+      "to": "A",
+      "message": "ROUTE",
+      "caption": "The server tells A that streams to B go through the relay.",
+      "kind": "tcp",
+      "path": [
+       [
+        270,
+        80
+       ],
+       [
+        114,
+        176
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "A",
+      "to": "S",
+      "message": "STREAM_CONNECT",
+      "caption": "A opens a new TCP connection to the server and asks for a stream to B.",
+      "kind": "tcp",
+      "path": [
+       [
+        114,
+        176
+       ],
+       [
+        270,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "S",
+      "to": "B",
+      "message": "STREAM_OFFER",
+      "caption": "The server offers B the stream, on B's control connection.",
+      "kind": "tcp",
+      "path": [
+       [
+        390,
+        80
+       ],
+       [
+        546,
+        176
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "B",
+      "to": "S",
+      "message": "STREAM_ACCEPT",
+      "caption": "B opens its own new TCP connection to the server and accepts, within 10 seconds.",
+      "kind": "tcp",
+      "path": [
+       [
+        546,
+        176
+       ],
+       [
+        390,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "S",
+      "to": "A",
+      "message": "STREAM_READY",
+      "caption": "The stream is ready on A's side.",
+      "kind": "tcp",
+      "path": [
+       [
+        270,
+        80
+       ],
+       [
+        114,
+        176
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "S",
+      "to": "B",
+      "message": "STREAM_READY",
+      "caption": "And on B's side.",
+      "kind": "tcp",
+      "path": [
+       [
+        390,
+        80
+       ],
+       [
+        546,
+        176
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "A",
+      "to": "B",
+      "message": "",
+      "caption": "From here the server copies the stream's bytes between the two connections. UDP game datagrams go through the relay as well.",
+      "kind": "relay",
+      "path": [
+       [
+        150,
+        176
+       ],
+       [
+        300,
+        80
+       ],
+       [
+        360,
+        80
+       ],
+       [
+        510,
+        176
+       ]
+      ],
+      "lost": false
+     }
+    ]
+   },
+   {
+    "id": "blocked",
+    "title": "Blocked: the relay is off",
+    "summary": "The same failed punch as above, but the server was not started with -relay, so it carries nothing. The room steps are as in the scenarios above and are left out here.",
+    "steps": [
+     {
+      "from": "A",
+      "to": "S",
+      "message": "HELLO",
+      "caption": "Player A connects.",
+      "kind": "tcp",
+      "path": [
+       [
+        114,
+        176
+       ],
+       [
+        270,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "S",
+      "to": "A",
+      "message": "HELLO_ACK",
+      "caption": "The flags byte says the server does not relay.",
+      "kind": "tcp",
+      "path": [
+       [
+        270,
+        80
+       ],
+       [
+        114,
+        176
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "B",
+      "to": "S",
+      "message": "HELLO",
+      "caption": "Player B connects.",
+      "kind": "tcp",
+      "path": [
+       [
+        546,
+        176
+       ],
+       [
+        390,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "S",
+      "to": "B",
+      "message": "HELLO_ACK",
+      "caption": "The server answers B.",
+      "kind": "tcp",
+      "path": [
+       [
+        390,
+        80
+       ],
+       [
+        546,
+        176
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "A",
+      "to": "S",
+      "message": "PROBE",
+      "caption": "A probes.",
+      "kind": "udp",
+      "path": [
+       [
+        114,
+        176
+       ],
+       [
+        270,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "B",
+      "to": "S",
+      "message": "PROBE",
+      "caption": "B probes; its router maps a new port for each destination.",
+      "kind": "udp",
+      "path": [
+       [
+        546,
+        176
+       ],
+       [
+        390,
+        80
+       ]
+      ],
+      "lost": false
+     },
+     {
+      "from": "A",
+      "to": "B",
+      "message": "PUNCH",
+      "caption": "The punch towards B's seen address does not reach B.",
+      "kind": "udp",
+      "path": [
+       [
+        204,
+        206
+       ],
+       [
+        456,
+        206
+       ]
+      ],
+      "lost": true
+     },
+     {
+      "from": "S",
+      "to": "A",
+      "message": "",
+      "caption": "There is no ROUTE and no stream: the server has nothing to offer. The players need a port forward, or a shared VPN such as Tailscale.",
+      "kind": "note",
+      "path": [],
+      "lost": false
+     }
+    ]
+   }
+  ]
+ },
  "credits": [
   "sp00nz ([sp00nznet](https://github.com/sp00nznet)) wrote [psnr](https://github.com/sp00nznet/psnr): the server, the C client, the protocol, NAT traversal, the relay and the NAT lab.",
   "undecuple ([undecuple](https://github.com/undecuple)) maintains re-psn and wrote everything added since the fork: the release and container tooling, the AppImage, hardening and limits, rooms and invite codes, the desktop app, this website, the documentation and the tests.",

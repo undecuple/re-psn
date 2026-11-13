@@ -135,3 +135,47 @@ def diagram_svg(scenario, esc):
             parts.append(f'<text class="{cls}" x="{x + w // 2}" y="{y + 24 + i * 20}" text-anchor="middle">{esc(line)}</text>')
     parts.append("</svg>\n")
     return "".join(parts)
+
+
+# ---- the data the page's script (site/action.js) plays: each step with its kind and the path its packet follows ----
+# Which two parties an edge joins, first letter first: the first point of EDGES[key] is at the first party.
+EDGE_PARTIES = {"AS": ("A", "S"), "BS": ("B", "S"), "AB": ("A", "B"), "AR": ("A", "S"), "BR": ("B", "S")}
+UDP_MESSAGES = ("PROBE", "PROBE_REPLY", "PUNCH")
+
+
+def _leg(key, src):
+    """The two end points of edge `key`, oriented so the first is at `src`."""
+    x1, y1, x2, y2, _ = EDGES[key]
+    return [[x1, y1], [x2, y2]] if EDGE_PARTIES[key][0] == src else [[x2, y2], [x1, y1]]
+
+
+def step_play(scenario, step):
+    """(kind, path, lost) of one step. kind: tcp, udp, direct, relay, or note (nothing moves)."""
+    src, dst, msg, _ = step
+    pair = {src, dst}
+    relay = any(k == "relay" for k, _ in scenario["edges"].values())
+    if pair == {"A", "B"}:
+        if msg == "PUNCH":
+            key = "AB"
+            lost = scenario["edges"]["AB"][0] == "blocked"
+            return "udp", _leg(key, src), lost
+        if msg == "" and relay:
+            return "relay", _leg("AR", src) + _leg("BR", "S"), False
+        return "direct", _leg("AB", src), False
+    if "S" in pair:
+        if msg == "":
+            return "note", [], False
+        player = "A" if "A" in pair else "B"
+        return ("udp" if msg in UDP_MESSAGES else "tcp"), _leg(player + "S", src), False
+    raise ValueError(f"step {step!r} joins parties with no edge")
+
+
+def build_action_data():
+    out = []
+    for s in SCENARIOS:
+        steps = []
+        for st in s["steps"]:
+            kind, path, lost = step_play(s, st)
+            steps.append({"from": st[0], "to": st[1], "message": st[2], "caption": st[3], "kind": kind, "path": path, "lost": lost})
+        out.append({"id": s["id"], "title": s["title"], "summary": s["summary"], "steps": steps})
+    return {"scenarios": out}
