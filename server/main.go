@@ -217,7 +217,7 @@ func main() {
 		if reachable(*httpAddr) && statusToken == "" {
 			logger.Warn("the status page lists every online ID and has no token; set -http-token or bind -http to localhost")
 		}
-		hs = &http.Server{Addr: *httpAddr, Handler: s.HTTP()}
+		hs = newStatusServer(*httpAddr, s.HTTP())
 		go func() { errc <- hs.ListenAndServe() }()
 	} else {
 		logger.Debug("status page off (set -http to turn it on)")
