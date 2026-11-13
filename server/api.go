@@ -208,6 +208,27 @@ func (s *Server) authorized(r *http.Request) bool {
 	return subtle.ConstantTimeCompare([]byte(got), []byte(s.httpToken)) == 1
 }
 
+// The status page answers small, quick requests, so a connection that does not send its request, or does not read the answer, in
+// these times is closed. Without them one idle or slow connection held a goroutine and a file descriptor for as long as it liked.
+const (
+	statusReadHeaderTimeout = 5 * time.Second
+	statusReadTimeout       = 10 * time.Second
+	statusWriteTimeout      = 10 * time.Second
+	statusIdleTimeout       = 30 * time.Second
+)
+
+// newStatusServer is the -http server: the status handler with the timeouts above.
+func newStatusServer(addr string, h http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           h,
+		ReadHeaderTimeout: statusReadHeaderTimeout,
+		ReadTimeout:       statusReadTimeout,
+		WriteTimeout:      statusWriteTimeout,
+		IdleTimeout:       statusIdleTimeout,
+	}
+}
+
 func (s *Server) HTTP() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
