@@ -29,6 +29,7 @@
 <li><a href="#connect">Connect</a></li>
 <li><a href="#docs">Docs</a></li>
 <li><a href="#credits">Credits</a></li>
+<li><a href="action.html">In action</a></li>
 </ul></nav>
 <main>
 <section id="overview">
@@ -339,6 +340,7 @@
 <h3>Unreleased</h3>
 <h4>Added</h4>
 <ul>
+<li>**Docs and tooling:** website: a &quot;see it in action&quot; page (<code>site/action.html</code>, linked from the page&#x27;s menu as &quot;In action&quot;): four simulated scenarios (direct, hole punch, relayed, relay off), each a diagram and numbered ...</li>
 <li>**Client:** <code>psnr_set_connect_policy(fn, user)</code> (<code>client/psnr.h</code>): the host registers one callback that the C client asks before it opens a TCP connection, so a runtime that restricts where a game may connect can refuse ...</li>
 <li>**Server:** a capability report (#77, item 3): <code>GET_CAPS</code> (0x04, no body, after HELLO) is answered with <code>CAPS</code> (0x94): <code>bits u32</code> and the server version as a blob.</li>
 <li>**Deploy:** <code>docker/docker-compose.yml</code> and <code>docker/docker-compose.host.yml</code> now run the container as user 10001 with all capabilities dropped, <code>no-new-privileges</code> and a read-only root filesystem with a 16 MB tmpfs on ...</li>

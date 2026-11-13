@@ -21,6 +21,7 @@ _spec = importlib.util.spec_from_file_location("re_psn_site", HERE / "site.py")
 sitegen = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(sitegen)
 import features  # noqa: E402
+import site_action  # noqa: E402
 
 HEAD = "\t".join(features.COLUMNS)
 ROWS = [
@@ -361,6 +362,60 @@ class BannerTest(unittest.TestCase):
             self.assertNotIn("letter-spacing", svg)
         self.assertNotIn("theme", page.lower().replace("color-scheme", ""))
         self.assertIsNone(re.search(r"\sstyle=|<script>|\son[a-z]+=", page))
+
+
+class ActionPageTest(unittest.TestCase):
+    """site/action.html: four scripted scenarios, drawn from tools/site_action.py, safe for the page's CSP and true to docs/api.md."""
+
+    def page(self):
+        f = Fixture()
+        self.addCleanup(f.tmp.cleanup)
+        f.run()
+        return f.read("site/action.html").decode()
+
+    def test_four_scenarios_each_with_a_diagram_and_numbered_steps(self):
+        page = self.page()
+        for sid in ("direct", "punch", "relayed", "blocked"):
+            sec = page.split(f'<section id="{sid}">', 1)[1].split("</section>", 1)[0]
+            self.assertIn('<svg class="action-diagram"', sec)
+            self.assertIn('role="img"', sec)
+            self.assertIn('<ol class="steps">', sec)
+            self.assertGreaterEqual(sec.count("<li>"), 8)
+        self.assertEqual(page.count("<section "), 5)
+
+    def test_no_script_no_inline_style_no_remote_load(self):
+        page = self.page()
+        self.assertNotIn("<script", page)
+        self.assertIsNone(re.search(r"\sstyle=|\son[a-z]+=", page))
+        self.assertIsNone(re.search(r"(?:src|href)=\"https?://(?!github\.com/)", page))
+
+    def test_only_documentation_addresses(self):
+        text = "\n".join(str(v) for s in site_action.SCENARIOS for v in (s["summary"],)) + site_action.SERVER + site_action.PLAYER_A + site_action.PLAYER_B
+        for ip in re.findall(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", self.page() + text):
+            self.assertRegex(ip, r"^(192\.0\.2|198\.51\.100|203\.0\.113)\.\d{1,3}$", ip)
+
+    def test_every_message_name_is_in_the_api_doc(self):
+        api = (ROOT / "docs/api.md").read_text(encoding="utf-8")
+        names = {m for s in site_action.SCENARIOS for (_, _, m, _) in s["steps"] if m}
+        self.assertTrue(names)
+        for name in sorted(names):
+            self.assertRegex(api, r"\b%s\b" % re.escape(name), f"{name} is not in docs/api.md")
+
+    def test_steps_name_known_parties_and_have_captions(self):
+        for s in site_action.SCENARIOS:
+            for src, dst, msg, caption in s["steps"]:
+                self.assertIn(src, site_action.WHO)
+                self.assertIn(dst, site_action.WHO)
+                self.assertTrue(caption.strip(), s["id"])
+                self.assertRegex(msg, r"^([A-Z][A-Z_]*)?$")
+            for key in s["edges"]:
+                self.assertIn(key, site_action.EDGES)
+
+    def test_home_page_links_to_it(self):
+        f = Fixture()
+        self.addCleanup(f.tmp.cleanup)
+        f.run()
+        self.assertIn('<a href="action.html">In action</a>', f.read("site/index.html").decode())
 
 
 class AutocompleteMarkupTest(unittest.TestCase):
