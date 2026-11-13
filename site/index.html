@@ -363,6 +363,7 @@
 </ul>
 <h4>Fixed</h4>
 <ul>
+<li>**Server:** <code>-max-conns-per-addr</code> now counts an IPv6 address as its /64 (an IPv4-mapped address as the IPv4 address), as the UDP limit and the admin failure delay already did.</li>
 <li>**Server:** the <code>-http</code> status page now closes a connection that does not finish its request header within 5 seconds, its request within 10 seconds, does not read its answer within 10 seconds, or sits idle for 30 ...</li>
 <li>**Server:** <code>SET_ROOM_DATA</code> no longer lets the owner make the room&#x27;s own join reply too big for one packet: a write to the external or internal blob that would is refused with error 6 and changes nothing, so a member ...</li>
 <li>**Server:** A search no longer disconnects the player when the rooms&#x27; data is large: the reply lists only as many rooms as fit in one packet, and the player pages on from there.</li>
@@ -411,7 +412,7 @@
 <tr><td data-label="Flag"><code>-max-rooms</code></td><td data-label="Variable"><code>RE_PSN_MAX_ROOMS</code></td><td data-label="Default"><code>1000</code></td><td data-label="What it does">Rooms across all titles</td></tr>
 <tr><td data-label="Flag"><code>-max-player-rooms</code></td><td data-label="Variable"><code>RE_PSN_MAX_PLAYER_ROOMS</code></td><td data-label="Default"><code>8</code></td><td data-label="What it does">Rooms one player may be in at once (0: no limit)</td></tr>
 <tr><td data-label="Flag"><code>-max-conns</code></td><td data-label="Variable"><code>RE_PSN_MAX_CONNS</code></td><td data-label="Default"><code>4096</code></td><td data-label="What it does">Open TCP connections in total, players and relay legs (0: no limit); not in v0.5.0</td></tr>
-<tr><td data-label="Flag"><code>-max-conns-per-addr</code></td><td data-label="Variable"><code>RE_PSN_MAX_CONNS_PER_ADDR</code></td><td data-label="Default"><code>32</code></td><td data-label="What it does">Open connections per remote address (0: no limit)</td></tr>
+<tr><td data-label="Flag"><code>-max-conns-per-addr</code></td><td data-label="Variable"><code>RE_PSN_MAX_CONNS_PER_ADDR</code></td><td data-label="Default"><code>32</code></td><td data-label="What it does">Open connections per remote address; an IPv6 address counts as its /64 (0: no limit)</td></tr>
 <tr><td data-label="Flag"><code>-max-req-rate</code></td><td data-label="Variable"><code>RE_PSN_MAX_REQ_RATE</code></td><td data-label="Default"><code>200</code></td><td data-label="What it does">Requests per second per connection before it is closed (0: no limit)</td></tr>
 <tr><td data-label="Flag"><code>-max-udp-rate</code></td><td data-label="Variable"><code>RE_PSN_MAX_UDP_RATE</code></td><td data-label="Default"><code>1000</code></td><td data-label="What it does">UDP packets per second per source (IPv4 address or IPv6 /64), shared by probes and relay traffic; same-size burst (0: no limit); since v0.4.0</td></tr>
 <tr><td data-label="Flag"><code>-v</code></td><td data-label="Variable"><code>RE_PSN_V</code></td><td data-label="Default"><code>off</code></td><td data-label="What it does">Same as -log-level debug</td></tr>

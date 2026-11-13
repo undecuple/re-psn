@@ -92,7 +92,7 @@ HELLO must come first. Any other request before it gets ERROR 7. A connection se
 **Limits:** every blob a client puts in a room (CREATE_ROOM, JOIN_ROOM, SET_ROOM_DATA,
 ROOM_MESSAGE) is at most 4096 bytes, else error 1. Game files do not go over the wire.
 The server refuses connections beyond `-max-conns` (default 4096) in total, and beyond `-max-conns-per-addr` (default 32) from one
-address and closes a connection that sends more than `-max-req-rate` (default 200)
+address (an IPv6 address counts as its /64) and closes a connection that sends more than `-max-req-rate` (default 200)
 requests in a second.
 
 **Timeout:** a connection that sends nothing for 90 seconds is dropped. The C
