@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **Docs and tooling:** `KNOWN_ISSUES.md`: what is known not to work or not to have been checked (early software, binaries and scripts not run on every platform, the experimental admin API, the relay off by default and other limits), each with a link to the page that says it in full; the README's document list links it, and the repository layout check allows the file in the root.
+
 ### Changed
 - **Docs and tooling:** `docs/installing.md` starts with "Install, step by step": numbered steps for Linux and for Windows, each with what the script prints, what to do when the folder is not on `PATH`, and how a failure shows. A few of the longest sentences in that page are split; no command, flag or behaviour changed.
 - **Docs and tooling:** the wording that called re-psn "a fork" in `CONTRIBUTING.md`, `AGENTS.md`, `NOTICE.md`, `SECURITY.md` and the website now says it began as a fork of psnr and is a repository of its own; the credit to upstream and the licence lines are unchanged. The security page heading "What this fork changes" is now "What re-psn changes".
