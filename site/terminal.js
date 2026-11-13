@@ -19,6 +19,7 @@
     ['settings [name]', 'flags and RE_PSN_* variables with defaults'],
     ['install', 'archives, container, from source'],
     ['connect', 'the ways to connect'],
+    ['action [scenario]', 'simulated runs: direct, punch, relayed, blocked; a name gives its steps'],
     ['version', 'the version'],
     ['changelog', 'the latest changes'],
     ['about', 'what re-psn is'],
@@ -29,7 +30,7 @@
     ['clear', 'clear the screen'],
     ['history', 'commands typed in this tab']
   ];
-  var COMMANDS = ['--help', 'help', 'features', 'roadmap', 'settings', 'install', 'connect', 'version', 'changelog',
+  var COMMANDS = ['--help', 'help', 'features', 'roadmap', 'settings', 'install', 'connect', 'action', 'version', 'changelog',
     'about', 'credits', 'licence', 'license', 'docs', 'links', 'clear', 'history'];
   var CANONICAL = { '--help': 'help', license: 'licence' };
 
@@ -41,6 +42,7 @@
     if (/^https:\/\/github\.com\//.test(url)) { return url; }
     if (/^[a-z][a-z0-9+.-]*:/i.test(url) || url.slice(0, 2) === '//') { return null; }
     if (url.charAt(0) === '#') { return url; }
+    if (url === 'action.html') { return url; }
     return (data && data.repository ? data.repository : 'https://github.com/undecuple/re-psn') + '/blob/main/' + url.replace(/^\/+/, '');
   }
 
@@ -85,6 +87,30 @@
     HELP.forEach(function (h) { lines.push([{ t: h[0], c: 'cmd' }, '  ' + h[1]]); });
     lines.push('', 'Keys: arrows move, Enter opens, Tab switches pane, / jumps to the command line, Esc goes back, F1 to F4 are shortcuts for help, features, install and settings (F5 still reloads the page). While you type, matches are listed above the prompt: Tab or Right accepts, Up and Down choose, Esc closes.');
     return lines;
+  }
+
+  function actionData(data) { return (data && data.action && data.action.scenarios) || []; }
+
+  // The scripted runs of the "in action" page, as text. Nothing here is measured: the page's data is a fixed script.
+  function cmdAction(args, data) {
+    var list = actionData(data);
+    var more = [link('The animated version', 'action.html', data), ' has a diagram, Play and Step.'];
+    if (!args.length) {
+      var out = ['Simulated runs, not live traffic. action <name> gives the steps.', ''];
+      list.forEach(function (s) { out.push([{ t: s.id, c: 'cmd' }, '  ' + s.title], ['    ' + s.summary]); });
+      out.push('', more);
+      return { lines: out };
+    }
+    var s = list.filter(function (x) { return x.id === args[0]; })[0];
+    if (!s) { return { lines: [err('action: no scenario ' + args[0].slice(0, 40) + ', use ' + list.map(function (x) { return x.id; }).join(', '))] }; }
+    var who = { A: 'player A', B: 'player B', S: 'server' };
+    var lines = [[{ t: s.title, c: 'strong' }], [s.summary], ''];
+    s.steps.forEach(function (st, i) {
+      lines.push([(i + 1) + '. ' + who[st.from] + ' to ' + who[st.to] + '  ', st.message ? { t: st.message, c: 'code' } : '(game traffic)']);
+      lines.push(['   ' + st.caption]);
+    });
+    lines.push('', more);
+    return { lines: lines };
   }
 
   function cmdFeatures(args, data) {
@@ -232,6 +258,7 @@
       case 'settings': res = cmdSettings(args, data); break;
       case 'install': res = { lines: cmdInstall(data) }; break;
       case 'connect': res = { lines: cmdConnect(data) }; break;
+      case 'action': res = cmdAction(args, data); break;
       case 'version':
         res = { lines: ['re-psn v' + data.version + ' (' + data.stage + ')', data.go ? 'Go ' + data.go + ' or newer to build.' : ''].filter(Boolean) };
         break;
@@ -269,6 +296,7 @@
       if (id) { return 'features/' + id; }
       if (st) { return 'features/' + st; }
     }
+    if (word === 'action' && args.length) { return 'action/' + args[0]; }
     if (word === 'settings' && args.length) { return 'settings/' + args[0].replace(/^-+/, ''); }
     return word;
   }
@@ -299,6 +327,8 @@
         pool = prev === '--status' ? statusList(data) : ['--status'].concat(data.features.map(function (f) { return f.id; }));
       } else if (word === 'settings') {
         pool = data.settings.map(function (s) { return s.flag; });
+      } else if (word === 'action') {
+        pool = tokens.length === 1 ? actionData(data).map(function (x) { return x.id; }) : [];
       } else {
         pool = [];
       }
@@ -356,6 +386,8 @@
         } else {
           pool = [{ text: '--status', desc: 'only features with this status' }].concat(data.features.map(function (f) { return { text: f.id, desc: f.feature }; }));
         }
+      } else if (word === 'action' && tokens.length === 1) {
+        pool = actionData(data).map(function (x) { return { text: x.id, desc: x.title }; });
       } else if (word === 'settings' && tokens.length === 1) {
         pool = data.settings.map(function (s) { return { text: s.flag, desc: plain(s.description) }; });
       }
@@ -479,7 +511,7 @@
   if (typeof document === 'undefined' || typeof fetch !== 'function') { return; }
 
   var MENU = [['about', 'Overview'], ['features', 'Features'], ['roadmap', 'Roadmap'], ['install', 'Install'],
-    ['settings', 'Settings'], ['connect', 'Connect'], ['changelog', 'Changelog'], ['docs', 'Docs']];
+    ['settings', 'Settings'], ['connect', 'Connect'], ['action', 'In action'], ['changelog', 'Changelog'], ['docs', 'Docs']];
   var FKEYS = { F1: 'help', F2: 'features', F3: 'install', F4: 'settings', F5: 'connect' };
 
   function el(tag, cls, text) {
