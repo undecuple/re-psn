@@ -125,6 +125,10 @@ const (
 	codeAlphabet   = "0123456789ABCDEFGHJKMNPQRSTVWXYZ" // 32 symbols, no I L O U: 5 bits each, 40 bits a code
 	maxCodeMisses  = 5                                  // wrong codes a connection may send per window
 	codeMissWindow = time.Minute
+	// maxAddrCodeMisses is the same limit for all connections from one address (an IPv6 /64 counts as one, as for the connection
+	// limit), so reconnecting does not start the count again. It is higher than the per-connection limit because players behind
+	// one router share an address.
+	maxAddrCodeMisses = 20
 )
 
 // newCode returns an unused code from crypto/rand, or an error if the system's random source fails.
@@ -185,12 +189,35 @@ func (s *Server) roomByCode(code string) *room {
 	return found
 }
 
-// codeMiss counts a wrong or malformed code against the connection; too many in a window close it.
+// addrMisses is the wrong room codes from one address in the current window.
+type addrMisses struct {
+	start time.Time
+	n     int
+}
+
+// codeMiss counts a wrong or malformed code against the connection and against its address; too many of either in a window
+// close the connection.
 func (s *Server) codeMiss(c *client) {
-	if now := time.Now(); now.Sub(c.codeWindow) > codeMissWindow {
+	now := time.Now()
+	if now.Sub(c.codeWindow) > codeMissWindow {
 		c.codeWindow, c.codeMisses = now, 0
 	}
-	if c.codeMisses++; c.codeMisses >= maxCodeMisses {
+	c.codeMisses++
+	key := addrLimitKey(c.addr)
+	am := s.addrMisses[key]
+	if am == nil || now.Sub(am.start) > codeMissWindow {
+		if len(s.addrMisses) >= 1024 { // drop the expired windows before adding one
+			for k, v := range s.addrMisses {
+				if now.Sub(v.start) > codeMissWindow {
+					delete(s.addrMisses, k)
+				}
+			}
+		}
+		am = &addrMisses{start: now}
+		s.addrMisses[key] = am
+	}
+	am.n++
+	if c.codeMisses >= maxCodeMisses || am.n >= maxAddrCodeMisses {
 		s.log.Warn("connection closed", "client", c.id, "online_id", c.onlineID, "reason", "wrong room codes", "limit", maxCodeMisses)
 		c.conn.Close()
 		return

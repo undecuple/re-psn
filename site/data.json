@@ -1305,6 +1305,7 @@
      "**Docs and tooling:** CI compiles the C client (`client/psnr.c`, `client/examples/minimal.c`) with MSVC on Windows and does not run it there; the build instructions in `docs/integrating.md` give the MSVC command."
     ],
     "Fixed": [
+     "**Server:** wrong or malformed invite codes are now also counted by address, so opening a new connection no longer starts the count again: 20 misses in 60 seconds from one address (an IPv6 /64 counts as one) close the ...",
      "**Server:** a player's connection no longer reads its title without the server lock while a new connection from the same address takes over its name.",
      "**Server:** a connection that sends a frame header declaring a long payload and then stops no longer costs the server the declared size (up to 64 KB).",
      "**Server:** a relay stream whose accepting side arrived just as the connecting side's 10 second wait ended no longer leaves the accepting connection open.",
@@ -1338,7 +1339,7 @@
    },
    "counts": {
     "Added": 20,
-    "Fixed": 17,
+    "Fixed": 18,
     "Changed": 10
    }
   },

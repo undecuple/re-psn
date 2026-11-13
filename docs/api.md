@@ -176,7 +176,8 @@ These are modelled on sceNpMatching2 rooms.
   `0123456789ABCDEFGHJKMNPQRSTVWXYZ` (40 bits from `crypto/rand`, no I, L, O or U) and is sent as 8 bytes; the server reads it
   case-insensitively and takes `O` as 0 and `I` or `L` as 1. Any member may read it with GET_ROOM_ACCESS, so anyone in the room can
   invite. JOIN_BY_CODE answers a wrong, expired or other-title code with error 2 and a malformed one with error 1; either counts as a
-  miss on the connection, and 5 misses in 60 seconds close it. The code is never logged or shown on the status page.
+  miss on the connection and on its address (an IPv6 /64 counts as one address), and 5 misses on one connection or 20 on one address in 60
+  seconds close the connection. The code is never logged or shown on the status page.
 - **JOIN_ROOM** on a room the caller is already in returns the room again
   instead of an error.
 - **Reply size:** a ROOM_JOINED reply must fit one packet of 65535 bytes. It is
