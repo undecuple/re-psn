@@ -520,6 +520,7 @@ welcome; [CONTRIBUTING.md](CONTRIBUTING.md) has the ground rules and the tests t
 | [deploy/README.md](deploy/README.md) | Settings file, systemd unit, Traefik, nginx and HAProxy examples |
 | [docker/README.md](docker/README.md) | Building and running the container with Docker or Podman |
 | [lab/README.md](lab/README.md) | The NAT lab: players behind routers in Docker |
+| [BUILDING.md](BUILDING.md) | Where to find how to build and test each part |
 | [KNOWN_ISSUES.md](KNOWN_ISSUES.md) | What is known not to work or not to have been checked |
 | [CHANGELOG.md](CHANGELOG.md), [NOTICE.md](NOTICE.md) | What changed; third-party components and credits |
 
