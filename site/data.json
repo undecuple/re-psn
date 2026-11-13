@@ -1309,9 +1309,11 @@
      "**Server:** A score server no longer slows down or grows without bound under many boards: the memory store keeps at most 1000 boards per title and 10000 players per board, and a score that would pass either gets ERROR 6 ...",
      "**Client:** The C client has `psnr_relay_unwrap_from`, which accepts a relayed datagram only from the server's UDP address.",
      "**Docs and tooling:** a comment in `server/rooms.go` that pointed at the missing `docs/room-codes.md` now names the section of `docs/api.md` that holds the content; SECURITY.md states that players behind one address can ...",
-     "**Client:** the receive path checks its allocations (a failure now ends the connection instead of dereferencing NULL), a reply frame too short to hold its request id is dropped instead of being delivered as a push, and ..."
+     "**Client:** the receive path checks its allocations (a failure now ends the connection instead of dereferencing NULL), a reply frame too short to hold its request id is dropped instead of being delivered as a push, and ...",
+     "**Client:** in the desktop app, `r` (refresh) on Rooms, Leaderboards and Server does nothing while a fetch is running and for one second after its answer."
     ],
     "Changed": [
+     "**Docs and tooling:** the NAT lab's player (`lab/natcheck.c`) unwraps relayed datagrams with `psnr_relay_unwrap_from` and the source address `recvfrom` reported, instead of `psnr_relay_unwrap`, which does not check the ...",
      "**Docs and tooling:** `docs/releasing.md` no longer says the ten-asset release and the first run of the app-archive upload and `release-check.yml` are still to come: v0.5.0 is that release, and both ran on it and passed.",
      "**Docs and tooling:** `scripts/bump-version.sh` now also sets the `var version` default of the desktop app (`app/cmd/re-psn-app/main.go`), and `TestVersionAgrees` checks it against `VERSION`; before, a bump left the ...",
      "**Docs and tooling:** the website, the README images, the favicon, the README badges, the desktop app's dark colours and the status page's dark colours now follow the colours of https://undecuple.github.io/me/ ...",
@@ -1325,8 +1327,8 @@
    },
    "counts": {
     "Added": 15,
-    "Fixed": 10,
-    "Changed": 9
+    "Fixed": 11,
+    "Changed": 10
    }
   },
   "latest": {
