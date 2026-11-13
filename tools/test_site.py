@@ -5,6 +5,7 @@
 The module is loaded by path under another name because "site" is also a standard library module.
 """
 import contextlib
+import html
 import importlib.util
 import io
 import json
@@ -79,6 +80,7 @@ class Fixture:
         (self.root / "docs/art/palette.json").write_text(json.dumps(PALETTE))
         (self.root / "site/style.css").write_text(CSS)
         (self.root / "site/terminal.js").write_text("// stub\n")
+        (self.root / "site/discuss.js").write_text("// stub\n")
         (self.root / "site/favicon.svg").write_text(ICON)
         for path, _, _ in sitegen.DOCS:
             p = self.root / path
@@ -462,6 +464,63 @@ class FileFrameCssTest(unittest.TestCase):
         self.assertIn("1px 100% no-repeat", body)
         out = self.css.split(".tui-out {", 1)[1].split("}", 1)[0]
         self.assertIn("display: flex", out)
+
+
+class DiscussPageTest(unittest.TestCase):
+    """site/discuss.html is the one page that may load from another site (giscus.app), after a click; no other page may."""
+
+    def setUp(self):
+        f = Fixture()
+        self.addCleanup(f.tmp.cleanup)
+        f.run()
+        self.f = f
+        self.page = f.read("site/discuss.html").decode()
+
+    def csp(self, page):
+        return html.unescape(re.search(r'http-equiv="Content-Security-Policy" content="([^"]*)"', page).group(1))
+
+    def test_csp_is_the_strict_one_plus_giscus_for_script_style_and_frame(self):
+        strict = sitegen.CSP
+        self.assertEqual(self.csp(self.page), sitegen.CSP_DISCUSS)
+        directives = dict(d.strip().split(" ", 1) for d in sitegen.CSP_DISCUSS.split(";"))
+        self.assertEqual(directives["script-src"], "'self' https://giscus.app")
+        self.assertEqual(directives["style-src"], "'self' https://giscus.app")
+        self.assertEqual(directives["frame-src"], "https://giscus.app")
+        for name in ("default-src", "img-src", "connect-src"):
+            self.assertEqual(directives[name], dict(d.strip().split(" ", 1) for d in strict.split(";"))[name])
+        self.assertNotIn("unsafe", sitegen.CSP_DISCUSS)
+        self.assertEqual(len(directives), 6)
+
+    def test_other_pages_keep_the_strict_csp_and_never_name_giscus(self):
+        for rel in ("site/index.html", "site/action.html"):
+            page = self.f.read(rel).decode()
+            self.assertEqual(self.csp(page), sitegen.CSP, rel)
+            self.assertNotIn("giscus.app", self.csp(page), rel)
+            self.assertNotIn("giscus", page.replace("discuss.html", ""), rel)
+
+    def test_no_script_tag_names_another_site_and_nothing_loads_before_the_click(self):
+        scripts = re.findall(r"<script\b[^>]*>", self.page)
+        self.assertEqual(scripts, ['<script src="discuss.js" defer>'])
+        self.assertNotIn("<iframe", self.page)
+        self.assertIsNone(re.search(r"\sstyle=|\son[a-z]+=|<style|<img|<object|<embed|<form", self.page))
+        for tagtext in re.findall(r"<(?:link|script)\b[^>]*>", self.page):
+            self.assertIsNone(re.search(r'(?:src|href)="(?:[a-z]+:)?//|(?:src|href)="https?:', tagtext), tagtext)
+        self.assertIsNone(re.search(r'(?:src|href)="https?://(?!github\.com/|giscus\.app/)', self.page))
+
+    def test_button_carries_the_settings_and_the_page_says_what_loads(self):
+        self.assertIn('id="discuss-load"', self.page)
+        for k, v in sitegen.GISCUS.items():
+            self.assertIn(f'data-giscus-{k}="{v}"', self.page)
+        self.assertIn("Nothing is requested from giscus.app or GitHub until you press the button", self.page)
+        self.assertIn(sitegen.DISCUSSIONS_URL, self.page)
+        self.assertEqual(self.page.count("<h1"), 1)
+
+    def test_home_page_links_to_it(self):
+        self.assertIn('<a href="discuss.html">Discuss</a>', self.f.read("site/index.html").decode())
+
+    def test_missing_script_is_reported(self):
+        (self.f.root / "site/discuss.js").unlink()
+        self.assertIn("site/discuss.js is missing", self.f.run("--check")[2])
 
 
 class AutocompleteMarkupTest(unittest.TestCase):
