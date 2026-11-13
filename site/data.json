@@ -1305,6 +1305,10 @@
     ],
     "Fixed": [
      "**Server:** wrong or malformed invite codes are now also counted by address, so opening a new connection no longer starts the count again: 20 misses in 60 seconds from one address (an IPv6 /64 counts as one) close the ...",
+     "**Server:** a player's connection no longer reads its title without the server lock while a new connection from the same address takes over its name.",
+     "**Server:** a connection that sends a frame header declaring a long payload and then stops no longer costs the server the declared size (up to 64 KB).",
+     "**Server:** a relay stream whose accepting side arrived just as the connecting side's 10 second wait ended no longer leaves the accepting connection open.",
+     "**Server:** the in-memory score store now keeps boards for at most 1000 titles, next to its existing 1000 boards per title and 10000 players per board.",
      "**Server:** `-max-conns-per-addr` now counts an IPv6 address as its /64 (an IPv4-mapped address as the IPv4 address), as the UDP limit and the admin failure delay already did.",
      "**Server:** the `-http` status page now closes a connection that does not finish its request header within 5 seconds, its request within 10 seconds, does not read its answer within 10 seconds, or sits idle for 30 ...",
      "**Server:** `SET_ROOM_DATA` no longer lets the owner make the room's own join reply too big for one packet: a write to the external or internal blob that would is refused with error 6 and changes nothing, so a member ...",
@@ -1334,7 +1338,7 @@
    },
    "counts": {
     "Added": 19,
-    "Fixed": 14,
+    "Fixed": 18,
     "Changed": 10
    }
   },

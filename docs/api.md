@@ -130,7 +130,7 @@ A clear bit means the server does not offer the feature to this player. Ignore b
 | 3 | room full |
 | 4 | not the room owner |
 | 5 | not in that room |
-| 6 | limit reached: the server's room limit, or the player is already in `-max-player-rooms` rooms; for a score request, the server's score store failed or a board or player limit was reached (see [Leaderboards](#leaderboards)); for JOIN_ROOM, JOIN_BY_CODE or SET_ROOM_DATA, the room's state would not fit one ROOM_JOINED reply (see Rooms) |
+| 6 | limit reached: the server's room limit, or the player is already in `-max-player-rooms` rooms; for a score request, the server's score store failed or a title, board or player limit was reached (see [Leaderboards](#leaderboards)); for JOIN_ROOM, JOIN_BY_CODE or SET_ROOM_DATA, the room's state would not fit one ROOM_JOINED reply (see Rooms) |
 | 7 | no HELLO yet |
 | 8 | name taken (HELLO): another player on this server has it |
 | 9 | no relay (STREAM_*): the server runs without `-relay` |
@@ -244,9 +244,10 @@ These are modelled on sceNpScore.
 - **GET_RANKING `start`:** a 1-based rank.
 - **GET_RANKING_BY_ID** returns one row per requested id, in request order.
   An id with no score gets rank 0 and score 0.
-- **Limits** (memory store): a title has at most 1000 boards and a board
-  at most 10000 players. A RECORD_SCORE that would start a board or add a
-  player past either gets ERROR 6 and is not kept; a player already on a
+- **Limits** (memory store): the store keeps boards for at most 1000 titles,
+  a title has at most 1000 boards and a board at most 10000 players. A
+  RECORD_SCORE that would start a title or a board, or add a player, past
+  any of them gets ERROR 6 and is not kept; a player already on a
   full board can still improve their score. The limits are fixed in the
   server, not set by a flag.
 

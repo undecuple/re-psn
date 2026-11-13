@@ -272,9 +272,8 @@ file's contents: errors name the variable, the scheme and the file's path only. 
 request gets ERROR 6 and the failure is logged at warn level.
 
 `-max-req-rate` only limits requests per second on each connection; it does not bound the in-memory score store. The
-store has its own fixed limits: at most 1000 boards per title and 10000 players per board. A score past either gets
-ERROR 6 (see [docs/api.md](api.md#leaderboards)). Across titles the store can still grow, because the number of titles
-is not limited.
+store has its own fixed limits: at most 1000 titles, 1000 boards per title and 10000 players per board. A score past
+any of them gets ERROR 6 (see [docs/api.md](api.md#leaderboards)).
 
 ## Stopping and replacing
 
