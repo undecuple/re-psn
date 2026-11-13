@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- **Docs and tooling:** the README and `docker/README.md` name v0.6.0 and its container image as the newest, and the features list says `since` 0.6.0, not `main`, for four rows that shipped in it (`-no-peer-titles`, the capability report, the C client's connect policy and the experimental admin API).
+
 ## [0.6.0] - 2026-11-12
 
 ### Added

@@ -152,7 +152,7 @@ Two test players meet in a room and connect directly, and the C client's test le
 Two test players meet in a room and connect directly. They are `lab/natcheck.c`, the NAT lab's player, which does what the
 runtime does for a game (HELLO, probe, room, punch, ping, a stream) without one. Built from a fresh clone with the commands shown.
 
-Captured from a local run on loopback with an early build (the `version=` field shows 0.2.0; the current release is 0.5.0): start the server with the defaults.
+Captured from a local run on loopback with an early build (the `version=` field shows 0.2.0; the current release is 0.6.0): start the server with the defaults.
 
 ```text
 $ ./re-psn
@@ -256,7 +256,7 @@ are pinned; synthetic checks do not certify a title's gameplay or NAT behavior.
 **Recommended:** download an official [release archive or AppImage](#release-archives) from the
 [releases page](https://github.com/undecuple/re-psn/releases) and verify it against `SHA256SUMS`.
 
-Releases are pre-releases for now: the newest, [v0.5.0](https://github.com/undecuple/re-psn/releases/tag/v0.5.0), is on the [releases page](https://github.com/undecuple/re-psn/releases) (see [Release archives](#release-archives)). Its container image is `ghcr.io/undecuple/re-psn:0.5.0` (see [Container](#container)).
+Releases are pre-releases for now: the newest, [v0.6.0](https://github.com/undecuple/re-psn/releases/tag/v0.6.0), is on the [releases page](https://github.com/undecuple/re-psn/releases) (see [Release archives](#release-archives)). Its container image is `ghcr.io/undecuple/re-psn:0.6.0` (see [Container](#container)).
 
 ### Optional quick install (Linux)
 
@@ -308,7 +308,7 @@ Run the tests with `go vet ./...` and `go test ./...` (on Linux with a C compile
 
 ### Container
 
-The 0.5.0 image is on GitHub's container registry for amd64 and arm64: `docker pull ghcr.io/undecuple/re-psn:0.5.0`; 0.4.0, 0.3.0 and 0.2.0 are still there. It is unsigned, and
+The 0.6.0 image is on GitHub's container registry for amd64 and arm64: `docker pull ghcr.io/undecuple/re-psn:0.6.0`; 0.5.0, 0.4.0, 0.3.0 and 0.2.0 are still there. It is unsigned, and
 the arm64 image has been built but not run. You can also build it from this repository with Docker or Podman.
 [docker/README.md](docker/README.md) covers ports, the status page and Podman.
 
@@ -328,7 +328,7 @@ It is configured only by `RE_PSN_*` variables.
 ### Release archives
 
 > [!NOTE]
-> [v0.5.0](https://github.com/undecuple/re-psn/releases/tag/v0.5.0) is a pre-release (GitHub marks none as "latest" yet, so use the [releases page](https://github.com/undecuple/re-psn/releases)): archives for Linux (amd64, arm64) and Windows (amd64), and an x86_64 AppImage, all unsigned. The Windows and arm64 binaries are cross-built and have not been run on those systems.
+> [v0.6.0](https://github.com/undecuple/re-psn/releases/tag/v0.6.0) is a pre-release (GitHub marks none as "latest" yet, so use the [releases page](https://github.com/undecuple/re-psn/releases)): archives for Linux (amd64, arm64) and Windows (amd64), and an x86_64 AppImage, all unsigned. The Windows and arm64 binaries are cross-built and have not been run on those systems.
 
 <details>
 <summary>What each release carries, and how to check a download</summary>
