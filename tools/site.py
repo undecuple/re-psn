@@ -45,35 +45,56 @@ TAG_CLASS = {
     "available": "ok", "unverified": "unv", "partial": "warn", "in-progress": "info",
     "planned": "plan", "later": "dim", "declined": "bad",
 }
-# The banner: the name in pixel letters inside a double frame, as on the undecuple page. Drawn with classes (the stylesheet sets the
-# colours from the palette tokens, since the page allows no inline style); the title bar below it carries the real text.
+# The banner: the name "re:psn" in pixel letters inside a double frame, as on the undecuple page. Drawn with classes (the stylesheet sets the
+# colours from the palette tokens, since the page allows no inline style); the title bar below it carries the real text. There are two:
+# the top one (all screens) and a vertical one for the side of the page that the stylesheet shows only on wide screens.
 GLYPHS = {
-    "R": ("11110", "10001", "10001", "11110", "10100", "10010", "10001"),
-    "E": ("11111", "10000", "10000", "11110", "10000", "10000", "11111"),
-    ":": ("0", "0", "1", "0", "0", "1", "0"),
-    "P": ("11110", "10001", "10001", "11110", "10000", "10000", "10000"),
-    "S": ("01111", "10000", "10000", "01110", "00001", "00001", "11110"),
-    "N": ("10001", "11001", "10101", "10101", "10011", "10001", "10001"),
+    "r": ("10110", "11001", "10000", "10000", "10000", "00000", "00000"),
+    "e": ("01110", "10001", "11111", "10000", "01110", "00000", "00000"),
+    ":": ("0", "1", "0", "0", "1", "0", "0"),
+    "p": ("11110", "10001", "10001", "10001", "11110", "10000", "10000"),
+    "s": ("01111", "10000", "01110", "00001", "11110", "00000", "00000"),
+    "n": ("10110", "11001", "10001", "10001", "10001", "00000", "00000"),
 }
+BANNER_TEXT = "re:psn"
+
+
+def _frame(w, h):
+    return (f'<rect class="bn-frame" x="3" y="3" width="{w - 6}" height="{h - 6}"/>'
+            f'<rect class="bn-frame" x="8" y="8" width="{w - 16}" height="{h - 16}"/>')
+
+
+def _cells(ch, x, y, cell):
+    out = []
+    for r, row in enumerate(GLYPHS[ch]):
+        for c, bit in enumerate(row):
+            if bit == "1":
+                out.append(f"M{x + c * cell} {y + r * cell}h{cell}v{cell}h-{cell}z")
+    return out
 
 
 def banner_svg():
-    cell, x0, y0 = 11, 44, 46
-    x, cells = x0, []
-    for ch in "RE:PSN":
-        rows = GLYPHS[ch]
-        for r, row in enumerate(rows):
-            for c, bit in enumerate(row):
-                if bit == "1":
-                    cells.append(f"M{x + c * cell} {y0 + r * cell}h{cell}v{cell}h-{cell}z")
-        x += (len(rows[0]) + 1) * cell
-    return ('<svg class="banner" viewBox="0 0 671 200" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">'
-            '<rect class="bn-frame" x="3" y="3" width="665" height="194"/><rect class="bn-frame" x="8" y="8" width="655" height="184"/>'
-            '<text class="bn-sub" x="647" y="34" text-anchor="end" font-family="monospace" font-size="14">self-hosted</text>'
-            f'<path class="bn-name" d="{"".join(cells)}"/>'
-            '<path class="bn-rule" d="M8 146H663"/>'
-            '<text class="bn-text" x="335" y="176" text-anchor="middle" font-family="monospace" font-size="16" textLength="560" lengthAdjust="spacing">'
-            'ROOMS AND LEADERBOARDS</text></svg>\n')
+    """The wide banner: the name in one row, centred."""
+    cell, w, h = 11, 671, 130
+    width = sum(len(GLYPHS[ch][0]) for ch in BANNER_TEXT) + len(BANNER_TEXT) - 1
+    x, cells = (w - width * cell) // 2, []
+    for ch in BANNER_TEXT:
+        cells += _cells(ch, x, (h - 7 * cell) // 2, cell)
+        x += (len(GLYPHS[ch][0]) + 1) * cell
+    return (f'<svg class="banner" viewBox="0 0 {w} {h}" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">'
+            f'{_frame(w, h)}<path class="bn-name" d="{"".join(cells)}"/></svg>\n')
+
+
+def banner_side_svg():
+    """The tall banner: the letters stacked top to bottom, each centred in the five-cell width."""
+    cell, gap, w = 8, 2, 90
+    h = (len(BANNER_TEXT) * 7 + (len(BANNER_TEXT) - 1) * gap) * cell + 2 * 24
+    y, cells = 24, []
+    for ch in BANNER_TEXT:
+        cells += _cells(ch, (w - len(GLYPHS[ch][0]) * cell) // 2, y, cell)
+        y += (7 + gap) * cell
+    return (f'<svg class="banner-side" viewBox="0 0 {w} {h}" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">'
+            f'{_frame(w, h)}<path class="bn-name" d="{"".join(cells)}"/></svg>\n')
 
 
 # roadmap group -> the statuses in it, in the order the page shows them
@@ -428,6 +449,7 @@ def render_page(data):
     w('<link rel="icon" href="favicon.svg" type="image/svg+xml">\n<link rel="stylesheet" href="style.css">\n<script src="terminal.js" defer></script>\n</head>\n<body id="top">\n')
     w('<a class="skip" href="#overview">Skip to the content</a>\n')
     w(banner_svg())
+    w(banner_side_svg())
     w('<header class="bar">\n')
     w(f'<h1 class="title"><strong>re:psn</strong> <span>by undecuple &middot; v{esc(v)} &middot; {esc(data["stage"])}</span></h1>\n')
     w('</header>\n')
