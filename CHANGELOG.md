@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-12
+
 ### Added
 - **Docs and tooling:** website: the plain pages (index, in action, discuss) are laid out like the undecuple page: under the banner a box of key and value rows with dotted leaders (project, version, features, repository) beside a box of links, double-framed tables with alternate-row shading, and section headings with a block of four greys. The sticky title bar and the framed section legends are gone, and the menu entries are now lower case (`in action`, `discuss`). The terminal view keeps its layout and hides the new block; its buttons (`[F1 help]`, `plain view`, the command chips) and the menu tabs now have a visible outline, as have the four entries of the legend on the "in action" page. The "in action" and "discuss" pages offer a "Main page" link at the top and the bottom and, when the reader came from another page of this site, a "Previous page" button (`site/nav.js`, same origin, nothing stored or sent). The font list is now the undecuple page's (local fonts only, ligatures off), so the two sites look alike on one machine; line spacing stays at 1.5. The change is in `site/style.css`, `tools/site.py`, the new `site/nav.js` and the generated pages; the Content-Security-Policy of every page is unchanged (`nav.js` is a same-origin script).
 - **Docs and tooling:** website: the terminal view has a `discuss` command and a "Discuss" menu entry. `discuss` says what the discussion page is and links it (`discuss.html`), the Discussions on GitHub and the issues; like the page, the command loads nothing from another site.

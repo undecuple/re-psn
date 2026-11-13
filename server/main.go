@@ -20,7 +20,7 @@ import (
 	"time"
 )
 
-var version = "0.5.0"
+var version = "0.6.0"
 
 func main() {
 	var bad error
