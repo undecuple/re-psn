@@ -448,6 +448,22 @@ class ActionPageTest(unittest.TestCase):
         self.assertIn('<a href="action.html">In action</a>', f.read("site/index.html").decode())
 
 
+class FileFrameCssTest(unittest.TestCase):
+    """The newest answer of the terminal view fills the pane and its gutter rule runs to the bottom, like a file open in a viewer."""
+
+    css = (ROOT / "site/style.css").read_text(encoding="utf-8")
+
+    def test_last_file_fills_the_pane_and_the_gutter_rule_reaches_the_bottom(self):
+        self.assertIn(".tui-out .file:last-child { flex: 1 0 auto;", self.css)
+        self.assertIn(".tui-out .file:last-child .file-body { flex: 1; }", self.css)
+        body = self.css.split(".tui-out .file-body {", 1)[1].split("}", 1)[0]
+        self.assertIn("var(--line)", body)
+        self.assertIn("calc(var(--gw) - 1px)", body)
+        self.assertIn("1px 100% no-repeat", body)
+        out = self.css.split(".tui-out {", 1)[1].split("}", 1)[0]
+        self.assertIn("display: flex", out)
+
+
 class AutocompleteMarkupTest(unittest.TestCase):
     def test_listbox_is_made_by_script_only(self):
         page = (ROOT / "site/index.html").read_text(encoding="utf-8")
