@@ -81,6 +81,7 @@ class Fixture:
         (self.root / "site/style.css").write_text(CSS)
         (self.root / "site/terminal.js").write_text("// stub\n")
         (self.root / "site/discuss.js").write_text("// stub\n")
+        (self.root / "site/nav.js").write_text("// stub\n")
         (self.root / "site/favicon.svg").write_text(ICON)
         for path, _, _ in sitegen.DOCS:
             p = self.root / path
@@ -387,8 +388,7 @@ class ActionPageTest(unittest.TestCase):
 
     def test_one_same_origin_script_no_inline_style_no_remote_load(self):
         page = self.page()
-        self.assertEqual(page.count("<script"), 1)
-        self.assertIn('<script src="action.js" defer></script>', page)
+        self.assertEqual(re.findall(r"<script\b[^>]*>", page), ['<script src="action.js" defer>', '<script src="nav.js" defer>'])
         self.assertIn("script-src &#x27;self&#x27;", page)
         self.assertIsNone(re.search(r"\sstyle=|\son[a-z]+=", page))
         self.assertIsNone(re.search(r"(?:src|href)=\"https?://(?!github\.com/)", page))
@@ -447,7 +447,7 @@ class ActionPageTest(unittest.TestCase):
         f = Fixture()
         self.addCleanup(f.tmp.cleanup)
         f.run()
-        self.assertIn('<a href="action.html">In action</a>', f.read("site/index.html").decode())
+        self.assertIn('<a href="action.html">in action</a>', f.read("site/index.html").decode())
 
 
 class DiscussPageTest(unittest.TestCase):
@@ -484,7 +484,7 @@ class DiscussPageTest(unittest.TestCase):
 
     def test_no_script_tag_names_another_site_and_nothing_loads_before_the_click(self):
         scripts = re.findall(r"<script\b[^>]*>", self.page)
-        self.assertEqual(scripts, ['<script src="discuss.js" defer>'])
+        self.assertEqual(scripts, ['<script src="discuss.js" defer>', '<script src="nav.js" defer>'])
         self.assertNotIn("<iframe", self.page)
         self.assertIsNone(re.search(r"\sstyle=|\son[a-z]+=|<style|<img|<object|<embed|<form", self.page))
         for tagtext in re.findall(r"<(?:link|script)\b[^>]*>", self.page):
@@ -500,11 +500,71 @@ class DiscussPageTest(unittest.TestCase):
         self.assertEqual(self.page.count("<h1"), 1)
 
     def test_home_page_links_to_it(self):
-        self.assertIn('<a href="discuss.html">Discuss</a>', self.f.read("site/index.html").decode())
+        self.assertIn('<a href="discuss.html">discuss</a>', self.f.read("site/index.html").decode())
 
     def test_missing_script_is_reported(self):
         (self.f.root / "site/discuss.js").unlink()
         self.assertIn("site/discuss.js is missing", self.f.run("--check")[2])
+
+
+class PlainLayoutTest(unittest.TestCase):
+    """The plain pages follow the undecuple page: one block of key and value rows and one of links under the banner, no sticky bar;
+    the terminal view hides that block and keeps outlined buttons and tabs."""
+
+    def setUp(self):
+        f = Fixture()
+        self.addCleanup(f.tmp.cleanup)
+        f.run()
+        self.pages = {rel: f.read(rel).decode() for rel in ("site/index.html", "site/action.html", "site/discuss.html")}
+        self.css = (ROOT / "site/style.css").read_text(encoding="utf-8")
+
+    def test_every_page_has_one_hidden_h1_a_key_box_and_a_link_box_and_no_title_bar(self):
+        for rel, page in self.pages.items():
+            self.assertEqual(page.count("<h1"), 1, rel)
+            self.assertIn('<h1 class="sr">', page, rel)
+            self.assertEqual(page.count('<div class="top">'), 1, rel)
+            self.assertEqual(page.count('<nav class="nfo"'), 1, rel)
+            self.assertEqual(page.count('<nav class="quick"'), 1, rel)
+            self.assertIn('<span class="k">version</span>', page, rel)
+            self.assertNotIn('class="bar', page, rel)
+            self.assertNotIn("sticky", page, rel)
+            # the banner stays a direct child of the body, so the terminal view can be put right after it
+            self.assertLess(page.index('<svg class="banner"'), page.index('<div class="top">'), rel)
+
+    def test_index_links_every_section_and_the_other_pages(self):
+        page = self.pages["site/index.html"]
+        quick = page.split('<nav class="quick"', 1)[1].split("</nav>", 1)[0]
+        for slug in re.findall(r'<section id="([a-z]+)">', page):
+            self.assertIn(f'<a href="#{slug}">', quick, slug)
+        self.assertIn('<a href="action.html">in action</a>', quick)
+        self.assertIn('<a href="discuss.html">discuss</a>', quick)
+
+    def test_detached_pages_offer_the_main_page_and_a_hidden_previous_page_button(self):
+        for rel in ("site/action.html", "site/discuss.html"):
+            page = self.pages[rel]
+            self.assertEqual(page.count('<nav class="pagenav"'), 2, rel)  # above and below the content
+            self.assertEqual(page.count('<a class="pn" href="index.html">&larr; Main page</a>'), 2, rel)
+            self.assertEqual(page.count('<button type="button" class="pn prev-page" hidden>'), 2, rel)
+        index = self.pages["site/index.html"]
+        self.assertNotIn("pagenav", index)
+        self.assertNotIn("nav.js", index)
+        self.assertEqual(re.findall(r"<script\b[^>]*>", index), ['<script src="terminal.js" defer>'])
+
+    def test_action_legend_entries_are_outlined_boxes(self):
+        legend = self.css.split(".legend .lg {", 1)[1].split("}", 1)[0]
+        self.assertIn("border: 1px solid var(--line)", legend)
+        for kind in ("tcp", "direct", "blocked", "relay"):
+            rule = self.css.split(f".legend .lg-{kind} {{", 1)[1].split("}", 1)[0]
+            self.assertIn("border-color: var(--t-", rule, kind)
+
+    def test_terminal_view_hides_the_block_and_has_outlined_buttons_and_tabs(self):
+        self.assertIn("html.tui-on:not(.plain) :is(.top, main, .skip, .totop) { display: none; }", self.css)
+        for sel in (".tui .fk", ".tui-menu .mi", ".tui .tui-plain", ".tui .chip"):
+            rule = re.search(re.escape(sel) + r"(?:, [^{]*)? \{([^}]*)\}", self.css)
+            self.assertIsNotNone(rule, sel)
+        for sel in (".tui .fk {", ".tui-menu .mi {", ".tui-plain, .tui .tui-plain {", ".tui .chip {"):
+            body = self.css.split(sel, 1)[1].split("}", 1)[0]
+            self.assertIn("border: 1px solid var(--line)", body, sel)
 
 
 class AutocompleteMarkupTest(unittest.TestCase):

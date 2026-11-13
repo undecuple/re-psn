@@ -67,7 +67,9 @@
 html {
   background: var(--page);
   color: var(--text);
-  font-family: ui-monospace, "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace;
+  /* The same font list as the undecuple page, so the two sites look alike on one machine (local fonts only; nothing is loaded). */
+  font-family: "Perfect DOS VGA 437", "Px437 IBM VGA 8x16", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  font-variant-ligatures: none;
   font-size: 16px;
   line-height: 1.5;
   -webkit-text-size-adjust: 100%;
@@ -136,48 +138,31 @@ p { margin: 0.75em 0; }
 ul { margin: 0.5em 0; padding-left: 3ch; }
 li { margin: 0.25em 0; }
 
-/* The title bar and the section frames are CSS borders, so every character stays real text. */
-.bar {
-  margin: 16px 0 0;
-  border: 1px solid var(--line);
-  border-bottom: 0;
-  padding: 0.25em 1ch;
-}
-header.bar { background: var(--raised); border-top: 3px solid var(--yellow); display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 2ch; }
-header.bar .title { flex: 1; }
-nav.bar {
-  margin: 0;
-  border-bottom: 3px double var(--line);
-  background: var(--page);
-}
-/* The section bar stays in view while scrolling; it is in the normal tab order and never traps focus. */
-nav.sticky { position: sticky; top: 0; z-index: 5; }
-[id] { scroll-margin-top: 6rem; }
-.bar .title { margin: 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 2ch; color: var(--c-h1); }
-.bar .title span { color: var(--muted); }
-.bar ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0 2ch; }
-.bar li { margin: 0; }
+/* The block under the banner and the section headings follow the undecuple page: double frames, a key and value box with dotted leaders,
+   a box of links, and a heading with a block of four greys. Frames are CSS borders, so every character stays real text. */
+.sr { position: absolute; left: -9999px; }
+.top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 26rem); gap: 0 16px; margin: 16px 0 0; align-items: stretch; }
+.nfo { display: grid; align-content: start; grid-template-columns: max-content 1fr; gap: 2px 16px; padding: 8px 12px; border: 3px double var(--line); background: var(--panel); }
+.nfo .k { color: var(--muted); }
+.nfo .k::after { content: " ........"; opacity: 0.5; }
+.quick { border: 3px double var(--line); background: var(--panel); padding: 8px 12px; min-width: 0; }
+.quick .qh { margin: 0 0 6px; color: var(--strong); letter-spacing: 0.14em; }
+.quick ul { list-style: none; margin: 0; padding: 0; column-count: 2; column-gap: 2ch; }
+.quick li { margin: 0; break-inside: avoid; }
+.quick li::before { content: "> "; color: var(--muted); }
+[id] { scroll-margin-top: 1rem; }
 
 main { display: block; }
 
-section {
-  position: relative;
-  margin: 2.25em 0 0;
-  padding: 1.25em 1ch 0.5em;
-  border: 1px solid var(--line);
+section { margin: 1.75em 0 0; }
+section > h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 0.5em; color: var(--strong); letter-spacing: 0.14em; text-transform: uppercase; }
+section > h2::before {
+  content: "";
+  flex: none;
+  width: 36px;
+  height: 14px;
+  background: linear-gradient(90deg, var(--fg0) 0 25%, var(--grey1) 25% 50%, var(--grey0) 50% 75%, var(--bg3) 75%);
 }
-section > h2 {
-  position: absolute;
-  top: 0;
-  left: 1ch;
-  transform: translateY(-50%);
-  background: var(--page);
-  color: var(--c-h2);
-  padding: 0 1ch;
-  max-width: calc(100% - 2ch);
-}
-section > h2::before { content: "\2524 "; color: var(--muted); }
-section > h2::after { content: " \251C"; color: var(--muted); }
 
 section h3 { margin: 1.25em 0 0.25em; color: var(--c-h3); border-bottom: 1px solid var(--orange); }
 section h3::before { content: "# "; color: var(--muted); }
@@ -210,10 +195,10 @@ section > h2 + p, section > h2 + h3 { margin-top: 0; }
 .tag.dim { border-color: var(--t-dim); color: var(--tt-dim); }
 .tag.bad { border-color: var(--t-bad); color: var(--tt-bad); }
 
-table { width: 100%; border-collapse: collapse; margin: 0.5em 0; }
-th, td { text-align: left; vertical-align: top; padding: 0.25em 1ch; border-top: 1px solid var(--select); }
-thead th { background: var(--panel); color: var(--strong); border-top: 0; border-bottom: 2px solid var(--blue); }
-td:first-child, th:first-child { padding-left: 0; }
+table { width: 100%; border-collapse: collapse; margin: 0.5em 0; border: 3px double var(--line); background: var(--panel); }
+th, td { text-align: left; vertical-align: top; padding: 0.25em 1ch; }
+thead th { color: var(--strong); font-weight: normal; border-bottom: 1px solid var(--line); }
+tbody tr:nth-child(even) { background: var(--page); }
 table.feat, table.set { table-layout: fixed; }
 table.feat th:nth-child(2) { width: 22ch; }
 table.feat th:nth-child(3) { width: 14ch; }
@@ -231,12 +216,12 @@ footer { margin: 2em 0 0; color: var(--muted); border-top: 1px dotted var(--fain
   table.feat, table.set { table-layout: auto; }
   table.stack, table.stack tbody, table.stack tr, table.stack td { display: block; width: 100%; }
   table.stack thead { position: absolute; left: -999px; }
-  table.stack tr { border-top: 1px solid var(--select); padding: 0.5em 0; }
+  table.stack tr { border-top: 1px solid var(--faint); padding: 0.5em 0; }
   table.stack td { border: 0; padding: 0.1em 0; }
   table.stack td::before { content: attr(data-label) ": "; color: var(--muted); }
   table.stack td:first-child::before { content: ""; }
-  .bar .title { display: block; }
-  header.bar { display: block; }
+  .top { grid-template-columns: minmax(0, 1fr); gap: 8px 0; }
+  .quick ul { column-count: 1; }
 }
 
 @media print {
@@ -270,13 +255,14 @@ body { padding-bottom: 72px; }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .tui, .plain-bar { display: none; }
 html.tui-on:not(.plain) .tui { display: grid; }
-html.tui-on:not(.plain) :is(.bar, main, .skip, .totop) { display: none; }
+html.tui-on:not(.plain) :is(.top, main, .skip, .totop) { display: none; }
 html.tui-on.plain .plain-bar { display: block; margin: 16px 0 0; }
 html.tui-on:not(.plain) footer { margin-top: 0.75em; }
 html.tui-on:not(.plain) body { padding-bottom: 16px; }
 
 .tui button { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; text-align: left; cursor: pointer; }
-.tui-plain { color: var(--strong); text-decoration: underline; text-underline-offset: 0.2em; background: none; border: 0; font: inherit; cursor: pointer; padding: 0; }
+.tui-plain, .tui .tui-plain { color: var(--strong); background: none; border: 1px solid var(--line); font: inherit; cursor: pointer; padding: 0 1.5ch; }
+.tui-plain:hover, .tui .tui-plain:hover { background: var(--hover); }
 .tui button:focus-visible, .tui-plain:focus-visible, .tui input:focus-visible, .tui-out:focus-visible {
   outline: 2px solid var(--strong);
   outline-offset: -2px;
@@ -297,15 +283,18 @@ html.tui-on:not(.plain) body { padding-bottom: 16px; }
 .tui-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 2ch; padding: 0.25em 1ch; background: var(--raised); color: var(--strong); border-top: 3px solid var(--yellow); border-bottom: 1px solid var(--line); }
 .tui-name { font-weight: bold; color: var(--c-h1); }
 .tui-ver { color: var(--muted); flex: 1; }
-.tui ul.tui-fkeys { display: flex; flex-wrap: wrap; gap: 0 2ch; padding: 0.25em 1ch; background: var(--raised); color: var(--c-key); border-bottom: 3px double var(--line); }
-.tui .fk { color: var(--c-key); }
-.tui .fk:hover { text-decoration: underline; }
+.tui ul.tui-fkeys { display: flex; flex-wrap: wrap; gap: 4px 1ch; padding: 0.25em 1ch; background: var(--raised); color: var(--c-key); border-bottom: 3px double var(--line); }
+.tui .fk { color: var(--c-key); border: 1px solid var(--line); padding: 0 1ch; }
+.tui .fk:hover { background: var(--hover); }
 .tui-panes { display: grid; grid-template-columns: 24ch minmax(0, 1fr); min-height: 0; }
 .tui-menu { border-right: 1px solid var(--line); scrollbar-color: var(--thumb) transparent; padding: 0.5em 0; overflow-y: auto; }
-.tui-menu .mi { display: block; width: 100%; padding: 0 1ch; }
+.tui-menu ul { padding: 0 1ch; }
+.tui-menu li { padding: 0 0 4px; }
+/* Each tab is an outlined box; the open one is marked by colour, a thicker left edge and the ">" mark, never by colour alone. */
+.tui-menu .mi { display: block; width: 100%; padding: 0 1ch; border: 1px solid var(--line); }
 .tui-menu .mi::before { content: "  "; white-space: pre; }
 .tui-menu .mi:hover { text-decoration: underline; background: var(--hover); }
-.tui-menu .mi[aria-current] { background: var(--select); color: var(--strong); box-shadow: inset 3px 0 var(--yellow); }
+.tui-menu .mi[aria-current] { background: var(--select); color: var(--strong); border-color: var(--strong); box-shadow: inset 3px 0 var(--yellow); }
 .tui-menu .mi[aria-current]::before { content: "> "; }
 .tui-content { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 .tui .chip.tui-back { display: none; }
@@ -399,8 +388,8 @@ html.tui-on:not(.plain) body { padding-bottom: 16px; }
   .tui-title .tui-plain { flex: 0 0 auto; min-height: 44px; display: inline-flex; align-items: center; }
   .tui-panes { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
   .tui-menu { overflow-x: auto; overflow-y: hidden; white-space: nowrap; padding: 0; border-right: 0; border-bottom: 1px solid var(--line); }
-  .tui-menu ul { display: flex; flex-direction: row; }
-  .tui-menu li { flex: 0 0 auto; }
+  .tui-menu ul { display: flex; flex-direction: row; gap: 4px; padding: 4px; }
+  .tui-menu li { flex: 0 0 auto; padding: 0; }
   .tui-menu .mi { flex: 0 0 auto; width: auto; min-height: 44px; display: flex; align-items: center; padding: 0 1.5ch; }
   .tui-menu .mi::before, .tui-menu .mi[aria-current]::before { content: none; }
   .tui-menu .mi[aria-current] { box-shadow: inset 0 -3px var(--yellow); }
@@ -413,7 +402,6 @@ html.tui-on:not(.plain) body { padding-bottom: 16px; }
   .tui-out .file.gw2 { --gw: 3.5ch; }
   .tui-out .file.gw3 { --gw: 4.5ch; }
   .tui-out .file.gw4 { --gw: 5.5ch; }
-  nav.bar ul { gap: 0 1.5ch; }
 }
 
 /* The "see it in action" page (tools/site_action.py): a static diagram and numbered steps per scenario. Colours as in the status tags;
@@ -428,11 +416,13 @@ html.tui-on:not(.plain) body { padding-bottom: 16px; }
 .action-diagram .e-blocked { stroke: var(--tt-bad); stroke-dasharray: 10 8; }
 .action-diagram .e-relay { stroke: var(--tt-plan); stroke-width: 5; }
 .action-diagram .edge-label { fill: var(--text); font-size: 13px; }
-.legend .lg { margin-right: 2ch; }
-.legend .lg-tcp { color: var(--tt-ok); }
-.legend .lg-direct { color: var(--tt-warn); }
-.legend .lg-blocked { color: var(--tt-bad); }
-.legend .lg-relay { color: var(--tt-plan); }
+/* Each legend entry is an outlined box, in the colour of the line it names (the word is always there; the colour is a second cue). */
+.legend { line-height: 2.1; }
+.legend .lg { display: inline-block; margin: 0 1ch 0 0; padding: 0 1ch; border: 1px solid var(--line); line-height: 1.5; }
+.legend .lg-tcp { color: var(--tt-ok); border-color: var(--t-ok); }
+.legend .lg-direct { color: var(--tt-warn); border-color: var(--t-warn); }
+.legend .lg-blocked { color: var(--tt-bad); border-color: var(--t-bad); }
+.legend .lg-relay { color: var(--tt-plan); border-color: var(--t-plan); }
 .steps { padding-left: 3ch; }
 .steps li { margin: 0.25em 0; }
 .steps .who { color: var(--muted); }
@@ -462,3 +452,9 @@ html.tui-on:not(.plain) body { padding-bottom: 16px; }
 .discuss-load:focus-visible { outline: 2px solid var(--strong); outline-offset: 2px; }
 .discuss-load:disabled { cursor: default; color: var(--muted); }
 .giscus { margin-top: 1em; }
+
+/* The way back from the pages that stand apart from the main page: outlined, like the other buttons. */
+.pagenav { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; }
+.pagenav .pn { font: inherit; color: var(--strong); background: none; border: 1px solid var(--line); padding: 0 1.5ch; text-decoration: none; cursor: pointer; }
+.pagenav .pn:hover { background: var(--hover); color: var(--strong); }
+.pagenav .pn:focus-visible { outline: 2px solid var(--strong); outline-offset: 2px; }

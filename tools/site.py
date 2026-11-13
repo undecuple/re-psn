@@ -448,6 +448,26 @@ def render_changes(data, w):
             w('</ul>\n')
 
 
+def page_nav():
+    """The way back from a page that stands apart from the main page. The link needs no script; the button is shown by site/nav.js
+    only when the reader came from another page of this site."""
+    return ('<nav class="pagenav" aria-label="Return">\n<a class="pn" href="index.html">&larr; Main page</a>\n'
+            '<button type="button" class="pn prev-page" hidden>&larr; Previous page</button>\n</nav>\n')
+
+
+def top_block(nfo, quick_title, quick):
+    """The block under the banner, laid out as on the undecuple page: a box of key and value rows and a box of links. nfo is
+    [(key, html)], quick is [(href, label)]. The terminal view hides it."""
+    o = ['<div class="top">\n<nav class="nfo" aria-label="About this page">\n']
+    for k, val in nfo:
+        o.append(f'<span class="k">{esc(k)}</span><span>{val}</span>\n')
+    o.append(f'</nav>\n<nav class="quick" aria-label="{esc(quick_title)}">\n<h2 class="qh">{esc(quick_title.upper())}</h2>\n<ul>\n')
+    for href, label in quick:
+        o.append(f'<li><a href="{esc(href)}">{esc(label)}</a></li>\n')
+    o.append('</ul>\n</nav>\n</div>\n')
+    return "".join(o)
+
+
 def render_page(data):
     v = data["version"]
     n = data["status_counts"]
@@ -464,19 +484,16 @@ def render_page(data):
     w(f'<title>{esc(TITLE)}</title>\n')
     w('<link rel="icon" href="favicon.svg" type="image/svg+xml">\n<link rel="stylesheet" href="style.css">\n<script src="terminal.js" defer></script>\n</head>\n<body id="top">\n')
     w('<a class="skip" href="#overview">Skip to the content</a>\n')
+    w(f'<h1 class="sr">re:psn by undecuple, v{esc(v)}, {esc(data["stage"])}</h1>\n')
     w(banner_svg())
     w(banner_side_svg())
-    w('<header class="bar">\n')
-    w(f'<h1 class="title"><strong>re:psn</strong> <span>by undecuple &middot; v{esc(v)} &middot; {esc(data["stage"])}</span></h1>\n')
-    w('</header>\n')
-    w('<nav class="bar sticky" aria-label="Sections"><ul>\n')
-    for slug, label in (("overview", "Overview"), ("features", "Features"), ("roadmap", "Roadmap"), ("changes", "Changes"),
-                        ("settings", "Settings"), ("install", "Install"), ("connect", "Connect"), ("docs", "Docs"),
-                        ("credits", "Credits")):
-        w(f'<li><a href="#{slug}">{label}</a></li>\n')
-    w('<li><a href="action.html">In action</a></li>\n')
-    w('<li><a href="discuss.html">Discuss</a></li>\n')
-    w('</ul></nav>\n<main>\n')
+    w(top_block([("project", "re:psn by undecuple"), ("version", f"{esc(v)} ({esc(data['stage'])})"),
+                 ("features", f"{total}, {n['available']} available"),
+                 ("repository", f'<a href="{esc(REPO_URL)}">{esc(REPO_URL.split("//", 1)[1])}</a>')],
+                "Sections",
+                [(f"#{slug}", slug) for slug in ("overview", "features", "roadmap", "changes", "settings", "install", "connect",
+                                                 "docs", "credits")] + [("action.html", "in action"), ("discuss.html", "discuss")]))
+    w('<main>\n')
 
     w('<section id="overview">\n<h2>Overview</h2>\n')
     for para in data["about"]["paragraphs"]:
@@ -565,17 +582,18 @@ def render_action_page(data):
     w('<meta name="color-scheme" content="dark">\n')
     w(f'<meta name="description" content="How a re:psn server introduces players, and when it carries their traffic: four simulated scenarios. {esc(UNOFFICIAL)}">\n')
     w('<title>re:psn in action</title>\n')
-    w('<link rel="icon" href="favicon.svg" type="image/svg+xml">\n<link rel="stylesheet" href="style.css">\n<script src="action.js" defer></script>\n</head>\n<body id="top">\n')
+    w('<link rel="icon" href="favicon.svg" type="image/svg+xml">\n<link rel="stylesheet" href="style.css">\n<script src="action.js" defer></script>\n<script src="nav.js" defer></script>\n</head>\n<body id="top">\n')
     w('<a class="skip" href="#scenarios">Skip to the scenarios</a>\n')
+    w(f'<h1 class="sr">re:psn in action, v{esc(v)}, {esc(data["stage"])}</h1>\n')
     w(banner_svg())
     w(banner_side_svg())
-    w('<header class="bar">\n')
-    w(f'<h1 class="title"><strong>re:psn</strong> <span>in action &middot; v{esc(v)} &middot; {esc(data["stage"])}</span></h1>\n')
-    w('</header>\n')
-    w('<nav class="bar sticky" aria-label="Scenarios"><ul>\n<li><a href="index.html">Home</a></li>\n')
-    for s in site_action.SCENARIOS:
-        w(f'<li><a href="#{s["id"]}">{esc(s["title"].split(":")[0])}</a></li>\n')
-    w('</ul></nav>\n<main>\n')
+    w(top_block([("page", "in action"), ("version", f"{esc(v)} ({esc(data['stage'])})"),
+                 ("scenarios", str(len(site_action.SCENARIOS)) + ", simulated")],
+                "Scenarios",
+                [("index.html", "home")] + [(f"#{s['id']}", s["title"].split(":")[0].lower()) for s in site_action.SCENARIOS]
+                + [("discuss.html", "discuss")]))
+    w(page_nav())
+    w('<main>\n')
     w('<section id="scenarios">\n<h2>How the pieces talk</h2>\n')
     w('<p>A re:psn server keeps rooms and leaderboards and tells each player where the others are. These four scenarios follow two players '
       'from first contact to game traffic. Each is a fixed script, not live traffic: the addresses are the ones reserved for '
@@ -594,7 +612,9 @@ def render_action_page(data):
             name = f'<code class="msg">{esc(msg)}</code> ' if msg else ''
             w(f'<li><span class="who">{who}</span> {name}{esc(caption)}</li>\n')
         w('</ol>\n</section>\n')
-    w('</main>\n<footer>\n')
+    w('</main>\n')
+    w(page_nav())
+    w('<footer>\n')
     w(f'<p>{esc(UNOFFICIAL)} {esc(AI_LINE)}</p>\n</footer>\n')
     w('<a class="totop" href="#top"><span aria-hidden="true">&uarr;</span> Top</a>\n</body>\n</html>\n')
     return "".join(o)
@@ -612,14 +632,15 @@ def render_discuss_page(data):
     w('<meta name="color-scheme" content="dark">\n')
     w(f'<meta name="description" content="Questions and comments about re:psn, as a GitHub Discussions thread. {esc(UNOFFICIAL)}">\n')
     w('<title>re:psn discussion</title>\n')
-    w('<link rel="icon" href="favicon.svg" type="image/svg+xml">\n<link rel="stylesheet" href="style.css">\n<script src="discuss.js" defer></script>\n</head>\n<body id="top">\n')
+    w('<link rel="icon" href="favicon.svg" type="image/svg+xml">\n<link rel="stylesheet" href="style.css">\n<script src="discuss.js" defer></script>\n<script src="nav.js" defer></script>\n</head>\n<body id="top">\n')
     w('<a class="skip" href="#discussion">Skip to the discussion</a>\n')
+    w(f'<h1 class="sr">re:psn discussion, v{esc(v)}, {esc(data["stage"])}</h1>\n')
     w(banner_svg())
     w(banner_side_svg())
-    w('<header class="bar">\n')
-    w(f'<h1 class="title"><strong>re:psn</strong> <span>discussion &middot; v{esc(v)} &middot; {esc(data["stage"])}</span></h1>\n')
-    w('</header>\n')
-    w('<nav class="bar sticky" aria-label="Pages"><ul>\n<li><a href="index.html">Home</a></li>\n<li><a href="action.html">In action</a></li>\n</ul></nav>\n<main>\n')
+    w(top_block([("page", "discussion"), ("version", f"{esc(v)} ({esc(data['stage'])})"), ("thread", "GitHub Discussions, via giscus")],
+                "Pages", [("index.html", "home"), ("action.html", "in action")]))
+    w(page_nav())
+    w('<main>\n')
     w('<section id="discussion">\n<h2>Discussion</h2>\n')
     w('<p>Questions, ideas and reports about re:psn go in one thread. It is a GitHub Discussions thread in the repository of the '
       f'<a href="{esc(DISCUSSIONS_URL)}">undecuple/me</a> site, shown here with <a href="https://giscus.app/">giscus</a>. '
@@ -631,7 +652,9 @@ def render_discuss_page(data):
     attrs = "".join(f' data-giscus-{k}="{esc(val)}"' for k, val in GISCUS.items())
     w(f'<p><button type="button" id="discuss-load" class="discuss-load"{attrs}>Load the discussion</button></p>\n')
     w('<div class="giscus" id="comments"></div>\n')
-    w('</section>\n</main>\n<footer>\n')
+    w('</section>\n</main>\n')
+    w(page_nav())
+    w('<footer>\n')
     w(f'<p>{esc(UNOFFICIAL)} {esc(AI_LINE)}</p>\n</footer>\n')
     w('<a class="totop" href="#top"><span aria-hidden="true">&uarr;</span> Top</a>\n</body>\n</html>\n')
     return "".join(o)
@@ -703,7 +726,7 @@ def main(argv=None):
     problems = []
     check_css(root, problems)
     check_icon(root, problems)
-    for js in (JS, "site/discuss.js"):
+    for js in (JS, "site/discuss.js", "site/nav.js"):
         if not (root / js).exists():
             problems.append(f"{js} is missing (a page loads it)")
     if a.check:
