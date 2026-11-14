@@ -13,6 +13,7 @@ the game's peer traffic, synchronization or proprietary backend works.
 | Another recomp runtime or a custom online adapter | Vendor the C client, map your runtime's asynchronous operations and implement peer transport around it. |
 | A title that has its own game server | Use re-psn as a side service for rooms and leaderboards only: [Running re-psn beside a title's own server](side-service.md). |
 | A tool inspecting a running server | Use the optional [HTTP status API](api.md#http); it is separate from the game protocol. |
+| A recomp reporting local trophies to the desktop app | Use the separate [desktop framework and trophy SDK](app-framework.md); the adapter still owns its game/HLE semantics. |
 
 This guide was checked against re-psn main `15bb542fd5a27d539781691d5bc9dca16244314b` and ps3recomp
 [`de4f090328ea08bef6b2f15caec0b85e343a7ece`](https://github.com/sp00nznet/ps3recomp/tree/de4f090328ea08bef6b2f15caec0b85e343a7ece)

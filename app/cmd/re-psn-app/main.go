@@ -54,6 +54,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return startTUI(stderr)
 	}
 	switch args[0] {
+	case "profile", "trophies", "friends", "account-relay":
+		return runFramework(args, stdout, stderr)
+	case "--profile-dir":
+		return runProfileTUI(args, stderr)
 	case "--no-tui", "-no-tui":
 		fmt.Fprintln(stderr, "re-psn-app: the terminal UI is off (--no-tui); use re-psn-app check HOST:PORT or re-psn-app version")
 		return 2
@@ -77,6 +81,12 @@ func usage(w io.Writer) {
   re-psn-app --no-tui                        do not start it: print a note and exit 2
   re-psn-app check [-timeout 5s] HOST:PORT   connect, say HELLO and report what the server answers
   re-psn-app version                         print the version
+  re-psn-app --profile-dir DIR               open local Profile, Trophies and Friends screens
+  re-psn-app profile create|show|export|restore|serve --dir DIR [OPTIONS]
+  re-psn-app trophies install|show --dir DIR [--input CATALOG]
+  re-psn-app friends register|list|request|accept|decline|cancel|remove|block|unblock --dir DIR --relay HTTPS_ORIGIN [--ca-file FILE] [--id PUBLIC_ID]
+  re-psn-app account-relay serve --state DIR --allow PUBLIC_IDS --tls-cert FILE --tls-key FILE [--listen HOST:PORT]
+  re-psn-app account-relay revoke --state DIR --id PUBLIC_ID  (stop the companion first)
 `)
 }
 
@@ -94,7 +104,10 @@ func runTUI(stderr io.Writer) int {
 		return 1
 	}
 	_, noColor := os.LookupEnv("NO_COLOR")
-	m := tui.New(tui.Options{Path: path, File: f, FirstRun: first, NoColor: noColor})
+	profileDir, _ := defaultProfileDir()
+	session := tui.NewProfileSession(profileDir)
+	defer session.Close()
+	m := tui.New(tui.Options{Path: path, File: f, FirstRun: first, NoColor: noColor, ProfileDir: profileDir, ProfileSession: session})
 	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Fprintln(stderr, "re-psn-app:", err)
 		return 1

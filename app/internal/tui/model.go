@@ -12,20 +12,26 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/undecuple/re-psn/app/framework"
 	"github.com/undecuple/re-psn/app/internal/client"
 	"github.com/undecuple/re-psn/app/internal/config"
 )
 
 // Options are what the program hands the UI.
 type Options struct {
-	Path     string       // the settings file
-	File     *config.File // its contents; an empty File when it does not exist
-	FirstRun bool         // no settings file yet: start with the chooser
-	Fetcher  Fetcher      // nil means NativeStatus{}
-	Save     func(path string, f *config.File) error
-	Timeout  time.Duration // for one refresh; 0 means 5 s
-	NoColor  bool          // NO_COLOR is set: bold and reverse only
-	Now      func() time.Time
+	ProfileDir     string
+	ProfileSession *ProfileSession
+	SocialOrigin   string
+	SocialCAFile   string
+	StartProfile   bool
+	Path           string       // the settings file
+	File           *config.File // its contents; an empty File when it does not exist
+	FirstRun       bool         // no settings file yet: start with the chooser
+	Fetcher        Fetcher      // nil means NativeStatus{}
+	Save           func(path string, f *config.File) error
+	Timeout        time.Duration // for one refresh; 0 means 5 s
+	NoColor        bool          // NO_COLOR is set: bold and reverse only
+	Now            func() time.Time
 	// Discover looks for servers on the local network; nil means client.Discover. port is 0 for the default.
 	Discover func(ctx context.Context, wait time.Duration, port uint16) ([]client.Found, error)
 }
@@ -47,11 +53,14 @@ const (
 	paneBoards
 	paneSettings
 	paneHelp
+	paneProfile
+	paneTrophies
+	paneFriends
 	// paneServer is not in the menu: it is the third tab of Status, reached with tab when a status URL is set.
 	paneServer
 )
 
-var paneNames = []string{"Overview", "Rooms", "Leaderboards", "Settings", "Help"}
+var paneNames = []string{"Overview", "Rooms", "Leaderboards", "Settings", "Help", "Profile", "Trophies", "Friends"}
 
 type edit int
 
@@ -62,6 +71,7 @@ const (
 	editName
 	editServer
 	editStatusURL
+	editFriend
 )
 
 var modes = []config.Mode{config.ModePlay, config.ModeHost, config.ModeBoth}
@@ -71,9 +81,17 @@ const narrowWidth = 70
 
 // Model is the whole UI state. It is a value; Update returns the next one.
 type Model struct {
-	opt  Options
-	file *config.File
-	set  config.Settings // the settings being edited; saved with s or at the end of the first run
+	profileView    *framework.View
+	profileSeq     int
+	profileLoading bool
+	profileErr     error
+	profileNote    string
+	profileConfirm string
+	profileTitle   int
+	friendRow      int
+	opt            Options
+	file           *config.File
+	set            config.Settings // the settings being edited; saved with s or at the end of the first run
 
 	w, h  int
 	light bool
@@ -142,6 +160,9 @@ type savedMsg struct {
 
 // New makes the starting model.
 func New(o Options) Model {
+	if o.ProfileSession == nil && o.ProfileDir != "" {
+		o.ProfileSession = NewProfileSession(o.ProfileDir)
+	}
 	if o.File == nil {
 		o.File = &config.File{}
 	}
@@ -171,11 +192,19 @@ func New(o Options) Model {
 			}
 		}
 	}
+	if o.StartProfile {
+		m.stage = stageHome
+		m.menu = paneProfile
+		m.content = true
+	}
 	return m
 }
 
 // Init checks the connection at start when a server is already set.
 func (m Model) Init() tea.Cmd {
+	if m.opt.StartProfile {
+		return func() tea.Msg { return profileStartMsg{} }
+	}
 	if m.stage == stageHome && (m.set.Server != "" || m.set.StatusURL != "") {
 		return func() tea.Msg { return initialRefreshMsg{} }
 	}
@@ -185,6 +214,22 @@ func (m Model) Init() tea.Cmd {
 // Update handles one message.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case profileStartMsg:
+		cmd := m.profileAction("read", "")
+		return m, cmd
+	case profileMsg:
+		if msg.seq == m.profileSeq {
+			m.profileLoading = false
+			m.profileView = &msg.view
+			m.profileErr = msg.err
+			m.profileNote = msg.note
+			if m.profileTitle >= len(msg.view.Titles) {
+				m.profileTitle = 0
+			}
+			if m.friendRow >= len(m.friendRows()) {
+				m.friendRow = 0
+			}
+		}
 	case initialRefreshMsg:
 		return m, m.refresh()
 	case tea.WindowSizeMsg:
@@ -359,6 +404,17 @@ func (m Model) homeKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.toggleTheme()
 		return m, nil
 	case "r":
+		if m.menu == paneProfile || m.menu == paneTrophies || m.menu == paneFriends {
+			if m.profileLoading {
+				return m, nil
+			}
+			action := "read"
+			if m.menu == paneFriends && m.opt.SocialOrigin != "" {
+				action = "list"
+			}
+			cmd := m.profileAction(action, "")
+			return m, cmd
+		}
 		if m.menu <= paneBoards || m.menu == paneServer {
 			// Every fetch opens a connection to the server, which counts it: ask again only when no fetch is
 			// running and the last answer is at least refreshCooldown old.
@@ -385,16 +441,24 @@ func (m Model) homeKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.menu = (m.menu + pane(len(paneNames)) - 1) % pane(len(paneNames))
 		case "down", "j":
 			m.menu = (m.menu + 1) % pane(len(paneNames))
-		case "1", "2", "3", "4", "5":
+		case "1", "2", "3", "4", "5", "6", "7", "8":
 			m.menu = pane(key[0] - '1')
 		case "enter", "right", "l", "space":
 			m.content = true
 			m.startStatusEdit()
+			if m.menu == paneProfile || m.menu == paneTrophies || m.menu == paneFriends {
+				if !m.profileLoading {
+					cmd := m.profileAction("read", "")
+					return m, cmd
+				}
+				return m, nil
+			}
 		}
 		return m, nil
 	}
 	switch key {
 	case "esc", "left", "h":
+		m.profileConfirm = ""
 		m.content = false
 		if m.menu == paneServer {
 			m.menu = paneRooms
@@ -402,6 +466,8 @@ func (m Model) homeKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	switch m.menu {
+	case paneProfile, paneTrophies, paneFriends:
+		return m.profileKey(key)
 	case paneRooms, paneBoards:
 		switch key {
 		case "e":
@@ -450,6 +516,10 @@ func (m Model) editKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	var err error
 	refresh := false
 	switch m.editing {
+	case editFriend:
+		m.editing = editNone
+		cmd := m.profileAction("request", v)
+		return m, cmd
 	case editTitle:
 		if err = checkTitle(v); err == nil {
 			m.title, refresh = v, true
