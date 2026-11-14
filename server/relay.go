@@ -135,6 +135,11 @@ func (s *Server) streamLeg(conn net.Conn, t byte, p []byte) (handedOff bool) {
 		s.nextStream++
 		st = &stream{id: s.nextStream, from: from, to: to, accept: make(chan net.Conn, 1)}
 		s.streams[st.id] = st
+		w := &writer{}
+		w.u32(st.id)
+		w.u32(from.id)
+		w.u16(vport)
+		s.flush([]push{{to, msgStreamOffer, w.b}})
 	}
 	s.mu.Unlock()
 	if off {
@@ -143,11 +148,6 @@ func (s *Server) streamLeg(conn net.Conn, t byte, p []byte) (handedOff bool) {
 	if !ok {
 		return fail(errNotFound)
 	}
-	w := &writer{}
-	w.u32(st.id)
-	w.u32(from.id)
-	w.u16(vport)
-	s.flush([]push{{to, msgStreamOffer, w.b}})
 	s.log.Debug("relay stream", "stream", st.id, "from", from.onlineID, "to", to.onlineID, "vport", vport)
 
 	other := s.awaitAccept(st, streamAcceptTimeout)

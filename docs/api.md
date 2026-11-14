@@ -29,6 +29,14 @@ u8 type | u16 length | payload (length bytes)
 - **Pushes** (types `0xA0`–`0xAF`) are server-initiated events. They have no
   request id.
 
+Room replies and pushes for each control connection are queued in the order
+the server applies the corresponding room operations, including disconnects.
+A delayed reply to one player therefore preserves the order of ownership
+changes sent to the remaining players. Ordering applies separately to each
+connection. A slow connection that exceeds the server's
+[outbound limits](running.md#slow-clients-and-event-delivery) is closed;
+the client must reconnect and obtain current room state.
+
 Field notation used below:
 
 - `blob`: a `u16` length followed by that many bytes.

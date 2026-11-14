@@ -221,26 +221,33 @@ type kickWrite struct {
 type kickRecordingConn struct {
 	net.Conn
 	name   string
-	writes *[]kickWrite
+	writes chan kickWrite
 }
 
 func (c *kickRecordingConn) Write(p []byte) (int, error) {
-	*c.writes = append(*c.writes, kickWrite{c.name, append([]byte(nil), p...)})
+	c.writes <- kickWrite{c.name, append([]byte(nil), p...)}
 	return len(p), nil
 }
 
 func (c *kickRecordingConn) SetWriteDeadline(time.Time) error { return nil }
+func (c *kickRecordingConn) Close() error                     { return nil }
 
 func TestRoomKickDispatchOrder(t *testing.T) {
 	s := NewServer(10, false)
-	var writes []kickWrite
-	client := func(id uint32, name string) *client {
+	writes := make(chan kickWrite, 4)
+	makeClient := func(id uint32, name string) *client {
 		return &client{
-			id: id, conn: &kickRecordingConn{name: name, writes: &writes},
+			id: id, conn: &kickRecordingConn{name: name, writes: writes},
 			commID: "NPWR00001_00", onlineID: name, rooms: map[uint64]*room{},
 		}
 	}
-	owner, target, other := client(1, "alice"), client(2, "bob"), client(3, "carol")
+	owner, target, other := makeClient(1, "alice"), makeClient(2, "bob"), makeClient(3, "carol")
+	t.Cleanup(func() {
+		for _, c := range []*client{owner, target, other} {
+			c.stopOutput()
+			c.waitOutput()
+		}
+	})
 	r := &room{id: 7, commID: owner.commID, max: 3}
 	s.rooms[r.id] = r
 	ownerMember := s.addMember(r, owner, nil)
@@ -275,15 +282,38 @@ func TestRoomKickDispatchOrder(t *testing.T) {
 		{"alice", msgMemberLeft, left.b},
 		{"carol", msgMemberLeft, left.b},
 	}
-	if len(writes) != len(want) {
-		t.Fatalf("dispatches: got %d, want %d", len(writes), len(want))
-	}
-	for i, got := range writes {
+	// Separate sockets may progress independently; only each recipient's FIFO
+	// order is observable. The owner's OK must precede its MEMBER_LEFT push.
+	seen := map[string]int{}
+	for range want {
+		var got kickWrite
+		select {
+		case got = <-writes:
+		case <-time.After(2 * time.Second):
+			t.Fatal("missing queued kick dispatch")
+		}
+		index := seen[got.to]
+		seen[got.to]++
+		var expected *struct {
+			to      string
+			typ     byte
+			payload []byte
+		}
+		for i := range want {
+			if want[i].to == got.to {
+				if index == 0 {
+					expected = &want[i]
+					break
+				}
+				index--
+			}
+		}
+		if expected == nil {
+			t.Fatalf("unexpected dispatch to %s", got.to)
+		}
 		typ, payload, err := readPacket(bytes.NewReader(got.packet))
-		if err != nil || len(got.packet) != len(payload)+3 ||
-			got.to != want[i].to || typ != want[i].typ || !bytes.Equal(payload, want[i].payload) {
-			t.Fatalf("dispatch %d: to %s type 0x%02X payload %x, err %v; want to %s type 0x%02X payload %x",
-				i, got.to, typ, payload, err, want[i].to, want[i].typ, want[i].payload)
+		if err != nil || len(got.packet) != len(payload)+3 || typ != expected.typ || !bytes.Equal(payload, expected.payload) {
+			t.Fatalf("dispatch to %s type %x payload %x, err %v; want type %x payload %x", got.to, typ, payload, err, expected.typ, expected.payload)
 		}
 	}
 	_, targetStillInRoom := target.rooms[r.id]
