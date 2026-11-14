@@ -61,12 +61,12 @@ func launch(s system) error {
 			continue
 		}
 		// kitty takes the program after its options; the other terminals use
-		// the xterm-compatible -e convention. The extra -- is passed to our
-		// executable and avoids xterm's single-argument shell fallback.
-		args := []string{"-e", self, "--"}
+		// the xterm-compatible -e convention. The explicit tui argument also
+		// avoids xterm's single-argument shell fallback.
+		args := []string{"-e", self, "tui"}
 		if filepath.Base(name) == "kitty" {
 			// A configured startup session would otherwise ignore the app.
-			args = []string{"--session=none", self, "--"}
+			args = []string{"--session=none", self, "tui"}
 		}
 		childEnv := append([]string(nil), s.environ...)
 		childEnv = append(childEnv, reexecGuard+"=1")

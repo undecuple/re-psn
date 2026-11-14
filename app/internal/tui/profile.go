@@ -29,6 +29,7 @@ type ProfileSession struct {
 	listener    net.Listener
 	removeGrant func()
 	grantToken  [32]byte
+	grantTitle  string
 	hasGrant    bool
 	renewDone   chan struct{}
 	grantErr    error
@@ -196,6 +197,7 @@ func (s *ProfileSession) Grant(title string) (string, error) {
 	}
 	s.removeGrant = remove
 	s.grantToken = g.Token
+	s.grantTitle = title
 	s.hasGrant = true
 	s.grantErr = nil
 	if s.renewDone == nil {
@@ -252,7 +254,50 @@ func (s *ProfileSession) Revoke() error {
 	s.grantErr = nil
 	return nil
 }
+
+// These host methods share the desktop session's single writer with its game
+// broker and friend operations. None is available through a game capability.
+func (s *ProfileSession) InstallCatalog(c framework.Catalog) error {
+	store, err := s.writer()
+	if err != nil {
+		return err
+	}
+	return store.InstallCatalog(c)
+}
+func (s *ProfileSession) Export(w io.Writer, passphrase []byte) error {
+	store, err := s.writer()
+	if err != nil {
+		return err
+	}
+	return store.Export(w, passphrase)
+}
+func (s *ProfileSession) Restore(r io.Reader, passphrase []byte) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return framework.ErrClosed
+	}
+	if s.store != nil {
+		return framework.ErrExists
+	}
+	store, err := framework.Restore(s.dir, r, passphrase)
+	if err == nil {
+		s.store = store
+	}
+	return err
+}
+func (s *ProfileSession) GrantInfo() (active bool, title, path string, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.hasGrant {
+		path = filepath.Join(s.dir, "game-grant.txt")
+	}
+	return s.hasGrant, s.grantTitle, path, s.grantErr
+}
 func (s *ProfileSession) Social(origin, ca, action, id string) error {
+	return s.SocialContext(s.ctx, origin, ca, action, id)
+}
+func (s *ProfileSession) SocialContext(parent context.Context, origin, ca, action, id string) error {
 	if err := s.ctx.Err(); err != nil {
 		return err
 	}
@@ -291,8 +336,10 @@ func (s *ProfileSession) Social(origin, ca, action, id string) error {
 		return err
 	}
 	defer c.Close()
-	ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(parent, 5*time.Second)
 	defer cancel()
+	stop := context.AfterFunc(s.ctx, cancel)
+	defer stop()
 	switch action {
 	case "register":
 		_, err = c.Register(ctx, store.View().Label)

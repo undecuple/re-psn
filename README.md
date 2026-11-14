@@ -23,7 +23,7 @@
 | **1** port | TCP and UDP 36100 for players ([ports](docs/running.md#ports)) |
 | **1** C file | the client: no third-party libraries and no threads ([client/psnr.c](client/psnr.c)) |
 | **Linux and Windows** | amd64 and arm64 on Linux, amd64 on Windows ([releases](https://github.com/undecuple/re-psn/releases)) |
-| **1** desktop app | a terminal UI to watch a server's rooms and leaderboards; release archives from v0.5.0, or build it from source ([app/README.md](app/README.md)) |
+| **1** optional desktop app | current source opens a local browser UI for Play, Host or Both, offline trophies and authenticated friends; advanced terminal controls remain available ([client guide](docs/client-ui.md)) |
 
 ## Quick start: host a server
 
@@ -56,7 +56,7 @@ has short guides for players and hosts.
 
 | Claim | Proof |
 |---|---|
-| Nothing to sign up for: no accounts or passwords, and nothing is stored on disk except the log file if you set one | [Security and privacy](#security-and-privacy) |
+| Game networking needs no signup; default room, player-name and score data stay in memory | [Security and privacy](#security-and-privacy) |
 | The server uses only Go's standard library | [go.mod](go.mod) has no `require` line, and CI enforces it ([ci.yml](.github/workflows/ci.yml)) |
 | Players behind routers get connected, with an optional relay | tested in Docker by the [NAT lab](lab/README.md) |
 | The client is one C file | [client/psnr.c](client/psnr.c), tested against the server by `client/test_psnr.c` |
@@ -68,9 +68,11 @@ has short guides for players and hosts.
 
 ## Coming soon
 
-Not built yet. Each is in the [features list](docs/features.md) and the [roadmap](ROADMAP.md) with its status: friends,
-presence and invites, private rooms, an opt-in SQLite store, connection checks, a graphical desktop
-client, a metrics endpoint, signed releases.
+Still planned: live friend presence and invites, private rooms, opt-in SQLite storage, deeper connection diagnostics,
+launch profiles, extra app themes, a metrics endpoint and signed releases. Current source already has the optional
+[graphical client](docs/client-ui.md), local trophy SDK and per-relay authenticated friend lists; these do not
+authenticate gameplay names. The [features list](docs/features.md) and [roadmap](ROADMAP.md) distinguish source work
+from released features.
 
 ---
 
@@ -252,19 +254,31 @@ desktop apps and more) is in [ROADMAP.md](ROADMAP.md) too.
 
 ## Desktop app
 
-[app/](app/README.md) holds the start of the desktop app, a separate Go module. It has a Go client for the protocol, tested against the
-real server; a settings file reader; `re-psn-app check HOST:PORT`, which connects, says HELLO and reports what the server answered;
-and a terminal UI (`re-psn-app` with no arguments). The UI asks on first start whether this machine plays, hosts or both. It then
-shows the server's rooms and one leaderboard at a time over the game protocol, and edits the settings. The theme is dark or light,
-in the website's colours. The server's version, uptime and connection counts are not available over the protocol, so the UI says so.
-An explicitly configured [HTTP status source](app/README.md#optional-native-http-status) adds uptime, connection totals,
-public-room members and board summaries natively, with the existing token rules and no browser. It falls back to the
-game protocol when HTTP is unavailable; the server version remains unshared.
-From v0.5.0 a release carries the app as `re-psn-app-vX.Y.Z-<os>-<arch>` archives (see [Release archives](#release-archives)); you can also build it from source (see [app/README.md](app/README.md)). On Linux desktops, starting without a terminal can open a supported terminal; the Windows build uses its console.
-See the [desktop startup instructions](app/README.md#starting-from-the-desktop) and the limits of local testing.
-The terminal UI uses [Bubble Tea](https://github.com/charmbracelet/bubbletea) and [Lip Gloss](https://github.com/charmbracelet/lipgloss)
-(MIT); the server module stays standard-library only. The app module needs Go 1.26 or newer; the server and the C client keep
-their own requirements.
+The optional [Windows/Linux app](app/README.md) opens a local browser interface with `re-psn-app` or
+`re-psn-app ui`; the advanced terminal interface is `re-psn-app tui`. Its colors, local monospace fonts and double
+frames follow [undecuple/me](https://undecuple.github.io/me/), with Light and System browser appearance options.
+
+Choose **Play / connect** to save/check a remote game server and inspect public snapshots, **Host** to explicitly
+start/stop the app's own local server, or **Both** to keep those targets independent. Selecting a role starts no
+server or registration. Host needs no profile. Closing the browser tab keeps the controller/owned host running;
+launch the app again to reopen it, or use Stop app to stop what it owns. Standalone servers remain independent.
+
+Local profiles provide approved trophy catalogs, title-scoped game reporting, encrypted recovery and explicit
+HTTPS friend registration/consent at each selected relay. Local trophies need no relay account. There is no live
+presence, invitation, automatic game configuration or trophy upload. Ordinary gameplay connects directly to the
+server without this client, profile or account. See the [client guide](docs/client-ui.md) and
+[recomp SDK guide](docs/app-framework.md).
+
+This describes **current source**, not every published archive. App archives built from it include a matching
+`re-psn-host` component beside the app; the current installers require both and preserve a separate `re-psn` server.
+Two-file updates are not crash-atomic; stop the app/host first and read the [update limits](docs/client-ui.md#install-and-update).
+Linux synthetic browser/host/SDK workflows and Windows PE controller/SDK checks under Wine are separate evidence.
+The tested Wine environment rejects the server's UDP setup; native Windows hosting is not established by those runs.
+
+The app is a separate Go 1.26 module. Its terminal UI uses [Bubble Tea](https://github.com/charmbracelet/bubbletea)
+and [Lip Gloss](https://github.com/charmbracelet/lipgloss) (MIT); the browser assets add no frontend dependencies.
+The game server stays standard-library only. [Build and startup instructions](app/README.md#build-and-test) cover
+source use and platform qualifications.
 
 ---
 
@@ -272,7 +286,8 @@ their own requirements.
 
 Start with [Integrating re-psn into a recompiled game](docs/integrating.md): existing ps3recomp bridge setup, direct
 C/C++ integration, callback ownership, peer/relay transport and failure handling. The [minimal C example](client/examples/minimal.c)
-is compiled and exercised against a loopback server by the required native-client check. Source-level runtime findings
+is compiled and exercised against a loopback server by the required native-client check. For app-managed local trophies,
+use the separate [scoped C/C++ SDK](docs/app-framework.md#recomp-developer-contract). Source-level runtime findings
 are pinned; synthetic checks do not certify a title's gameplay or NAT behavior.
 
 ---
@@ -313,7 +328,8 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -Version v0.4.0
 ```
 
 This installs the server only (`re-psn.exe` into `%LOCALAPPDATA%\re-psn\bin`, no administrator rights, no PATH change unless you add
-`-AddToPath`); `-App` installs the desktop app instead (v0.5.0 and later). The script comes from a pinned repository revision, and the v0.4.0 release carries the same
+`-AddToPath`). This historical pinned script predates the paired desktop install; use the [current client guide](docs/client-ui.md#install-and-update)
+for app updates. The script comes from a pinned repository revision, and the v0.4.0 release carries the same
 `install.ps1` (identical SHA-256) as a release asset. It has been tested on PowerShell 7 only and, like the Windows binary, has not been run on Windows by us. See
 [docs/installing.md](docs/installing.md) for options.
 
@@ -365,7 +381,9 @@ Each release carries `re-psn-vX.Y.Z-windows-amd64.zip`, `re-psn-vX.Y.Z-linux-amd
 install scripts `install.sh` and `install.ps1` ([docs/installing.md](docs/installing.md)), seven assets in all (v0.3.0 has
 five, without the scripts). From v0.5.0 a release adds three archives of the desktop app, `re-psn-app-vX.Y.Z-<os>-<arch>` (same
 three platforms: the `re-psn-app` binary, `LICENSE`, `NOTICE.md` and the app's README), ten assets in all; the install scripts
-install the app only when asked (`install.sh --app`, `install.ps1 -App`). `SHA256SUMS` lists the archives and the AppImage, and from v0.4.0 the scripts. Check a download with `sha256sum -c SHA256SUMS --ignore-missing` on Linux, or compare the output of
+install the app only when asked (`install.sh --app`, `install.ps1 -App`). Current source app archives additionally carry the
+matching `re-psn-host` component, and its installers refuse older archives without it; these source changes do not
+retrofit published releases. See [paired update limits](docs/client-ui.md#install-and-update). `SHA256SUMS` lists the archives and the AppImage, and from v0.4.0 the scripts. Check a download with `sha256sum -c SHA256SUMS --ignore-missing` on Linux, or compare the output of
 `Get-FileHash <archive>` with the line in `SHA256SUMS` on Windows.
 
 Linux x86_64 also gets `re-psn-vX.Y.Z-x86_64.AppImage`, the same binary as one runnable file (unsigned): check it with
@@ -489,13 +507,17 @@ What to set before the server goes behind a proxy or on the internet.
 
 ## Security and privacy
 
-- **What the server stores:** nothing on disk. Rooms, names and scores live in memory. The only file is the log, if you set
-  `-log-file` (it holds online IDs and addresses, never tokens).
+- **Game-server persistence:** rooms, player names and scores stay in memory by default. A runtime pidfile tracks the
+  process; an optional `-log-file` persists online IDs and addresses, never tokens. See [runtime metadata](docs/running.md#stopping-and-replacing).
 - **What other players learn:** everyone in a room receives the other members' IP addresses and P2P ports, because that is how they
   connect. The status page lists every connected online ID. That is why it is off unless `-http` is set, and then
   stays on localhost or behind a token.
-- **No accounts:** a name is not authenticated; anyone who can reach TCP 36100 can join. Run it for people you would let onto your
+- **Game-protocol names:** a name is not authenticated; anyone who can reach TCP 36100 can join. Run it for people you would let onto your
   network.
+
+The optional app separately stores its local identity/trophy profile; the opt-in friend companion stores registrations
+and consent at each host. These accounts do not authenticate gameplay names. Protect their private directories and
+use the [encrypted recovery flow](docs/app-framework.md#portable-identity-and-encrypted-recovery).
 
 Limits, the UDP source check and how to report a vulnerability privately are in [SECURITY.md](SECURITY.md).
 
@@ -509,6 +531,8 @@ welcome; [CONTRIBUTING.md](CONTRIBUTING.md) has the ground rules and the tests t
 
 | Document | What is in it |
 |---|---|
+| [docs/client-ui.md](docs/client-ui.md) | Optional browser client, Play/Host/Both, reopen, local trophies/friends, updates and platform evidence |
+| [docs/app-framework.md](docs/app-framework.md) | Local C/C++ trophy SDK, portable profile recovery and authenticated friend companion |
 | [docs/integrating.md](docs/integrating.md) | Developer integration paths, a tested C example, runtime startup/callback details and acceptance checks |
 | [docs/architecture.md](docs/architecture.md) | The parts, the threadless client, why game traffic is peer to peer, the relay |
 | [docs/api.md](docs/api.md) | The protocol: framing, session, rooms, leaderboards, UDP, relay, HTTP |

@@ -8,6 +8,14 @@ This authenticates control of a re-psn key. Trophy reports are game/player suppl
 they do not prove an achievement, game ownership or a PSN account. The examples use invented metadata. This does
 not provide Sony authentication, ticket processing, a provider-verification badge or authenticated gameplay HELLO.
 
+## Desktop interface
+
+The optional [browser client](client-ui.md) opens with `re-psn-app` or `re-psn-app ui`. Its Play/Trophies/Friends
+screens provide catalog approval, title grant/revocation, per-relay registration/friend actions and encrypted
+backup/restore without a separate frontend dependency. Host controls the app's own game-server component; it does
+not automatically start this document's independent friend companion. Games keep their direct networking path.
+The advanced terminal UI remains `re-psn-app tui`; bare `--profile-dir DIR` retains its profile-terminal shortcut.
+
 ## Components
 
 ```mermaid
@@ -50,15 +58,15 @@ Keep that process running. In another terminal:
 /tmp/app-trophy /tmp/demo-game-grant.txt status 1
 /tmp/app-trophy /tmp/demo-game-grant.txt unlock 1
 /tmp/app-trophy /tmp/demo-game-grant.txt status 1
-/tmp/re-psn-app --profile-dir /tmp/demo-profile
+/tmp/re-psn-app ui --profile-dir /tmp/demo-profile
 ```
 
-Select Trophies (`7`, Enter). The first receipt time survives restart and repeated unlocks. Closing the broker
+Open Trophies. The first receipt time survives restart and repeated unlocks. Closing the broker
 revokes its capabilities and removes its own descriptor. The descriptor contains a secret; give its path to the
 game, never its contents in arguments, telemetry or logs. Each capability can query/unlock only one approved title.
 
-The desktop Trophies screen can also issue (`g`) and revoke (`v`) a grant. Keep that app session open while the
-game uses its descriptor. One desktop session shares its writer between local game reports and friend actions.
+The browser Trophies screen can also enable and revoke a grant; the advanced terminal uses `g` and `v`. Keep that
+app session open while the game uses its descriptor. One desktop session shares its writer between local game reports and friend actions.
 The standalone broker holds the same exclusive writer, so stop it before using other CLI commands that mutate
 the profile. Read-only snapshots and trophy views remain available while it runs.
 
@@ -169,13 +177,15 @@ re-psn-app friends register --dir /private/alice-profile --relay https://relay.e
 re-psn-app friends request --dir /private/alice-profile --relay https://relay.example.org:36443 --ca-file /private/host-ca.pem --id rp1-BOB_PUBLIC_HASH
 re-psn-app friends accept --dir /private/bob-profile --relay https://relay.example.org:36443 --ca-file /private/host-ca.pem --id rp1-ALICE_PUBLIC_HASH
 re-psn-app friends list --dir /private/alice-profile --relay https://relay.example.org:36443 --ca-file /private/host-ca.pem
-re-psn-app --profile-dir /private/alice-profile --social-relay https://relay.example.org:36443 --social-ca-file /private/host-ca.pem
+re-psn-app ui --profile-dir /private/alice-profile
 ```
 
 Omit `--ca-file` for system-trusted certificates. These HTTPS origins have no path prefix, query, credentials or
-fragment. The optional trailing slash is canonicalized. The desktop Friends screen requires explicit registration
-confirmation (`e`, `y`); `f` requests a peer ID, `a` accepts, `d` declines/cancels, `u` removes, `b` blocks, `x` unblocks
-and `r` refreshes. Requests require mutual consent; crossed requests do not silently accept. A block removes accepted
+fragment. The optional trailing slash is canonicalized. In the browser, first save that explicit origin and CA path
+in Settings, then confirm registration in Friends.
+The screen offers request/accept/decline/cancel/remove/block/unblock and explicit refresh. The advanced terminal
+retains `e`, `y` registration, `f` request, `a` accept, `d` decline/cancel, `u` remove, `b`/`x` block/unblock and `r` refresh.
+Requests require mutual consent; crossed requests do not silently accept. A block removes accepted
 and pending edges in both directions. Unblocking never restores a friendship. Unknown/blocked targets return generic
 unavailable responses, and there is no public directory. The screen labels cached snapshots and their fetch time;
 there is no live online/title/room presence, invitation or join-a-friend support yet.
@@ -211,5 +221,8 @@ per catalog and 4 MiB aggregate serialized state. Catalog redefinition and malfo
 The local tests use generated profiles, certificates and synthetic metadata. They cover native C reporting, persistence,
 encrypted restore and actual TLS friendship operations across independent hosts. They do not establish compatibility
 with a real game, Sony trophy saves, hosted infrastructure, a physical Windows terminal or native Windows C runtime.
-Live presence, invites, authenticated gameplay admission, trophy synchronization, OS keychains and a graphical UI
-remain separate work. The current desktop app is the terminal UI described in [app/README.md](../app/README.md).
+The current [graphical browser interface](client-ui.md) and advanced terminal use this same backend. Windows PE
+controller/SDK checks under Wine do not establish native Windows game or hosting support; the tested Wine server
+fails UDP setup with unsupported WSAIoctl error 10045. Linux synthetic runtime evidence and Windows/Linux builds
+remain separately labeled. Live presence, invites, authenticated gameplay admission, trophy synchronization and
+OS keychains are not implemented by this framework.

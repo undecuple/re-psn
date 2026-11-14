@@ -50,6 +50,7 @@ make_release() { # TAG
       mkdir -p "$T/build/$n"
       printf '#!/bin/sh\necho "re-psn-app %s %s"\n' "$1" "$arch" > "$T/build/$n/re-psn-app"
       chmod 0755 "$T/build/$n/re-psn-app"
+      cp "$T/build/re-psn-$1-linux-$arch/re-psn" "$T/build/$n/re-psn-host"
       echo license > "$T/build/$n/LICENSE"
       echo notice > "$T/build/$n/NOTICE.md"
       echo 'app readme' > "$T/build/$n/README.md"
@@ -220,6 +221,9 @@ run Linux x86_64 1000 --app --version v0.8.0
 check "--app: installs re-psn-app, not the server" \
   test "$rc" = 0 -a "$("$bin/re-psn-app")" = "re-psn-app v0.8.0 amd64" -a ! -e "$bin/re-psn"
 check "--app: mode 0755" test -n "$(find "$bin/re-psn-app" -perm 0755)"
+check "--app: matching host component installed byte for byte" cmp "$bin/re-psn-host" "$T/build/re-psn-v0.8.0-linux-amd64/re-psn"
+check "--app: host mode 0755" test -n "$(find "$bin/re-psn-host" -perm 0755)"
+check "--app: both components only, no temporary files" test "$(ls -A "$bin" | tr '\n' ' ')" = "re-psn-app re-psn-host "
 check "--app: LICENSE, NOTICE.md and README.md copied" \
   test -f "$T/home/.local/share/re-psn-app/v0.8.0/README.md" -a -f "$T/home/.local/share/re-psn-app/v0.8.0/NOTICE.md"
 check "--app: no server folder created" test ! -e "$T/home/.local/share/re-psn"
@@ -241,6 +245,85 @@ check "--app dry run: exits 0, no download, nothing written" test "$rc" = 0 -a !
 check "--app dry run: nothing written" nothing_written
 check "--app dry run: app asset URL" has "re-psn-app-v0.8.0-linux-amd64.tar.gz"
 check "--app dry run: install path" has "$bin/re-psn-app"
+check "--app dry run: host path and honest update qualification" has "$bin/re-psn-host"
+check "--app dry run: pair is not crash-atomic" has "not crash-atomic"
+
+# A checksum-valid legacy/incomplete app archive must not replace either old component.
+make_release v0.9.0
+missing="re-psn-app-v0.9.0-linux-amd64"
+rm "$T/build/$missing/re-psn-host"
+tar -C "$T/build" -czf "$F/v0.9.0/$missing.tar.gz" "$missing"
+(cd "$F/v0.9.0" && sha256sum ./*.tar.gz ./*.AppImage | sed 's# \./# #' > SHA256SUMS)
+pair="$T/pair"
+mkdir -p "$pair"
+printf 'old app\n' > "$pair/re-psn-app"
+printf 'old host\n' > "$pair/re-psn-host"
+printf 'standalone stays\n' > "$pair/re-psn"
+run Linux x86_64 1000 --app --version v0.9.0 --dir "$pair"
+check "--app missing host: refused before replacement" test "$rc" != 0
+check "--app missing host: app preserved" test "$(cat "$pair/re-psn-app")" = 'old app'
+check "--app missing host: host preserved" test "$(cat "$pair/re-psn-host")" = 'old host'
+check "--app missing host: standalone preserved" test "$(cat "$pair/re-psn")" = 'standalone stays'
+run Linux x86_64 1000 --app --version v0.5.0 --dir "$pair"
+check "--app bad checksum: pair preserved" test "$rc" != 0 -a "$(cat "$pair/re-psn-app")" = 'old app' -a "$(cat "$pair/re-psn-host")" = 'old host'
+run Linux x86_64 1000 --app --version v0.6.0 --dir "$pair"
+check "--app missing checksum line: pair preserved" test "$rc" != 0 -a "$(cat "$pair/re-psn-app")" = 'old app' -a "$(cat "$pair/re-psn-host")" = 'old host'
+
+
+# Refuse an existing update lock without removing another installer's marker.
+mkdir "$pair/.re-psn-app.install.lock"
+echo other > "$pair/.re-psn-app.install.lock/owner"
+run Linux x86_64 1000 --app --version v0.8.0 --dir "$pair"
+check "--app concurrent/stale lock: refused and left intact" test "$rc" != 0 -a "$(cat "$pair/.re-psn-app.install.lock/owner")" = other
+rm -rf "$pair/.re-psn-app.install.lock"
+
+# Force the second replacement to fail: rollback must restore both old bytes.
+real_mv="$(command -v mv)"
+rm "$B/mv"
+cat > "$B/mv" <<EOF
+#!/bin/sh
+for arg in "\$@"; do
+  case "\$arg" in */.re-psn-app.install.lock/new-app) exit 73 ;; esac
+done
+exec "$real_mv" "\$@"
+EOF
+chmod 0755 "$B/mv"
+run Linux x86_64 1000 --app --version v0.8.0 --dir "$pair"
+check "--app second replacement failure: exits nonzero" test "$rc" != 0
+check "--app second replacement failure: both old bytes restored" test "$(cat "$pair/re-psn-app")" = 'old app' -a "$(cat "$pair/re-psn-host")" = 'old host'
+check "--app rollback: no staging left" test "$(ls -A "$pair" | tr '\n' ' ')" = "re-psn re-psn-app re-psn-host "
+# A failed rollback must retain recovery bytes and the lock, not hide the failure.
+cat > "$B/mv" <<EOF
+#!/bin/sh
+for arg in "\$@"; do
+  case "\$arg" in */.re-psn-app.install.lock/new-app|*/.re-psn-app.install.lock/old-host) exit 74 ;; esac
+done
+exec "$real_mv" "\$@"
+EOF
+chmod 0755 "$B/mv"
+run Linux x86_64 1000 --app --version v0.8.0 --dir "$pair"
+check "--app rollback failure: explicit error" has "rollback incomplete"
+check "--app rollback failure: recovery bytes retained" test "$rc" != 0 -a "$(cat "$pair/.re-psn-app.install.lock/old-host")" = 'old host'
+check "--app rollback failure: standalone unchanged" test "$(cat "$pair/re-psn")" = 'standalone stays'
+"$real_mv" "$pair/.re-psn-app.install.lock/old-host" "$pair/re-psn-host"
+rm -rf "$pair/.re-psn-app.install.lock"
+rm "$B/mv"
+ln -s "$real_mv" "$B/mv"
+run Linux x86_64 1000 --app --version v0.8.0 --dir "$pair"
+check "--app valid update: matching host bytes" cmp "$pair/re-psn-host" "$T/build/re-psn-v0.8.0-linux-amd64/re-psn"
+check "--app valid update: unrelated standalone unchanged" test "$(cat "$pair/re-psn")" = 'standalone stays'
+
+# A directory/symlink is not silently treated as an executable replacement path.
+rm "$pair/re-psn-app"
+mkdir "$pair/re-psn-app"
+run Linux x86_64 1000 --app --version v0.8.0 --dir "$pair"
+check "--app non-file target: refused" test "$rc" != 0 -a -d "$pair/re-psn-app"
+rmdir "$pair/re-psn-app"
+echo unrelated > "$T/unrelated"
+ln -s "$T/unrelated" "$pair/re-psn-app"
+run Linux x86_64 1000 --app --version v0.8.0 --dir "$pair"
+check "--app symlink target: refused, unrelated bytes retained" test "$rc" != 0 -a -L "$pair/re-psn-app" -a "$(cat "$T/unrelated")" = unrelated
+
 run Linux aarch64 1000 --appimage
 check "--appimage on arm64: refused" test "$rc" = 1 -a -z "$(ls -A "$T/home")"
 

@@ -22,6 +22,7 @@ import (
 
 	"github.com/undecuple/re-psn/app/framework"
 	"github.com/undecuple/re-psn/app/internal/config"
+	"github.com/undecuple/re-psn/app/internal/host"
 	"github.com/undecuple/re-psn/app/internal/tui"
 
 	tea "charm.land/bubbletea/v2"
@@ -385,7 +386,9 @@ func runProfileTUI(args []string, stderr io.Writer) int {
 	_, noColor := os.LookupEnv("NO_COLOR")
 	session := tui.NewProfileSession(*dir)
 	defer session.Close()
-	m := tui.New(tui.Options{Path: path, File: f, NoColor: noColor, ProfileDir: *dir, ProfileSession: session, SocialOrigin: *origin, SocialCAFile: *ca, StartProfile: true})
+	manager := host.New("")
+	defer manager.Close()
+	m := tui.New(tui.Options{Path: path, File: f, NoColor: noColor, ProfileDir: *dir, ProfileSession: session, SocialOrigin: *origin, SocialCAFile: *ca, StartProfile: true, Host: manager})
 	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1

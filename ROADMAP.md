@@ -75,7 +75,7 @@ Merged into main. Items are in v0.2.0, v0.3.0, v0.4.0 or v0.5.0 unless a line sa
 - [net-udp-guard] UDP packets accepted only from the address of the player's TCP connection.
 - [net-guardrails] Partial: bounded per-source UDP rate limits and aggregate drop counters, in v0.4.0. Per-player relay byte/stream budgets, failed-token blocking and UDP fuzz coverage remain planned.
 - [client-c] A one-file C client with no dependencies.
-- [app-tui] The shared Windows/Linux terminal app: first-run choice, Rooms/Leaderboards, Settings, dark and light. Linux desktop starts can open a supported terminal; Windows uses its console. An optional HTTP status source adds native totals, public room members/age and board summaries, with game-protocol fallback. Partial: no Host screen or joining yet.
+- [app-tui] The released terminal app provides a first-run choice, Rooms/Leaderboards, Settings and dark/light themes. An optional HTTP status source adds version, totals, public room members/age and board summaries, with game-protocol fallback. Current source keeps it as advanced `re-psn-app tui` and adds an owned Host pane; see the client work below. It does not launch or join a game.
 
 [Testing and CI](docs/features.md#testing-and-ci), [release](docs/features.md#release) and [documentation](docs/features.md#documentation)
 - [test-fuzz] Fuzz tests for the frame parser, the request handlers and the PROXY header.
@@ -92,7 +92,7 @@ Merged into main. Items are in v0.2.0, v0.3.0, v0.4.0 or v0.5.0 unless a line sa
 - [docs-connecting] A page on the ways players connect, with Tailscale and ZeroTier links; neither overlay has been run.
 - [docs-readme] A rewritten README with an example from real runs, the features, the settings and credit to upstream.
 - [docs-art] A generator for the README banner and terminal images from real runs, in one palette, checked in CI.
-- [docs-website] A static project website built from the features list, version, settings table and changelog; partial: published at https://undecuple.github.io/re-psn/ with a terminal-style interface (commands, numbered file output, phone tabs and a System / Light / Dark switch). Browser checks cover command entry, selection, themes and narrow layouts; a real keyboard, screen reader, physical phone, self-hosted font and animated diagrams remain unverified or unfinished. See docs/website.md for controls and contributor checks.
+- [docs-website] A static project website built from the features list, version, settings table and changelog; partial: published at https://undecuple.github.io/re-psn/ with a dark terminal-style interface, commands, numbered file output and phone tabs. The site is read-only and has one theme; the local client/status page have separate appearance controls. Browser checks cover command entry, selection and narrow layouts; a real keyboard, screen reader, physical phone, self-hosted font and animated diagrams remain unverified or unfinished. See docs/website.md.
 
 On the ps3recomp side (upstream's work):
 - **Sockets:** real host sockets behind `PS3_NET_ONLINE`
@@ -105,9 +105,25 @@ On the ps3recomp side (upstream's work):
 
 ## Now
 
-- [app-framework] App-managed offline trophies, a recomp SDK and portable profile backups.
-- [players-accounts] Portable re-psn identities and opt-in authenticated per-host friend accounts. These do not
-  authenticate game-protocol names or implement provider verification.
+These source changes work in synthetic local checks and remain distinct from published releases:
+
+- [client-desktop] Optional Windows/Linux client with independent Play/Host/Both workspaces, owned host start/stop,
+  authenticated reopen and paired app/host archives. Ordinary gameplay and standalone hosting remain independent.
+- [client-gui] Embedded local browser interface, now the default launch; advanced `tui` remains available. The
+  undecuple/me colors/fonts/framing need no frontend dependencies. Browser close and explicit app shutdown have
+  different outcomes; see [client operation](docs/client-ui.md).
+- [app-appearance] Browser Dark/Light/System, advanced terminal dark/light. Extra presets and terminal system-following remain.
+- [app-framework] Working app-managed offline store, private title-scoped C/C++ trophy reporting and encrypted recovery.
+  Real-title adapters, Sony trophy-save parsing, automatic platinum, trophy verification and remote sync are not supplied.
+- [players-accounts] Portable re-psn identities and explicit authenticated per-host registration. These authenticate key
+  control, not gameplay names or provider ownership; restoring a profile does not restore another host's authority.
+- [players-friends] Per-host mutually accepted requests, removal and blocks in the client and companion. Live presence,
+  game-facing NPBasic integration, invitations and join-a-friend remain absent.
+
+Windows/Linux binaries are built. Linux synthetic browser/owned-host/SDK runs and Windows controller/profile/SDK/reopen
+checks under Wine are separately labeled. Wine rejects the server UDP setup with WSAIoctl error 10045; those runs do
+not establish native Windows hosting. Native physical Windows/ARM64 execution and real-title support remain unverified.
+Current app installers refuse old archives without `re-psn-host`; paired replacements are not crash-atomic.
 
 ## Next
 
@@ -128,15 +144,13 @@ In about this order.
 - [medius-data] A profile-specific data path, only after its requirements and authorization are evidenced.
 
 ### Apps
-- [client-desktop] A terminal app for players and hosts, with launch profiles and a host mode.
-- [client-gui] A graphical app and a local web UI with the same screens.
+- Per-game launch profiles and native platform/runtime qualification beyond synthetic Linux/Wine checks.
 - [app-themes] Colour presets in the apps, each shipped only once its licence is credited.
-- [app-appearance] Dark, light or follow the system.
 - [app-colours] Custom colours with a contrast warning.
 
 ### Players and rooms
 - [rooms-private] Room passwords, private slots and join by room ID.
-- [players-friends] Friends, presence and invites for everyone on the same server.
+- Game-facing friend integration, live presence, invitations and join-a-friend beyond the current opt-in consent lists.
 - [net-checks] A connection check that says where a connection fails.
 
 ## Later

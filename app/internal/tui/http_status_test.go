@@ -200,7 +200,7 @@ func TestHTTPStatusNativeViewsAndQuery(t *testing.T) {
 		m.light = light
 		m.st = newStyles(light, true)
 		m.menu = paneOverview
-		mustShow(t, m, "42s", "3", "18446744073709551615", "HTTP status connected")
+		mustShow(t, m, "42s", "3", "18446744073709551615", "HTTP status reachable")
 		m.menu = paneRooms
 		mustShow(t, m, "18446744073709551615", "alice[2J", "12s", "invite-only")
 		m.menu = paneBoards

@@ -15,6 +15,7 @@ import (
 	"github.com/undecuple/re-psn/app/framework"
 	"github.com/undecuple/re-psn/app/internal/client"
 	"github.com/undecuple/re-psn/app/internal/config"
+	"github.com/undecuple/re-psn/app/internal/host"
 )
 
 // Options are what the program hands the UI.
@@ -24,6 +25,7 @@ type Options struct {
 	SocialOrigin   string
 	SocialCAFile   string
 	StartProfile   bool
+	Host           *host.Manager
 	Path           string       // the settings file
 	File           *config.File // its contents; an empty File when it does not exist
 	FirstRun       bool         // no settings file yet: start with the chooser
@@ -42,6 +44,7 @@ const (
 	stageMode stage = iota // first run: Play, Host or Both
 	stageName
 	stageServer
+	stageHost
 	stageHome
 )
 
@@ -56,11 +59,12 @@ const (
 	paneProfile
 	paneTrophies
 	paneFriends
+	paneHost
 	// paneServer is not in the menu: it is the third tab of Status, reached with tab when a status URL is set.
 	paneServer
 )
 
-var paneNames = []string{"Overview", "Rooms", "Leaderboards", "Settings", "Help", "Profile", "Trophies", "Friends"}
+var paneNames = []string{"Overview", "Rooms", "Leaderboards", "Settings", "Help", "Profile", "Trophies", "Friends", "Host"}
 
 type edit int
 
@@ -72,6 +76,7 @@ const (
 	editServer
 	editStatusURL
 	editFriend
+	editHostAddress
 )
 
 var modes = []config.Mode{config.ModePlay, config.ModeHost, config.ModeBoth}
@@ -87,6 +92,9 @@ type Model struct {
 	profileErr     error
 	profileNote    string
 	profileConfirm string
+	hostLoading    bool
+	hostConfirm    bool
+	hostError      error
 	profileTitle   int
 	friendRow      int
 	opt            Options
@@ -196,16 +204,20 @@ func New(o Options) Model {
 		m.stage = stageHome
 		m.menu = paneProfile
 		m.content = true
+		if m.set.Mode == config.ModeHost {
+			m.menu = paneOverview
+			m.content = false
+		}
 	}
 	return m
 }
 
 // Init checks the connection at start when a server is already set.
 func (m Model) Init() tea.Cmd {
-	if m.opt.StartProfile {
+	if m.opt.StartProfile && m.set.Mode != config.ModeHost {
 		return func() tea.Msg { return profileStartMsg{} }
 	}
-	if m.stage == stageHome && (m.set.Server != "" || m.set.StatusURL != "") {
+	if m.stage == stageHome && m.set.Mode != config.ModeHost && (m.set.Server != "" || m.set.StatusURL != "") {
 		return func() tea.Msg { return initialRefreshMsg{} }
 	}
 	return nil
@@ -214,6 +226,9 @@ func (m Model) Init() tea.Cmd {
 // Update handles one message.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case hostMsg:
+		m.hostLoading = false
+		m.hostError = msg.err
 	case profileStartMsg:
 		cmd := m.profileAction("read", "")
 		return m, cmd
@@ -315,7 +330,7 @@ func (m Model) chooserKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.set.Mode = modes[m.choice]
 			m.problem = ""
 			if m.set.Mode == config.ModeHost {
-				m.stage, m.input = stageServer, field{value: m.set.Server}
+				m.stage, m.input = stageHost, field{value: m.set.HostAddress}
 			} else {
 				m.stage, m.input = stageName, field{value: m.set.Name, limit: 16}
 			}
@@ -327,6 +342,10 @@ func (m Model) chooserKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	}
 	if key == "backspace" && m.input.value == "" {
 		m.problem = ""
+		if m.stage == stageHost && m.set.Mode == config.ModeBoth {
+			m.stage, m.input = stageServer, field{value: m.set.Server}
+			return m, nil
+		}
 		if m.stage == stageServer && m.set.Mode != config.ModeHost {
 			m.stage, m.input = stageName, field{value: m.set.Name, limit: 16}
 		} else {
@@ -339,6 +358,20 @@ func (m Model) chooserKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	v := m.input.trimmed()
+	if m.stage == stageHost {
+		if v == "" {
+			v = "127.0.0.1:36100"
+		}
+		s := m.set
+		s.HostAddress = v
+		if err := s.Validate(); err != nil {
+			m.problem = err.Error()
+			return m, nil
+		}
+		m.set = s
+		m.problem = ""
+		return m, m.save(true)
+	}
 	if m.stage == stageName {
 		if err := checkSetting(config.Settings{Name: v}, v); err != nil {
 			m.problem = err.Error()
@@ -353,6 +386,10 @@ func (m Model) chooserKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	m.set.Server, m.problem = v, ""
+	if m.set.Mode == config.ModeBoth {
+		m.stage, m.input = stageHost, field{value: m.set.HostAddress}
+		return m, nil
+	}
 	return m, m.save(true)
 }
 
@@ -385,6 +422,9 @@ func (m Model) saved(msg savedMsg) (tea.Model, tea.Cmd) {
 	m.saveErr, m.saveNote = nil, "Saved."
 	if msg.first {
 		m.stage, m.saveNote = stageHome, ""
+		if m.set.Mode == config.ModeHost {
+			return m, nil
+		}
 		return m, m.refresh()
 	}
 	return m, nil
@@ -404,6 +444,9 @@ func (m Model) homeKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.toggleTheme()
 		return m, nil
 	case "r":
+		if m.menu == paneHost {
+			return m, nil
+		}
 		if m.menu == paneProfile || m.menu == paneTrophies || m.menu == paneFriends {
 			if m.profileLoading {
 				return m, nil
@@ -438,11 +481,13 @@ func (m Model) homeKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if !m.content {
 		switch key {
 		case "up", "k":
-			m.menu = (m.menu + pane(len(paneNames)) - 1) % pane(len(paneNames))
+			m.moveMenu(-1)
 		case "down", "j":
-			m.menu = (m.menu + 1) % pane(len(paneNames))
-		case "1", "2", "3", "4", "5", "6", "7", "8":
-			m.menu = pane(key[0] - '1')
+			m.moveMenu(1)
+		case "1", "2", "3", "4", "5", "6", "7", "8", "9":
+			if p := pane(key[0] - '1'); m.paneAllowed(p) {
+				m.menu = p
+			}
 		case "enter", "right", "l", "space":
 			m.content = true
 			m.startStatusEdit()
@@ -466,6 +511,8 @@ func (m Model) homeKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	switch m.menu {
+	case paneHost:
+		return m.hostKey(key)
 	case paneProfile, paneTrophies, paneFriends:
 		return m.profileKey(key)
 	case paneRooms, paneBoards:
@@ -559,6 +606,17 @@ func (m Model) editKey(k tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.seq++
 			m.track = serverTrack{}
 		}
+	case editHostAddress:
+		s := m.set
+		s.HostAddress = v
+		if m.opt.Host != nil && m.opt.Host.View().Running {
+			err = errors.New("stop the owned server before changing its address")
+		} else {
+			err = s.Validate()
+			if err == nil {
+				m.set = s
+			}
+		}
 	}
 	if err != nil {
 		m.problem = err.Error()
@@ -596,7 +654,7 @@ func checkBoard(v string) error {
 	return nil
 }
 
-const settingRows = 5
+const settingRows = 7
 
 func (m Model) settingsKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
@@ -612,6 +670,10 @@ func (m Model) settingsKey(key string) (tea.Model, tea.Cmd) {
 	case "enter", "space":
 		switch m.setRow {
 		case 0:
+			if m.opt.Host != nil && m.opt.Host.View().Running {
+				m.problem = "Stop the owned server before changing role"
+				return m, nil
+			}
 			i := 0
 			for j, md := range modes {
 				if md == m.set.Mode {
@@ -619,6 +681,11 @@ func (m Model) settingsKey(key string) (tea.Model, tea.Cmd) {
 				}
 			}
 			m.set.Mode = modes[i%len(modes)]
+			if m.set.Mode == config.ModeHost && m.opt.ProfileSession != nil {
+				cmd := m.profileAction("revoke", "")
+				m.dirty = m.set != m.file.Settings
+				return m, cmd
+			}
 		case 1:
 			m.startEdit(editName, m.set.Name, 16)
 		case 2:
@@ -627,6 +694,18 @@ func (m Model) settingsKey(key string) (tea.Model, tea.Cmd) {
 			m.startEdit(editStatusURL, m.set.StatusURL, 0)
 		case 4:
 			m.toggleTheme()
+		case 5:
+			m.startEdit(editHostAddress, m.set.HostAddress, 0)
+		case 6:
+			if m.opt.Host != nil && m.opt.Host.View().Running {
+				m.problem = "Stop the owned server before changing relay"
+				return m, nil
+			}
+			if m.set.HostRelay == "true" {
+				m.set.HostRelay = "false"
+			} else {
+				m.set.HostRelay = "true"
+			}
 		}
 		m.dirty = m.set != m.file.Settings
 	}

@@ -133,7 +133,7 @@ var escapes = regexp.MustCompile(`\x1b\[[0-9;:?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(
 
 func screen(m Model) string { return escapes.ReplaceAllString(m.View().Content, "") }
 
-var boxRuns = regexp.MustCompile(`[│╭╮╰╯─\s]+`)
+var boxRuns = regexp.MustCompile(`[│╭╮╰╯─║╔╗╚╝═\s]+`)
 
 // flat is the screen as one line: frames dropped and every run of space joined, so wrapped text still matches.
 func flat(m Model) string { return boxRuns.ReplaceAllString(screen(m), " ") }
@@ -188,8 +188,12 @@ func TestFirstRunChooser(t *testing.T) {
 	m = drive(t, m, seq(typed("example.org"), keys("enter"))...)
 	mustShow(t, m, "want host:port")
 	m = drive(t, m, seq(keys("ctrl+u"), typed("127.0.0.1:36100"), keys("enter"))...)
+	if m.stage != stageHost {
+		t.Fatalf("Both did not ask for separate host bind: %d", m.stage)
+	}
+	m = drive(t, m, seq(typed("127.0.0.1:36200"), keys("enter"))...)
 	if m.stage != stageHome {
-		t.Fatalf("stage %d after the server; problem %q", m.stage, m.problem)
+		t.Fatalf("stage %d after the host bind; problem %q", m.stage, m.problem)
 	}
 	if q := f.last(); q.Server != "127.0.0.1:36100" {
 		t.Fatalf("no check after the first run: %+v", q)
@@ -198,20 +202,20 @@ func TestFirstRunChooser(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := config.Settings{Mode: config.ModeBoth, Name: "alice_01", Server: "127.0.0.1:36100"}
+	want := config.Settings{Mode: config.ModeBoth, Name: "alice_01", Server: "127.0.0.1:36100", HostAddress: "127.0.0.1:36200"}
 	if got.Settings != want {
 		t.Fatalf("saved %+v, want %+v", got.Settings, want)
 	}
 	if st, err := os.Stat(path); err != nil || runtime.GOOS != "windows" && st.Mode().Perm() != 0o600 {
 		t.Fatalf("settings file: %v %v, want mode 0600", st.Mode(), err)
 	}
-	mustShow(t, m, "Connected", "Overview")
+	mustShow(t, m, "Reachable", "Overview")
 }
 
 func TestFirstRunHostSkipsNameAndGoesBack(t *testing.T) {
 	m := New(Options{Path: "x.ini", FirstRun: true, Fetcher: &fake{}, Save: func(string, *config.File) error { return nil }})
 	m = drive(t, m, keys("down", "enter")...)
-	if m.stage != stageServer || m.set.Mode != config.ModeHost {
+	if m.stage != stageHost || m.set.Mode != config.ModeHost {
 		t.Fatalf("Host: stage %d mode %q, want the server step", m.stage, m.set.Mode)
 	}
 	m = drive(t, m, keys("backspace")...)
@@ -226,8 +230,8 @@ func TestFirstRunHostSkipsNameAndGoesBack(t *testing.T) {
 
 func TestFirstRunSaveError(t *testing.T) {
 	m := New(Options{Path: "x.ini", FirstRun: true, Fetcher: &fake{}, Save: func(string, *config.File) error { return errors.New("disk full") }})
-	m = drive(t, m, seq(keys("down", "enter"), typed("h:1"), keys("enter"))...)
-	if m.stage != stageServer {
+	m = drive(t, m, seq(keys("down", "enter"), typed("127.0.0.1:36100"), keys("enter"))...)
+	if m.stage != stageHost {
 		t.Fatalf("stage %d after a failed save, want to stay", m.stage)
 	}
 	mustShow(t, m, "could not save: disk full")

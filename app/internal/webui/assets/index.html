@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>re:psn · your network</title>
+  <link rel="stylesheet" href="/app.css">
+  <script defer src="/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#content">Skip to workspace</a>
+<div class="app-shell">
+  <header class="app-header">
+    <a class="brand" href="/" aria-label="re:psn home"><span class="brand-mark" aria-hidden="true">&gt;_</span><strong>re:psn</strong><span class="brand-caption">your network</span></a>
+    <span class="version" id="version">optional desktop client</span>
+    <div class="role-switch" role="group" aria-label="Workspace">
+      <button type="button" data-role="play" data-mutates>Play <span>connect</span></button>
+      <button type="button" data-role="host" data-mutates>Host</button>
+      <button type="button" data-role="both" data-mutates>Both</button>
+    </div>
+    <button type="button" class="quiet" id="refresh-state">Refresh local view</button>
+  </header>
+
+  <div id="error" class="notice error" role="alert" hidden></div>
+  <div id="notice" class="notice" role="status" hidden></div>
+  <div class="activity" aria-label="Service activity">
+    <span id="activity-play">Play · not checked</span><span id="activity-host">Host · stopped</span><span id="activity-grant">Trophies · local service off</span>
+    <button type="button" class="text-button" id="shutdown" data-mutates>Stop app</button>
+  </div>
+
+  <main id="content" tabindex="-1">
+    <section id="welcome" class="welcome" aria-labelledby="welcome-title" hidden>
+      <p class="eyebrow">Welcome to re:psn</p>
+      <h1 id="welcome-title">Choose how you use your network.</h1>
+      <p class="lede">Connect to a server, run your own, or do both. Trophies and friends are optional extras; games can connect without this app.</p>
+      <div class="role-cards">
+        <button type="button" class="role-card" data-role="play" data-mutates><span class="card-number">01 / PLAY</span><strong>Connect &amp; play</strong><span>Check a server, keep your local trophies and manage friends.</span><span class="card-link">Choose Play →</span></button>
+        <button type="button" class="role-card" data-role="host" data-mutates><span class="card-number">02 / HOST</span><strong>Run your server</strong><span>Start and observe your own server. No player profile required.</span><span class="card-link">Choose Host →</span></button>
+        <button type="button" class="role-card" data-role="both" data-mutates><span class="card-number">03 / BOTH</span><strong>Play &amp; host</strong><span>Keep a Play target and your local host independently configured.</span><span class="card-link">Choose Both →</span></button>
+      </div>
+      <p class="muted">Choosing a workspace starts no server, creates no identity and signs you into nothing.</p>
+    </section>
+
+    <div id="workspace" class="workspace" hidden>
+      <nav class="navigation" aria-label="Workspace sections">
+        <span class="nav-label">WORKSPACE</span>
+        <button type="button" data-page="overview">Overview</button>
+        <button type="button" data-page="play" data-personal>Play / connect</button>
+        <button type="button" data-page="host" data-host>Host server</button>
+        <span class="nav-label" data-personal>YOUR EXTRAS</span>
+        <button type="button" data-page="trophies" data-personal>Trophies <span id="nav-trophies" class="nav-count">0</span></button>
+        <button type="button" data-page="friends" data-personal>Friends <span id="nav-friends" class="nav-count">0</span></button>
+        <button type="button" data-page="profile" data-personal>Profile &amp; backup</button>
+        <span class="nav-label">PREFERENCES</span>
+        <button type="button" data-page="settings">Settings</button>
+        <div class="nav-note">Local app.<br>Your games connect directly.</div>
+      </nav>
+
+      <div class="pages">
+        <section id="page-overview" class="page" aria-labelledby="overview-title">
+          <div class="page-heading"><div><p class="eyebrow" id="workspace-label">Your workspace</p><h1 id="overview-title">Your workspace.</h1></div><span class="badge" id="workspace-badge">Local</span></div>
+          <p class="lede">Your game connection, local host and personal extras each have their own controls.</p>
+          <div class="overview-grid">
+            <article class="panel" data-personal><div class="panel-heading"><h2>Play / connect</h2><span class="tag" id="overview-play-tag">Not checked</span></div><p class="large-value break" id="overview-target">No server selected</p><p class="muted" id="overview-play-note">Choose a target and check it explicitly.</p><button type="button" data-page="play">Open Play →</button></article>
+            <article class="panel" data-host><div class="panel-heading"><h2>Your host</h2><span class="tag" id="overview-host-tag">Stopped</span></div><p class="large-value break" id="overview-host-address">Not configured</p><p class="muted" id="overview-host-note">Only servers started by this app can be stopped here.</p><button type="button" data-page="host">Open Host →</button></article>
+            <article class="panel" data-personal><div class="panel-heading"><h2>Local trophies</h2><span class="tag">Player-reported</span></div><p class="large-value" id="overview-trophies">0 reported</p><p class="muted">Stored on this machine. No relay registration required.</p><button type="button" data-page="trophies">Open Trophies →</button></article>
+            <article class="panel" data-personal><div class="panel-heading"><h2>Friends</h2><span class="tag">Per relay</span></div><p class="large-value" id="overview-friends">No snapshot yet</p><p class="muted">Explicit registration and mutual consent. Cached lists are labeled.</p><button type="button" data-page="friends">Open Friends →</button></article>
+          </div>
+          <aside class="callout"><strong>The client is optional.</strong> Ordinary game networking and standalone hosting work without it. This app adds local trophy management, authenticated friends and controls for its own host.</aside>
+        </section>
+
+        <section id="page-play" class="page" aria-labelledby="play-title" hidden>
+          <div class="page-heading"><div><p class="eyebrow">Player workspace</p><h1 id="play-title">Choose your connection.</h1></div><span class="badge" id="play-badge">Not checked</span></div>
+          <p class="lede">Check a remote server and browse its public snapshot. Your game uses its own connection settings.</p>
+          <form id="play-form" class="panel">
+            <div class="form-grid"><label>Game server<input id="play-server" name="server" placeholder="play.example.org:36100" maxlength="255" autocomplete="off"></label><label>Optional status URL<input id="play-status-url" name="status_url" type="url" placeholder="https://relay.example.org/status" maxlength="2048" autocomplete="off"></label></div>
+            <details><summary>Protocol filters</summary><div class="form-grid"><label>Title communication ID<input id="play-title-id" maxlength="12" autocomplete="off" placeholder="SYNTHETIC"></label><label>Board ID<input id="play-board-id" type="number" min="0" max="4294967295" step="1" value="0"></label><label class="checkbox"><input id="play-boards" type="checkbox">Include leaderboard request</label></div></details>
+            <div class="actions"><button class="primary" type="submit" data-mutates>Save &amp; check server</button><span class="muted" id="play-check-time">Nothing contacted yet.</span></div>
+          </form>
+          <p class="section-note" id="play-message">A successful check is a completed snapshot request, not a live game session.</p>
+          <div class="panel table-panel"><div class="panel-heading"><h2>Public rooms</h2><span class="muted">Read-only snapshot</span></div><div class="table-scroll"><table><thead><tr><th scope="col">Room</th><th scope="col">Title</th><th scope="col">Players</th><th scope="col">Members</th></tr></thead><tbody id="rooms-body"></tbody></table></div></div>
+          <div class="panel table-panel"><div class="panel-heading"><h2>Leaderboards</h2><span class="muted">Reported scores</span></div><div class="table-scroll"><table><thead><tr><th scope="col">Title / board</th><th scope="col">Entries</th><th scope="col">Leader</th><th scope="col">Best</th></tr></thead><tbody id="boards-body"></tbody></table></div></div>
+        </section>
+
+        <section id="page-host" class="page" aria-labelledby="host-title" hidden>
+          <div class="page-heading"><div><p class="eyebrow">Operator workspace</p><h1 id="host-title">Your local game server.</h1></div><span class="badge" id="host-badge">Stopped</span></div>
+          <p class="lede">Manage the local game server started by this app. Your remote Play target stays separate.</p>
+          <div class="panel"><div class="panel-heading"><h2>Owned local server</h2><span class="tag" id="host-ownership">App-managed</span></div><p id="host-message">No host is running.</p><dl class="facts"><div><dt>Listening address</dt><dd id="host-address">Not configured</dd></div><div><dt>Started</dt><dd id="host-started">—</dd></div></dl></div>
+          <form id="host-form" class="panel"><h2>Host configuration</h2><div class="form-grid"><label>Listen on<input id="host-bind" placeholder="127.0.0.1:36100" maxlength="255" autocomplete="off"></label><label class="checkbox"><input id="host-relay" type="checkbox">Enable game traffic relay</label></div><p class="muted">Loopback is local to this computer. A LAN/public bind is an explicit choice; no firewall or router settings are changed.</p><div class="actions"><button class="primary" type="submit" id="host-start" data-mutates>Save &amp; start host</button><button type="button" id="host-stop" data-mutates>Stop owned host</button><button type="button" id="use-host" data-mutates>Use this host as Play target</button></div></form>
+          <aside class="callout"><strong>Ownership stays clear.</strong> Closing this tab leaves the app and its host running. Use Stop owned host or Stop app. A remote status-reader credential does not grant server control.</aside>
+        </section>
+
+        <section id="page-trophies" class="page" aria-labelledby="trophies-title" hidden>
+          <div class="page-heading"><div><p class="eyebrow">Personal extras / offline</p><h1 id="trophies-title">Your local trophy collection.</h1></div><span class="badge">Game-reported</span></div>
+          <p class="lede">Reports stay on this machine. They are not PSN-verified and are never uploaded by this app.</p>
+          <div class="profile-needed callout" data-needs-profile><strong>A local profile keeps your collection.</strong><p>No account on a relay is needed.</p><button type="button" data-page="profile">Create a local profile →</button></div>
+          <div class="panel"><div class="panel-heading"><h2>Titles</h2><span id="trophy-total" class="muted">0 reported</span></div><label>Selected title<select id="trophy-title"></select></label><div class="actions"><button type="button" id="grant-start" data-mutates>Enable game reporting</button><button type="button" id="grant-revoke" data-mutates>Revoke game reporting</button></div><p id="grant-message" class="section-note">Local game reporting is off.</p><p id="grant-path" class="mono break" hidden></p><div class="table-scroll"><table><thead><tr><th scope="col">Trophy</th><th scope="col">Grade</th><th scope="col">Status</th></tr></thead><tbody id="trophies-body"></tbody></table></div></div>
+          <form id="catalog-form" class="panel"><h2>Approve a developer catalog</h2><p class="muted">Choose the catalog supplied by your recomp developer. The repository includes synthetic examples only.</p><label>Catalog JSON file<input id="catalog-file" type="file" accept=".json,application/json"></label><p id="catalog-preview" class="section-note">No catalog selected.</p><button type="submit" data-mutates>Approve catalog</button></form>
+        </section>
+
+        <section id="page-friends" class="page" aria-labelledby="friends-title" hidden>
+          <div class="page-heading"><div><p class="eyebrow">Personal extras / authenticated</p><h1 id="friends-title">Friends on your relay.</h1></div><button type="button" id="friends-refresh" data-mutates>Refresh from relay</button></div>
+          <p class="lede">Every relay owns its own registrations, friendships and moderation. A portable identity can join more than one.</p>
+          <div class="profile-needed callout" data-needs-profile><strong>Create a local profile first.</strong><p>Registration on a friend relay remains a separate choice.</p><button type="button" data-page="profile">Open Profile →</button></div>
+          <div class="panel"><div class="panel-heading"><h2>Selected friend relay</h2><span class="tag">Cached snapshot</span></div><p id="friend-origin" class="mono break">No friend relay selected</p><p id="friend-freshness" class="muted">No authenticated snapshot yet. Online presence is not provided.</p><div class="actions"><button type="button" id="friend-register" data-mutates>Register this identity</button><button type="button" data-page="settings">Choose relay / trust settings</button></div></div>
+          <form id="friend-request-form" class="panel"><label>Friend's public account ID<input id="friend-id" placeholder="rp1-…" pattern="rp1-[a-f0-9]{64}" title="Use a full re-psn public account ID" maxlength="68" autocomplete="off" spellcheck="false" required></label><div class="actions"><button type="submit" data-mutates>Send friend request</button><span class="muted">The recipient must accept.</span></div></form>
+          <div class="friend-groups" id="friend-groups"></div>
+        </section>
+
+        <section id="page-profile" class="page" aria-labelledby="profile-title" hidden>
+          <div class="page-heading"><div><p class="eyebrow">Personal extras / portable identity</p><h1 id="profile-title">Your identity, kept locally.</h1></div><span class="badge">Optional</span></div>
+          <p class="lede">A local profile holds your trophy reports and identity. Reusing its public ID across relays makes those registrations linkable.</p>
+          <div id="profile-details" class="panel" hidden><h2 id="profile-label">Local profile</h2><label>Public account ID<input id="profile-id" readonly spellcheck="false"></label><p class="muted">This proves control of your re-psn key. It is not a PSN login or a GitHub/Discord verification badge.</p></div>
+          <form id="profile-create-form" class="panel"><h2>Create a local profile</h2><label>Display label<input id="profile-name" maxlength="128" autocomplete="off" placeholder="Your display label" required></label><p class="muted">Creating it registers with no relay and publishes nothing.</p><button class="primary" type="submit" data-mutates>Create profile</button></form>
+          <p id="profile-error" class="section-note"></p>
+          <div class="backup-grid">
+            <form id="export-form" class="panel"><h2>Encrypted backup</h2><p class="muted">Moves your identity and local trophies. Keep the passphrase separately; it cannot be reset.</p><label>Backup passphrase<input id="export-passphrase" type="password" minlength="12" maxlength="1024" autocomplete="new-password" required></label><label>Confirm passphrase<input id="export-confirm" type="password" minlength="12" maxlength="1024" autocomplete="new-password" required></label><button type="submit" data-mutates>Download encrypted backup</button></form>
+            <form id="restore-form" class="panel"><h2>Restore a backup</h2><p id="restore-note" class="muted">Restore into a new, empty profile. Imported data cannot restore another relay's approvals or friendships.</p><label>Encrypted backup<input id="restore-file" type="file" required></label><label>Backup passphrase<input id="restore-passphrase" type="password" minlength="12" maxlength="1024" autocomplete="off" required></label><button type="submit" data-mutates>Restore into this new profile</button></form>
+          </div>
+        </section>
+
+        <section id="page-settings" class="page" aria-labelledby="settings-title" hidden>
+          <div class="page-heading"><div><p class="eyebrow">Preferences</p><h1 id="settings-title">Set it up your way.</h1></div><span class="badge" id="settings-dirty">Saved</span></div>
+          <form id="settings-form">
+            <div class="panel"><h2>Workspace &amp; appearance</h2><div class="form-grid"><label>Workspace<select id="setting-mode"><option value="play">Play / connect</option><option value="host">Host</option><option value="both">Both</option></select></label><label>Appearance<select id="setting-theme"><option value="dark">Dark / project palette</option><option value="light">Light</option><option value="system">Follow system</option></select></label><label>Player display name<input id="setting-name" maxlength="16" autocomplete="off"></label></div><p class="muted">Host-only operation needs no player name or profile.</p></div>
+            <div class="panel"><h2>Play target</h2><div class="form-grid"><label>Game server<input id="setting-server" maxlength="255" autocomplete="off" placeholder="play.example.org:36100"></label><label>Optional status URL<input id="setting-status-url" type="url" maxlength="2048" autocomplete="off" placeholder="https://relay.example.org/status"></label></div></div>
+            <div class="panel"><h2>Friend relay</h2><div class="form-grid"><label>HTTPS origin<input id="setting-social-origin" type="url" maxlength="2048" autocomplete="off" placeholder="https://relay.example.org:36443"></label><label>Optional private CA file on this computer<input id="setting-social-ca" maxlength="4096" autocomplete="off" spellcheck="false" placeholder="Leave empty for system trust"></label></div><p class="muted">Saving a relay does not register or contact it. Trust settings are not imported from a portable backup.</p></div>
+            <div class="panel"><h2>Local host</h2><div class="form-grid"><label>Listen on<input id="setting-host-address" maxlength="255" autocomplete="off" placeholder="127.0.0.1:36100"></label><label class="checkbox"><input id="setting-host-relay" type="checkbox">Enable game traffic relay</label></div><p class="muted">Saved separately from your Play target. Start hosting explicitly from Host.</p></div>
+            <div class="actions"><button class="primary" type="submit" data-mutates>Save settings</button><button type="button" id="settings-reset">Discard edits</button></div>
+          </form>
+        </section>
+      </div>
+    </div>
+  </main>
+  <footer class="app-footer"><span>re:psn <span id="footer-version"></span> · local client</span><span id="bridge-state" role="status">Opening private app session…</span></footer>
+</div>
+<dialog id="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-description"><form method="dialog"><p class="eyebrow">Confirm action</p><h2 id="confirm-title"></h2><p id="confirm-description"></p><div class="actions"><button value="cancel" autofocus>Cancel</button><button id="confirm-accept" class="primary" value="accept">Continue</button></div></form></dialog>
+<noscript><div class="notice error">This local interface needs JavaScript. The terminal app, CLI and standalone game server remain available.</div></noscript>
+</body>
+</html>

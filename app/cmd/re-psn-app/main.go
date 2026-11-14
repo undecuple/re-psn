@@ -1,6 +1,6 @@
 // re-psn-app: the desktop app for players and hosts of a re-psn server. With
-// no arguments it starts the terminal UI; check (the first connection check)
-// and version are subcommands.
+// no arguments it opens a private local browser interface. The advanced terminal
+// interface is available through tui; check and version also remain available.
 package main
 
 import (
@@ -20,6 +20,7 @@ import (
 	"github.com/undecuple/re-psn/app/internal/client"
 	"github.com/undecuple/re-psn/app/internal/config"
 	"github.com/undecuple/re-psn/app/internal/desktop"
+	"github.com/undecuple/re-psn/app/internal/host"
 	"github.com/undecuple/re-psn/app/internal/tui"
 )
 
@@ -44,6 +45,9 @@ var launchDesktop = desktop.Launch
 
 func run(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 || len(args) == 1 && args[0] == "--" {
+		return startUI(nil, stdout, stderr)
+	}
+	if len(args) == 1 && args[0] == "tui" {
 		if !isTerminal() {
 			if err := launchDesktop(); err != nil {
 				fmt.Fprintln(stderr, "re-psn-app: not a terminal:", err)
@@ -54,6 +58,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return startTUI(stderr)
 	}
 	switch args[0] {
+	case "ui":
+		return startUI(args[1:], stdout, stderr)
+	case "host":
+		return runHost(args[1:], stdout, stderr)
 	case "profile", "trophies", "friends", "account-relay":
 		return runFramework(args, stdout, stderr)
 	case "--profile-dir":
@@ -77,7 +85,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 
 func usage(w io.Writer) {
 	fmt.Fprint(w, `usage:
-  re-psn-app                                 start the terminal UI (Linux desktops can open a terminal)
+  re-psn-app [ui]                            open the optional local browser app
+  re-psn-app tui                             open the advanced terminal interface
+  re-psn-app ui --no-open --url-file FILE     write a private one-use launch link
+  re-psn-app host serve [--listen IP:PORT]     explicitly run the owned server component
   re-psn-app --no-tui                        do not start it: print a note and exit 2
   re-psn-app check [-timeout 5s] HOST:PORT   connect, say HELLO and report what the server answers
   re-psn-app version                         print the version
@@ -107,7 +118,9 @@ func runTUI(stderr io.Writer) int {
 	profileDir, _ := defaultProfileDir()
 	session := tui.NewProfileSession(profileDir)
 	defer session.Close()
-	m := tui.New(tui.Options{Path: path, File: f, FirstRun: first, NoColor: noColor, ProfileDir: profileDir, ProfileSession: session})
+	manager := host.New("")
+	defer manager.Close()
+	m := tui.New(tui.Options{Path: path, File: f, FirstRun: first, NoColor: noColor, ProfileDir: profileDir, ProfileSession: session, Host: manager, SocialOrigin: f.SocialOrigin, SocialCAFile: f.SocialCAFile})
 	if _, err := tea.NewProgram(m).Run(); err != nil {
 		fmt.Fprintln(stderr, "re-psn-app:", err)
 		return 1
