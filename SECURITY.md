@@ -7,7 +7,7 @@ address, the same as on real PSN P2P.
 
 ## What to know before you run it
 
-- **No authentication.** Anyone who can reach TCP 36100 can join, and can claim
+- **The game protocol has no authentication.** Anyone who can reach TCP 36100 can join, and can claim
   any online ID. Run it for people you'd let onto your network: a LAN, a
   tailnet, or friends.
 - **The status page** (`-http`, off by default; `127.0.0.1:36101` is the usual address) lists every
@@ -16,7 +16,10 @@ address, the same as on real PSN P2P.
 - **The relay** (`-relay`, off by default) carries traffic between players
   in the same room. It can't tell what the traffic is, but it does see how
   much there is and between whom, and it uses the host's bandwidth.
-- **Nothing is stored on disk**, apart from the log if you set `-log-file`.
+- **The game server stores nothing on disk**, apart from the log if you set `-log-file`. The optional desktop
+  [profile framework](docs/app-framework.md) separately stores a private signing seed, local trophy reports and
+  cached friend snapshots. Its opt-in social companion persists registrations, revocations and friend/block edges.
+  Protect those directories and encrypted recovery backups. They do not authenticate game-protocol names.
 - **Players behind one address share names.** Players who connect from the same public address (carrier-grade NAT, a
   household NAT, or a TCP proxy used without `-proxy-protocol`) can take over each other's online IDs: a HELLO with a name
   another connection holds from that address makes the server close the old connection and accept the new one

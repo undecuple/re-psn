@@ -17,7 +17,8 @@ leaderboards, per-player storage.
 
 It is **not** a public PSN replacement, and won't grow into one:
 - no public instance and no server directory;
-- no accounts or passwords, just an unauthenticated name each player sets;
+- the game protocol keeps an unauthenticated name; optional desktop identities and per-host friend accounts
+  are separate, explicitly registered services, without a public directory;
 - no live Sony infrastructure, impersonation of Sony's servers, real PSN authentication or real PSN tickets;
 - no DNAS, DRM, commerce, publisher services, or reliance on real keys, credentials or other secrets.
 
@@ -104,7 +105,9 @@ On the ps3recomp side (upstream's work):
 
 ## Now
 
-Nothing is in progress at the moment; the items under Next come first.
+- [app-framework] App-managed offline trophies, a recomp SDK and portable profile backups.
+- [players-accounts] Portable re-psn identities and opt-in authenticated per-host friend accounts. These do not
+  authenticate game-protocol names or implement provider verification.
 
 ## Next
 
@@ -143,7 +146,6 @@ In about this order.
 - [ha-multi] Several servers behind one address, kept on the back burner until one server is not enough.
 - [metrics-endpoint] A metrics endpoint for Prometheus, off by default, with no personal data in it.
 - [metrics-dashboard] A Grafana dashboard and alert rules built on that endpoint.
-- [players-accounts] Optional sign-in, which needs the scope above changed first.
 - [release-signing] Signed Windows binaries and signed checksums.
 - [net-upnp] Opening a player's P2P port on their router automatically.
 - [medius-multititle] Consider further Medius title/build profiles separately, with evidence for each.

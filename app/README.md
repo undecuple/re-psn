@@ -7,6 +7,7 @@ The app has a terminal UI built on [Bubble Tea](https://github.com/charmbracelet
 
 ## Contents
 
+- [Profiles, trophies and friends](#profiles-trophies-and-friends)
 - [What is here](#what-is-here)
 - [Build and test](#build-and-test)
 - [The terminal UI](#the-terminal-ui)
@@ -26,9 +27,38 @@ The app has a terminal UI built on [Bubble Tea](https://github.com/charmbracelet
 | `internal/config/` | Reads and writes the per-user settings file, `re-psn.ini` |
 | `internal/tui/` | The terminal UI: a Bubble Tea model whose Update and View are tested with messages and a fake server, no terminal |
 | `cmd/re-psn-app/` | The program: the terminal UI with no arguments, `check` and `version` |
+| `framework/` | Exported offline profile/trophy store, local scoped game broker, encrypted backups and optional mTLS social service/client |
+| `integration/` | Generated-data native C SDK and two-host authenticated friendship scenario |
 
 The client can use the game protocol alone. An explicitly configured status URL adds native HTTP status data without
 opening a browser; see [Optional native HTTP status](#optional-native-http-status).
+
+## Profiles, trophies and friends
+
+The terminal desktop app adds Profile, Trophies and Friends to the existing menu (`6`, `7`, `8`). The ordinary startup
+does not create a profile, start a game broker or register with a social companion. Opening these panes reads local
+snapshots. In Profile, `c`, then `y` explicitly creates an identity. Game metadata is approved through the CLI first.
+
+```sh
+re-psn-app profile create --dir /private/player-profile --name 'Player'
+re-psn-app trophies install --dir /private/player-profile --input ../client/examples/app_trophies.json
+re-psn-app --profile-dir /private/player-profile
+```
+
+Trophies are local game reports, not verified achievements. In Trophies, choose a title and press `g` to issue a
+private grant descriptor for the recomp SDK; keep the app open while the game uses it. `v` revokes it. The running
+desktop owns the profile writer, so close it before catalog installation, export/restore or separate mutating CLI
+commands. Read-only views and its own game/friend operations can coexist. No game automatically receives access.
+
+An optional `--social-relay HTTPS_ORIGIN` and `--social-ca-file FILE` select the friend service explicitly. Friends
+registration requires `e`, then `y`; `f` requests a public ID, `a` accepts, `d` declines/cancels, `u` removes, `b` blocks,
+`x` unblocks and `r` refreshes. With no origin, the screen shows cached state only. Snapshots are timestamped and do
+not imply live presence. Registration links this public identity to that host; the same key at other hosts is linkable.
+
+The CLI also provides `profile show|export|restore|serve`, `trophies show`, the friend actions and an optional
+`account-relay serve|revoke` companion for hosts. The companion has a separate TLS listener and state directory;
+the existing game server and protocol stay independent. Read the [framework guide](../docs/app-framework.md) for
+complete commands, C/C++ integration, private files, TLS/allowlist setup, encrypted recovery and unimplemented features.
 
 ## Build and test
 
@@ -267,7 +297,9 @@ with `-mod=readonly`, and `govulncheck` runs on the module):
 The program also links the modules those three need: `github.com/charmbracelet/colorprofile`, `ultraviolet`, `x/ansi`, `x/termios`
 and `x/windows` (MIT), `github.com/clipperhouse/displaywidth` and `uax29/v2` (MIT), `github.com/lucasb-eyer/go-colorful` (MIT),
 `github.com/mattn/go-runewidth` (MIT), `github.com/muesli/cancelreader` (MIT), `github.com/rivo/uniseg` (MIT),
-`github.com/xo/terminfo` (MIT), and `golang.org/x/sync` and `golang.org/x/sys` (BSD-3-Clause). The module graph (`go list -m all`)
+`github.com/xo/terminfo` (MIT), and `golang.org/x/sync` and `golang.org/x/sys` (BSD-3-Clause). The framework also uses the
+already pinned `golang.org/x/sys` directly for OS writer locks and Windows atomic replacement. No dependency version
+is added or changed by the framework. The module graph (`go list -m all`)
 also has modules that only their tests or their own dependencies' tests use (`aymanbagabas/go-udiff`, `bits-and-blooms/bitset`,
 `charmbracelet/x/exp/golden`, `clipperhouse/stringish`, `golang.org/x/exp`); they are not built into the program. None needs cgo. Bubbles is not used.
 

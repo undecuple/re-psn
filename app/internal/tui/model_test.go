@@ -325,6 +325,9 @@ func TestRankingErrorKeepsRooms(t *testing.T) {
 func TestConnectionErrorsAreText(t *testing.T) {
 	f := &fake{err: errors.New("dial 127.0.0.1:1: connection refused")}
 	m := homeModel(t, f, config.Settings{Server: "127.0.0.1:1"})
+	// Keep the diagnostic on one content line: flat otherwise interleaves
+	// the longer menu with a wrapped phrase. Narrow layout has separate tests.
+	m.w = 100
 	m = drive(t, m, keys("r")...)
 	mustShow(t, m, "No answer from 127.0.0.1:1", "connection refused", "Check the server in Settings")
 	m = drive(t, m, keys("2", "enter")...)

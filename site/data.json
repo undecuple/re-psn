@@ -7,9 +7,9 @@
   "available": 43,
   "unverified": 3,
   "partial": 9,
-  "in-progress": 0,
+  "in-progress": 2,
   "planned": 15,
-  "later": 9,
+  "later": 8,
   "declined": 1
  },
  "features": [
@@ -100,14 +100,14 @@
   {
    "id": "players-accounts",
    "area": "Players",
-   "feature": "Optional sign-in",
-   "detail": "Optional accounts next to the default of a name per player: a credential per server kept on the player's machine, sign-in through a generic OpenID Connect provider, or with Discord or GitHub.",
-   "status": "later",
+   "feature": "Portable identities and per-host friend accounts",
+   "detail": "App-owned Ed25519 identity with encrypted portable backup, explicit per-host mTLS registration and mutually accepted friend lists.",
+   "status": "in-progress",
    "since": "",
-   "evidence": "",
-   "note": "Not started. Needs the opt-in database (store-sqlite) first, and the scope in ROADMAP.md says no accounts or passwords, so that needs changing too. The default would stay a name per player.",
-   "status_label": "later",
-   "status_class": "dim"
+   "evidence": "app/framework, app/integration/framework_test.go, docs/app-framework.md",
+   "note": "Separate opt-in companion. No provider badge, authenticated gameplay admission, federation, live presence, invites or trophy upload.",
+   "status_label": "in progress",
+   "status_class": "info"
   },
   {
    "id": "limits-requests",
@@ -972,6 +972,18 @@
    "note": "Not in v0.4.0. `install.sh --app` and `install.ps1 -App` install it (tested against a fake release only). The release workflow has not built them on a tag; the Windows and arm64 binaries are cross-built and not run.",
    "status_label": "available",
    "status_class": "ok"
+  },
+  {
+   "id": "app-framework",
+   "area": "Client",
+   "feature": "Offline trophy framework and recomp SDK",
+   "detail": "Desktop-managed local trophy catalogs and monotonic reports, private title-scoped local broker, dependency-free C/C++ SDK and encrypted profile recovery.",
+   "status": "in-progress",
+   "since": "",
+   "evidence": "app/framework, client/psnr_app.c, client/psnr_app.h, docs/app-framework.md",
+   "note": "Synthetic integration only. No Sony trophy-save format adapter, automatic platinum, earned-trophy verification or remote trophy synchronization.",
+   "status_label": "in progress",
+   "status_class": "info"
   }
  ],
  "roadmap": {
@@ -1032,7 +1044,10 @@
    "admin-api",
    "app-archives"
   ],
-  "Now": [],
+  "Now": [
+   "players-accounts",
+   "app-framework"
+  ],
   "Next": [
    "rooms-private",
    "players-friends",
@@ -1051,7 +1066,6 @@
    "ci-more"
   ],
   "Later": [
-   "players-accounts",
    "metrics-endpoint",
    "metrics-dashboard",
    "store-postgres",

@@ -9,11 +9,11 @@ What re-psn does today and what is planned, one row per feature. Each status res
 | available | merged, with a test or a recorded run | 43 |
 | not yet verified | merged, but nothing in the repository checks it | 3 |
 | partial | merged in part, or with known gaps | 9 |
-| in progress | an open pull request or branch | 0 |
+| in progress | an open pull request or branch | 2 |
 | planned | wanted and intended, not started | 15 |
-| later | after the planned items, or after a decision | 9 |
+| later | after the planned items, or after a decision | 8 |
 | declined | will not be done | 1 |
-| all | | 80 |
+| all | | 81 |
 
 ## Rooms and matchmaking
 
@@ -36,7 +36,7 @@ What re-psn does today and what is planned, one row per feature. Each status res
 |---|---|---|---|---|---|
 | `players-names` | **One player per name**: Names are compared case-insensitively. A HELLO with a name held from another address gets ERROR 8 (name taken); from the same address it is the same player reconnecting, and the old connection is closed. | available | 0.2.0 | [`TestNameTakenFromAnotherAddress`](../server/server_test.go), [`TestSameAddressReconnectTakesOver`](../server/server_test.go) | No passwords: a name is not authenticated. |
 | `players-friends` | **Friends, presence and invites**: sceNpBasic: a friends list (everyone on the same server), presence (online, title, room), invites and join-a-friend, player history and a block list. | planned |  | [`ROADMAP.md`](../ROADMAP.md) | Not in the server today. |
-| `players-accounts` | **Optional sign-in**: Optional accounts next to the default of a name per player: a credential per server kept on the player's machine, sign-in through a generic OpenID Connect provider, or with Discord or GitHub. | later |  |  | Not started. Needs the opt-in database (store-sqlite) first, and the scope in ROADMAP.md says no accounts or passwords, so that needs changing too. The default would stay a name per player. |
+| `players-accounts` | **Portable identities and per-host friend accounts**: App-owned Ed25519 identity with encrypted portable backup, explicit per-host mTLS registration and mutually accepted friend lists. | in progress |  | [`app/framework`](../app/framework), [`app/integration/framework_test.go`](../app/integration/framework_test.go), [`docs/app-framework.md`](app-framework.md) | Separate opt-in companion. No provider badge, authenticated gameplay admission, federation, live presence, invites or trophy upload. |
 
 ## Limits
 
@@ -149,6 +149,7 @@ What re-psn does today and what is planned, one row per feature. Each status res
 | `app-colours` | **Custom colours**: Edit named colour slots (background, surface, text, muted, accent, good, warn, bad) as hex values, with a contrast warning below 4.5:1, import and export, saved per user and per mode. | planned |  |  | Not started. A bad value falls back to the default preset. |
 | `client-lan-discover` | **LAN discovery in the C client**: `psnr_discover` broadcasts one UDP request from its own temporary socket and returns the LAN servers that answer, with their ports, relay flag, player count, name and version. | available | 0.5.0 | [`client/psnr.c`](../client/psnr.c), [`client/test_psnr.c`](../client/test_psnr.c) | Not in v0.4.0. Finds only servers started with -discover. Tested against a fake responder and, by hand, against a real server on loopback; not a real broadcast across a network. Does not cross subnets or client-isolated Wi-Fi. The Windows build broadcasts to 255.255.255.255 only; CI compiles the client with MSVC but does not run it on Windows. |
 | `client-connect-policy` | **Host connect policy in the C client**: `psnr_set_connect_policy` registers one callback that the client asks before it opens a TCP connection: the connection `psnr_connect` and `psnr_connect_timeout` make (once per resolved address, with the host as typed) and each relay leg (`psnr_stream_connect`, `psnr_stream_accept`). A refusal skips that address, or returns -1 for a relay leg; refusing every address gives NULL and `psnr_connect_error()` is `PSNR_E_POLICY`. No callback means today's behaviour. | available | 0.6.0 | [`client/psnr.c`](../client/psnr.c), [`client/psnr.h`](../client/psnr.h), [`client/test_psnr.c`](../client/test_psnr.c) | Not in v0.5.0. Process-wide, set before the first connect; not covered: `psnr_discover` and the title's own P2P socket. IPv4 only, like the client. Tested against a real server on loopback; each check fails with its hook removed. |
+| `app-framework` | **Offline trophy framework and recomp SDK**: Desktop-managed local trophy catalogs and monotonic reports, private title-scoped local broker, dependency-free C/C++ SDK and encrypted profile recovery. | in progress |  | [`app/framework`](../app/framework), [`client/psnr_app.c`](../client/psnr_app.c), [`client/psnr_app.h`](../client/psnr_app.h), [`docs/app-framework.md`](app-framework.md) | Synthetic integration only. No Sony trophy-save format adapter, automatic platinum, earned-trophy verification or remote trophy synchronization. |
 
 ## Desktop app
 

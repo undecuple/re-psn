@@ -205,6 +205,12 @@ func (m Model) hintBar() string {
 		return m.hints("↑/↓", "move", "enter", "open", "r", "refresh", "t", "theme", "q", "quit")
 	case m.menu == paneServer:
 		return m.hints("tab", "rooms", "r", "refresh", "esc", "menu", "t", "theme", "q", "quit")
+	case m.menu == paneProfile:
+		return m.hints("c", "create", "r", "reload", "esc", "menu", "q", "quit")
+	case m.menu == paneTrophies:
+		return m.hints("↑/↓", "title", "g", "game grant", "v", "revoke", "r", "reload", "esc", "menu")
+	case m.menu == paneFriends:
+		return m.hints("r", "refresh", "e", "register", "f", "request", "a/d", "accept/decline", "u", "remove", "b/x", "block/unblock", "esc", "menu")
 	case m.menu == paneRooms:
 		return m.hints("tab", "leaderboards", "e", "title", "r", "refresh", "esc", "menu", "t", "theme", "q", "quit")
 	case m.menu == paneBoards:
@@ -234,6 +240,8 @@ func (m Model) renderContent(w int) string {
 		lines = m.renderSettings()
 	case paneHelp:
 		lines = m.renderHelp()
+	case paneProfile, paneTrophies, paneFriends:
+		lines = m.profileLines()
 	}
 	return lipgloss.NewStyle().Width(w).Render(strings.Join(lines, "\n"))
 }
