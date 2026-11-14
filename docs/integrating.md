@@ -361,8 +361,11 @@ traffic. A zero setting disables the limiter; this is not source authentication 
 With server `-relay`, handle relay capability, ROUTE/STREAM_OFFER pushes and datagram wrapping/unwrapping or separate
 stream sockets. Fallback is transport policy, not an automatic property of calling `psnr_connect`. The inspected
 ps3recomp runtime already contains optional relay hooks, even though some upstream prose says game traffic is never
-relayed. Test the path your own build actually uses. Its helper timeout parameters are not end-to-end deadlines for
-all connect/write/body-read operations.
+relayed. Test the path your own build actually uses. This repository's `psnr_stream_connect` and `psnr_stream_accept`
+share one `timeout_ms` budget across TCP connect, setup writes and the complete READY reply. Interrupted waits retry
+with the remaining budget; a negative timeout waits without a deadline, including after interruptions. They return a
+blocking raw stream on success, whose later I/O deadlines belong to the caller.
+The pinned runtime's separate helper timeout parameters do not bound all connect/write/body-read operations.
 [Runtime socket hooks](https://github.com/sp00nznet/ps3recomp/blob/de4f090328ea08bef6b2f15caec0b85e343a7ece/libs/network/np_psnr.h#L68-L104),
 [relay policy](https://github.com/sp00nznet/ps3recomp/blob/de4f090328ea08bef6b2f15caec0b85e343a7ece/libs/network/np_psnr.c#L390-L420).
 

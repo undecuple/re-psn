@@ -42,6 +42,9 @@ jobs:
         run: >-
           python3 tools/check_conformance.py
           --require github.com/sp00nznet/psnr/server:TestCClient
+          --require github.com/sp00nznet/psnr/server:TestCClientStreamDeadline
+          --require github.com/sp00nznet/psnr/server:TestCClientConnectWait
+          --require github.com/sp00nznet/psnr/server:TestCClientRelayPair
           --require github.com/sp00nznet/psnr/server:TestCheckReleaseAssets
           --require github.com/sp00nznet/psnr/server:TestReleaseAssetListsAgree
           --require github.com/sp00nznet/psnr/server:TestReleaseCheckWorkflow
