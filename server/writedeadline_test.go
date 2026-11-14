@@ -9,16 +9,10 @@ import (
 
 // A member who joins a room and stops reading must not hold up the others.
 // Its receive buffer is shrunk so a few kilobytes of room messages fill it;
-// the owner keeps sending to it until the server's write to it times out.
+// the owner keeps sending until the server disconnects the slow recipient.
 func TestStuckMemberDoesNotBlockOthers(t *testing.T) {
-	old := writeTimeout
-	writeTimeout = 300 * time.Millisecond
-	t.Cleanup(func() { writeTimeout = old })
-
 	s, addr := startServer(t)
-	// Cleanups run last in first-registered order, so this waits for the
-	// server's handlers (including their final pushes, which read writeTimeout)
-	// before the restore above runs.
+	// Join the server's handlers and their writers before this test returns.
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -65,43 +59,8 @@ func TestStuckMemberDoesNotBlockOthers(t *testing.T) {
 	c := dial(t, addr, "NPWR00001_00", "carol", 3660)
 	join(c, "carol")
 
-	// alice sends bob room messages until bob's socket stalls the server
-	payload := make([]byte, 4000)
-	stalled := false
-	for i := 0; i < 2000 && !stalled; i++ {
-		w := &writer{}
-		w.u64(roomID)
-		w.u16(bob)
-		w.blob(payload)
-		begin := time.Now()
-		if rt, _ := a.call(msgRoomMessage, w.b); rt != msgOK {
-			t.Fatalf("message %d: 0x%02X", i, rt)
-		}
-		// A reply is sent before the pushes for its request, so a long
-		// reply means the previous push was stuck for most of writeTimeout.
-		stalled = time.Since(begin) >= writeTimeout/2
-		time.Sleep(6 * time.Millisecond) // under the 200 requests per second limit
-	}
-	if !stalled {
-		t.Fatal("bob's socket never stalled the server; the test does not exercise the path")
-	}
-
-	// carol still gets replies while bob is stuck
-	search := func(when string) {
-		t.Helper()
-		w := &writer{}
-		w.u16(0)
-		w.u16(10)
-		if rt, _ := c.call(msgSearchRooms, w.b); rt != msgRoomList {
-			t.Fatalf("search %s: 0x%02X", when, rt)
-		}
-	}
-	search("while bob is stuck")
-
-	// the server drops bob: its write timed out, it closed the connection,
-	// and the reader's cleanup removed bob from the server's clients. Bob's
-	// kernel never gets an EOF (bob's window stays shut without reads), so
-	// the server's state is what is checked.
+	// Alice keeps receiving replies independently of Bob's writer. Detect the
+	// slow client's removal, rather than requiring its socket to stall Alice.
 	bobGone := func() bool {
 		s.mu.Lock()
 		defer s.mu.Unlock()
@@ -112,6 +71,34 @@ func TestStuckMemberDoesNotBlockOthers(t *testing.T) {
 		}
 		return true
 	}
+	payload := make([]byte, 4000)
+	for i := 0; i < 2000 && !bobGone(); i++ {
+		w := &writer{}
+		w.u64(roomID)
+		w.u16(bob)
+		w.blob(payload)
+		if rt, _ := a.call(msgRoomMessage, w.b); rt != msgOK {
+			t.Fatalf("message %d: %x", i, rt)
+		}
+		time.Sleep(6 * time.Millisecond)
+	}
+	// Carol remains usable after the send loop; the deterministic gated-writer
+	// test separately proves progress while another writer is blocked.
+	search := func(when string) {
+		t.Helper()
+		w := &writer{}
+		w.u16(0)
+		w.u16(10)
+		if rt, _ := c.call(msgSearchRooms, w.b); rt != msgRoomList {
+			t.Fatalf("search %s: 0x%02X", when, rt)
+		}
+	}
+	search("after send loop")
+
+	// The server drops Bob on output overflow or write timeout; it closes the connection,
+	// and the reader's cleanup removed bob from the server's clients. Bob's
+	// kernel never gets an EOF (bob's window stays shut without reads), so
+	// the server's state is what is checked.
 	for deadline := time.Now().Add(5 * time.Second); !bobGone(); {
 		if time.Now().After(deadline) {
 			t.Fatal("server did not drop bob within 5s")

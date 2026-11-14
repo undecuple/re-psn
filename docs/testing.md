@@ -10,6 +10,7 @@ missing tests, skips, failed builds and timeouts fail the command.
 - [What runs](#what-runs)
 - [Isolation and cleanup](#isolation-and-cleanup)
 - [Limits](#limits)
+- [Room delivery ordering](#room-delivery-ordering)
 - [Optional fail2ban filter check](#optional-fail2ban-filter-check)
 
 ## Run
@@ -64,6 +65,21 @@ These checks do not run games, prove LAN/Internet reachability, exercise NAT tra
 Medius or title compatibility. Use the full Go suites and CI for broader regression coverage, and the separate
 [NAT lab](../lab/README.md) for its Docker scenarios. Runner checks were executed on Linux; Windows and macOS execution
 still need validation.
+
+## Room delivery ordering
+
+Run the server suite, including its deterministic room-output checks:
+
+```sh
+go test -race ./server
+go test -race ./server -run '^TestRoomEventsFollowTransitions$' -count=10
+```
+
+The ordering regression holds an owner's reply at the socket while another member leaves, disconnects, joins or
+kicks a member. It checks the remaining client's event order against room state. Queue tests cover frame and byte
+limits, the in-flight frame, payload ownership, a legal default-limit peer-key burst, write failures and shutdown.
+The TCP slow-member test also checks that a client which stops reading is removed while other clients remain usable.
+These checks use synthetic clients and controlled local sockets; real games and router behavior need separate runs.
 
 ## Optional fail2ban filter check
 

@@ -63,6 +63,7 @@ func FuzzHandle(f *testing.F) {
 		defer peer.Close()
 
 		owner := &client{id: 1, conn: a, commID: "NPWR00001_00", onlineID: "alice", rooms: map[uint64]*room{}}
+		defer func() { owner.stopOutput(); owner.waitOutput() }()
 		s.clients[owner.id] = owner
 		s.handle(owner, msgCreateRoom, body(create))
 		if typ == msgHello || typ == msgStreamConnect || typ == msgStreamAccept {

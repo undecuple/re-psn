@@ -14,6 +14,7 @@ behind a reverse proxy, logging, ports, firewall rules, and what state it keeps.
 - [Health checks and restarts](restarts.md)
 - [Environment variables](#environment-variables)
 - [Logging](#logging)
+- [Slow clients and event delivery](#slow-clients-and-event-delivery)
 - [Ports](#ports)
 - [Firewall](#firewall)
 - [Stopping and replacing](#stopping-and-replacing)
@@ -215,6 +216,28 @@ Rotate the file with logrotate or your service manager (`copytruncate`, or resta
 
 For optional host bans after repeated HTTP status-token refusals, see [fail2ban.md](fail2ban.md). Its disabled example
 uses JSON journal logs and a separate firewall action; game/UDP bans and live host enforcement are not covered.
+
+## Slow clients and event delivery
+
+Each control connection has one writer. Room replies and pushes enter its queue in room-operation order, including
+events produced by disconnect cleanup. Socket writes happen outside the shared room-state lock, so a player who
+stops reading does not delay another player's requests or reorder later ownership changes ahead of earlier ones.
+
+The fixed limits are 2048 frames and 128 KiB of encoded frame bytes per control connection, counting the three-byte
+header and the frame currently being written. Either limit closes the connection when the next frame would exceed
+it. An empty queue can hold the 2033-frame PEER_AUTH response at the default eight-room limit: one reply and
+8 × 254 peer keys. Accumulated backlog or larger configured room memberships can still exhaust the queue.
+
+At the default 4096-connection limit, the encoded-byte accounting allows at most 512 MiB of retained outbound
+frames. On a 64-bit build, the lazily grown queue-slot arrays add at most 192 MiB once grown; their resize operation
+briefly retains old and new arrays. These figures exclude transient reply construction, allocator overhead, memory
+awaiting garbage collection, goroutine stacks, socket buffers and other server state. They are queue accounting,
+not a process-memory ceiling. `-max-conns 0` removes the aggregate connection bound while retaining each queue's limits.
+
+An exhausted output queue closes that connection. A write failure or a write stalled for ten seconds also closes it.
+The normal disconnect path removes its room memberships and tells the remaining members. A reconnect obtains
+current room state. Relay stream offers use the target's control queue; raw TCP relay payload uses the separate
+relay streams and their existing idle/write limits.
 
 ## Ports
 

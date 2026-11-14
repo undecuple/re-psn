@@ -1,9 +1,8 @@
 package main
 
-// One goroutine per client connection, one mutex over all room state (the
-// score store has its own lock; scores.go). Room handlers run under the lock
-// and return the pushes they owe other clients; those are written after the
-// lock drops, so a slow peer socket never stalls anyone else's request.
+// One reader and one lazy writer per player connection, one mutex over room
+// state (the score store has its own lock; scores.go). Replies and pushes are
+// queued under the state lock; only the writer writes control frames, outside it.
 
 import (
 	crand "crypto/rand"
@@ -24,10 +23,8 @@ import (
 
 const clientTimeout = 90 * time.Second // HELLO/HEARTBEAT keep a client alive
 
-// writeTimeout bounds one write to a client. A write is made while the
-// recipient's sendMu is held, so a member who stops reading must not hold it
-// for longer than this. A var so a test can shorten it.
-var writeTimeout = 10 * time.Second
+// writeTimeout bounds one queued frame write to a client.
+const writeTimeout = 10 * time.Second
 
 // defaultMaxConns is the default for -max-conns: a bound on file descriptors, high enough that a normal server never meets it.
 const defaultMaxConns = 4096
@@ -125,7 +122,7 @@ type client struct {
 	rttMs      uint16    // the player's own last round trip in milliseconds, from an optional HEARTBEAT body (display only)
 	rttAt      time.Time // when it was reported; the zero time means none or unknown
 	rooms      map[uint64]*room
-	sendMu     sync.Mutex
+	output     clientOutput
 }
 
 type push struct {
@@ -280,15 +277,16 @@ func (s *Server) run(c *client) {
 		if relayLeg {
 			return
 		}
-		c.conn.Close()
+		c.stopOutput()
 		s.mu.Lock()
 		var out []push
 		for _, r := range c.rooms {
 			out = append(out, s.leave(r, c)...)
 		}
 		delete(s.clients, c.id)
-		s.mu.Unlock()
 		s.flush(out)
+		s.mu.Unlock()
+		c.waitOutput()
 		s.log.Info("disconnected", "client", c.id, "online_id", c.onlineID)
 	}()
 
@@ -333,7 +331,11 @@ func (s *Server) handle(c *client, t byte, p []byte) {
 	// commID is cleared under s.mu by another client's HELLO that takes over this player's name, so it is read under s.mu too.
 	s.mu.Lock()
 	noHello := c.commID == ""
+	closed := c.outputClosed()
 	s.mu.Unlock()
+	if closed {
+		return
+	}
 	if t != msgHello && noHello {
 		s.log.Debug("request before hello", "client", c.id, "type", t)
 		c.send(msgError, errReply(req, errNoHello))
@@ -350,6 +352,10 @@ func (s *Server) handle(c *client, t byte, p []byte) {
 	}
 
 	s.mu.Lock()
+	if c.outputClosed() {
+		s.mu.Unlock()
+		return
+	}
 	var reply []byte
 	var rt byte
 	var out []push
@@ -397,10 +403,9 @@ func (s *Server) handle(c *client, t byte, p []byte) {
 		s.log.Warn("unknown request type", "client", c.id, "online_id", c.onlineID, "type", t)
 		rt, reply = msgError, errReply(req, errBadRequest)
 	}
-	s.mu.Unlock()
-
 	c.send(rt, reply)
 	s.flush(out)
+	s.mu.Unlock()
 }
 
 func (s *Server) hello(c *client, req uint32, r *reader) (byte, []byte) {
@@ -425,7 +430,7 @@ func (s *Server) hello(c *client, req uint32, r *reader) (byte, []byte) {
 		}
 		s.log.Info("reconnected", "client", c.id, "replaces", o.id, "online_id", onlineID)
 		o.commID = "" // no longer counts; its run loop cleans up once Close lands
-		o.conn.Close()
+		o.stopOutput()
 	}
 	c.commID, c.onlineID, c.p2pPort = commID, onlineID, port
 	var tok [4]byte
@@ -447,18 +452,10 @@ func (s *Server) hello(c *client, req uint32, r *reader) (byte, []byte) {
 	return msgHelloAck, w.b
 }
 
+// flush queues pushes while s.mu is held, preserving state-transition order.
 func (s *Server) flush(out []push) {
 	for _, m := range out {
 		m.to.send(m.t, m.p)
-	}
-}
-
-func (c *client) send(t byte, p []byte) {
-	c.sendMu.Lock()
-	defer c.sendMu.Unlock()
-	c.conn.SetWriteDeadline(time.Now().Add(writeTimeout))
-	if err := writePacket(c.conn, t, p); err != nil {
-		c.conn.Close() // the reader goroutine sees it and cleans up (a timeout lands here too)
 	}
 }
 
