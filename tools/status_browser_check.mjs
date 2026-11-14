@@ -41,12 +41,22 @@ try {
   await navigate();
   await evaluate('localStorage.clear()');
   await navigate();
-  ok(await evaluate("getComputedStyle(document.documentElement).backgroundColor === 'rgb(40, 40, 40)'"), 'project dark palette');
+  ok(await evaluate("getComputedStyle(document.documentElement).backgroundColor === 'rgb(16, 17, 19)'"), 'project dark palette');
   ok(await evaluate("document.title === 're:psn · server status'"), 'updated title');
   ok(await evaluate("document.querySelector('#rooms-body').textContent.includes('alice')"), 'real loopback room is rendered');
   ok(await evaluate("document.querySelector('#boards-body').textContent.includes('100')"), 'real loopback score is rendered');
   ok(await evaluate("document.querySelector('#boards-panel').hidden"), 'rooms tab starts selected');
   ok(await fits(), 'desktop fits');
+  ok(await evaluate("document.querySelector('#host-view').hidden"), 'Play hides operator counters');
+  await click('button[data-role="host"]');
+  ok(await evaluate("!document.querySelector('#host-view').hidden && document.querySelector('#status-tabs').hidden"), 'Host focuses real server observation');
+  ok(await evaluate("document.querySelector('#host-view').textContent.includes('read-only') || document.querySelector('#host-view').textContent.includes('administrative')"), 'Host grants no administration');
+  await navigate();
+  ok(await evaluate("document.querySelector('button[data-role=host]').getAttribute('aria-pressed')==='true'"), 'Host view preference survives reload');
+  await click('button[data-role="both"]');
+  ok(await evaluate("!document.querySelector('#host-view').hidden && !document.querySelector('#status-tabs').hidden"), 'Both shows player views and host counters');
+  await click('button[data-role="play"]');
+
   await contrast();
   await screenshot('desktop-dark.png');
   const readmeFrame = await framing.prepareStatusScreenshot({evaluate, viewport});
@@ -81,7 +91,7 @@ try {
   await click('button[data-theme="dark"]');
   await evaluate("document.querySelector('#appearance').open=true; document.querySelector('#colour-text').value='#282828';document.querySelector('#colours').requestSubmit()");
   ok(await evaluate("document.querySelector('#appearance-message').textContent.includes('4.5:1')"), 'unreadable custom colour rejected');
-  ok(await evaluate("getComputedStyle(document.documentElement).color === 'rgb(212, 190, 152)'"), 'failed custom change retains good theme');
+  ok(await evaluate("getComputedStyle(document.documentElement).color === 'rgb(159, 158, 153)'"), 'failed custom change retains good theme');
   await evaluate("document.querySelector('#colour-text').value='#ffffff';document.querySelector('#colour-page').value='#181818';document.querySelector('#colours').requestSubmit()");
   ok(await evaluate("getComputedStyle(document.documentElement).backgroundColor === 'rgb(24, 24, 24)' && getComputedStyle(document.documentElement).color === 'rgb(255, 255, 255)'"), 'valid custom colours apply under CSP');
   await navigate();

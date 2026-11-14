@@ -332,3 +332,11 @@ the second cannot bind; `./re-psn-vX.Y.Z-x86_64.AppImage -replace` stops the fir
 - **Backup:** there is nothing to back up.
 - **Upgrade:** stop the server, rebuild it, start it again. Titles reconnect when
   they next go online.
+
+## Status-page views
+
+The server's opt-in status page offers Play, Host and Both views. Play focuses on published rooms, Host on server
+counters and limits, and Both shows both groups. These are local viewing preferences, not authentication roles or
+server permissions. The page stays read-only: choosing Host does not start a listener or grant administration.
+Its appearance follows the compact dark framing and muted section colors of [undecuple/me](https://undecuple.github.io/me/),
+with readable focus states, narrow layouts and reduced-motion support.

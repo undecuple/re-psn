@@ -160,3 +160,26 @@ legend { color: var(--accent); }
   .terminal, button, th, td, fieldset { border-color: CanvasText; }
   button[aria-selected="true"], button[aria-pressed="true"] { outline: 2px solid Highlight; }
 }
+
+/* Match undecuple/me's compact metadata and double frames. Interactive borders
+   keep the stronger contrast already required by this status interface. */
+:root { font-family: "Perfect DOS VGA 437", "Px437 IBM VGA 8x16", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; line-height: 1.4; }
+.terminal { border: 3px double var(--grey0); }
+.titlebar { border-bottom: 3px double var(--grey0); padding: 12px; }
+.role-controls { display: flex; flex-wrap: wrap; gap: .4rem; }
+button[aria-pressed="true"], button[aria-selected="true"] { color: var(--page); background: var(--text); border-color: var(--text); box-shadow: none; }
+button[aria-selected="true"] span { color: var(--page); }
+.role-guidance { margin: 12px; padding: 8px 12px; border: 3px double var(--grey0); background: var(--surface); font-size: .875rem; }
+.role-guidance strong { color: var(--strong); font-weight: normal; letter-spacing: .1em; }
+.role-guidance p { color: var(--muted); margin: .4rem 0 0; }
+.host-view { border-bottom: 3px double var(--grey0); }
+.host-note { padding: 0 12px; color: var(--muted); font-size: .875rem; }
+.host-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; margin: 0; padding: 12px; }
+.host-metrics dt { color: var(--muted); font-size: .75rem; }
+.host-metrics dt::after { content: " ........"; color: var(--grey0); }
+.host-metrics dd { margin: .25rem 0 0; color: var(--strong); overflow-wrap: anywhere; }
+.file-head h2 { display: flex; align-items: center; gap: 10px; color: var(--strong); font-weight: normal; letter-spacing: .1em; }
+.file-head h2::before { content: ""; width: 36px; height: 14px; flex: none; background: linear-gradient(90deg, var(--text) 0 25%, var(--grey1) 25% 50%, var(--grey0) 50% 75%, var(--bg3) 75%); }
+.file-head h2 > span { display: none; }
+@media (max-width: 760px) { .host-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 400px) { .host-metrics { grid-template-columns: 1fr; } }
