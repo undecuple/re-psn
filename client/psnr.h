@@ -167,7 +167,11 @@ int  psnr_probe_reply(const void* buf, size_t len, uint8_t ip[4], uint16_t* port
  *   relay, psnr_stream_connect opens one to it; the peer gets a STREAM_OFFER
  *   push (stream_id u32 | from_user u32 | vport u16) and answers with
  *   psnr_stream_accept. Both return a connected, blocking socket carrying the
- *   stream's raw bytes (a SOCKET on Windows, an fd elsewhere), or -1. */
+ *   stream's raw bytes (a SOCKET on Windows, an fd elsewhere), or -1. A nonnegative
+ *   timeout_ms bounds the complete TCP connect, setup write and READY reply; fragments
+ *   share that one budget, including retries after interrupted waits. A negative
+ *   value waits without a deadline. The host's connect-policy callback runs
+ *   before that budget starts. */
 int     psnr_relay_available(const psnr_client* c);
 size_t  psnr_relay_wrap(const psnr_client* c, uint32_t to_user, const void* payload, size_t len,
                         uint8_t* out, size_t cap);   /* 0 if it doesn't fit */

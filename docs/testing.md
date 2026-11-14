@@ -42,6 +42,11 @@ The runner uses `tools/check_conformance.py` to require the exact package/test n
 `-count=1`, and forwards test output. The app module uses `-mod=readonly`. There is no option for an external target.
 The route-notification test does not establish that relayed gameplay data works.
 
+The full Linux CI suite also requires `TestCClientStreamDeadline`, `TestCClientConnectWait` and
+`TestCClientRelayPair`. These check fragmented or stalled setup replies, interrupted connection waits sharing one
+deadline, and two native C clients exchanging binary bytes through the real TCP relay. The pair test checks blocking
+socket mode and cleanup after either leg closes; it does not run a game or exercise a router's NAT behavior.
+
 ## Isolation and cleanup
 
 The existing fixtures explicitly bind loopback: the C test uses `127.0.0.1`, and the app tests select free TCP/UDP

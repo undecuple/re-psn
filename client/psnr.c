@@ -296,9 +296,10 @@ static int remaining_ms(uint64_t deadline)
     return now < deadline ? (int)(deadline - now) : 0;
 }
 
-/* connect() that waits at most timeout_ms for the handshake. 0 when connected. The socket is
- * left non-blocking. */
-static int connect_bounded(sock_t s, const struct addrinfo* ai, int timeout_ms)
+/* Connect within the caller's monotonic deadline, retrying interrupted waits
+ * without restarting its budget. A negative timeout waits indefinitely. The
+ * socket is left non-blocking; 0 means connected. */
+static int connect_bounded(sock_t s, const struct addrinfo* ai, uint64_t deadline, int timeout_ms)
 {
     pollfd_t pf;
     int err = 0;
@@ -307,7 +308,19 @@ static int connect_bounded(sock_t s, const struct addrinfo* ai, int timeout_ms)
     if (connect(s, ai->ai_addr, (int)ai->ai_addrlen) == 0) return 0;
     if (!CONNECT_PENDING()) return -1;
     pf.fd = s; pf.events = POLLOUT; pf.revents = 0;
-    if (poll(&pf, 1, timeout_ms) <= 0) return -1;
+    for (;;) {
+        int wait = timeout_ms < 0 ? -1 : remaining_ms(deadline);
+        int r;
+        if (wait == 0) return -1;
+        r = poll(&pf, 1, wait);
+        if (r > 0) break;
+        if (r == 0) return -1;
+#ifdef _WIN32
+        if (WSAGetLastError() != WSAEINTR) return -1;
+#else
+        if (errno != EINTR) return -1;
+#endif
+    }
     if (getsockopt(s, SOL_SOCKET, SO_ERROR, (char*)&err, &el) != 0 || err) return -1;
     return 0;
 }
@@ -346,7 +359,7 @@ static psnr_client* connect_impl(const char* host, uint16_t port,
         s = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
         if (s == BAD_SOCK) continue;
         if (timeout_ms < 0 ? connect(s, ai->ai_addr, (int)ai->ai_addrlen) == 0
-                           : connect_bounded(s, ai, remaining_ms(deadline)) == 0) break;
+                           : connect_bounded(s, ai, deadline, timeout_ms) == 0) break;
         sock_close(s);
         s = BAD_SOCK;
     }
@@ -493,52 +506,89 @@ int psnr_relay_unwrap_from(const psnr_client* c, const uint8_t src_ip[4], uint16
     return psnr_relay_unwrap(buf, len, from_user, payload, payload_len);
 }
 
+/* Transfer a setup frame on a non-blocking relay leg. Every wait and every
+ * fragment shares the same deadline; a partial reply cannot restart it. */
+static int stream_transfer(sock_t s, uint8_t* p, size_t n, int sending,
+                            uint64_t deadline, int timeout_ms)
+{
+    while (n) {
+        pollfd_t pf;
+        int k, wait;
+        if (timeout_ms >= 0 && !remaining_ms(deadline)) return -1;
+        k = sending ? send(s, (const char*)p, (int)n, 0) : recv(s, (char*)p, (int)n, 0);
+        if (k == 0) return -1;
+        if (k > 0) { p += k; n -= (size_t)k; continue; }
+#ifdef _WIN32
+        if (WSAGetLastError() == WSAEINTR) continue;
+#else
+        if (errno == EINTR) continue;
+#endif
+        if (!WOULD_BLOCK()) return -1;
+        wait = timeout_ms < 0 ? -1 : remaining_ms(deadline);
+        if (wait == 0) return -1;
+        pf.fd = s; pf.events = sending ? POLLOUT : POLLIN; pf.revents = 0;
+        k = poll(&pf, 1, wait);
+        if (k == 0) return -1;
+        if (k < 0) {
+#ifdef _WIN32
+            if (WSAGetLastError() == WSAEINTR) continue;
+#else
+            if (errno == EINTR) continue;
+#endif
+            return -1;
+        }
+    }
+    return 0;
+}
+
 /* A relay leg: a fresh connection to the server whose first message is
  * STREAM_CONNECT or STREAM_ACCEPT, returned once the server says READY. */
 static int64_t stream_leg(const psnr_client* c, uint8_t type, const uint8_t* body, uint16_t len,
                           int timeout_ms)
 {
     struct sockaddr_in a;
+    struct addrinfo ai;
     uint8_t f[64], hdr[3];
-    pollfd_t pfd;
+    uint64_t deadline;
     int one = 1;
     sock_t s;
     if (!policy_allows(PSNR_PURPOSE_STREAM, NULL, c->server_ip, c->server_port)) return -1;
+    deadline = now_ms() + (uint64_t)(timeout_ms > 0 ? timeout_ms : 0);
     s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (s == BAD_SOCK) return -1;
     memset(&a, 0, sizeof(a));
     a.sin_family = AF_INET;
     memcpy(&a.sin_addr, c->server_ip, 4);
     a.sin_port = htons(c->server_port);
-    if (connect(s, (struct sockaddr*)&a, sizeof(a)) != 0) goto fail;
+    memset(&ai, 0, sizeof(ai));
+    ai.ai_addr = (struct sockaddr*)&a;
+    ai.ai_addrlen = sizeof(a);
+    if (connect_bounded(s, &ai, deadline, timeout_ms) != 0) goto fail;
     setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (const char*)&one, sizeof(one));
 
     f[0] = type;
     psnr_put16(f + 1, (uint16_t)(4 + len));
     psnr_put32(f + 3, 1);
     memcpy(f + 7, body, len);
-    if (send(s, (const char*)f, 7 + len, 0) != 7 + len) goto fail;
+    if (stream_transfer(s, f, 7u + len, 1, deadline, timeout_ms) != 0) goto fail;
 
     /* The reply: READY, or an ERROR. The server waits up to 10 s for the
      * other side to accept. */
-    for (int got = 0; got < 3; ) {
-        pfd.fd = s;
-        pfd.events = POLLIN;
-        pfd.revents = 0;
-        if (poll(&pfd, 1, timeout_ms) <= 0) goto fail;
-        int n = (int)recv(s, (char*)hdr + got, 3 - got, 0);
-        if (n <= 0) goto fail;
-        got += n;
-    }
+    if (stream_transfer(s, hdr, sizeof(hdr), 0, deadline, timeout_ms) != 0) goto fail;
     uint16_t plen = psnr_get16(hdr + 1);
     for (uint16_t got = 0; got < plen; ) {   /* req u32 (+ an error code) */
         uint8_t skip[16];
         int want = plen - got > (int)sizeof(skip) ? (int)sizeof(skip) : plen - got;
-        int n = (int)recv(s, (char*)skip, want, 0);
-        if (n <= 0) goto fail;
-        got = (uint16_t)(got + n);
+        if (stream_transfer(s, skip, (size_t)want, 0, deadline, timeout_ms) != 0) goto fail;
+        got = (uint16_t)(got + want);
     }
     if (hdr[0] != PSNR_STREAM_READY) goto fail;
+    /* The caller owns a blocking raw stream after setup, as before. */
+#ifdef _WIN32
+    { u_long nb = 0; if (ioctlsocket(s, FIONBIO, &nb) != 0) goto fail; }
+#else
+    { int flags = fcntl(s, F_GETFL, 0); if (flags < 0 || fcntl(s, F_SETFL, flags & ~O_NONBLOCK) != 0) goto fail; }
+#endif
     return (int64_t)s;
 fail:
     sock_close(s);
