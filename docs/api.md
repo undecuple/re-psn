@@ -4,6 +4,9 @@ Game clients talk to the server over one TCP connection (default port 36100).
 The server is in `server/`, the C client is in `client/psnr.h`, and both are
 tested against each other (`server/client_test.go`).
 
+The desktop's [profile/trophy/social framework](app-framework-api.md) has its own versioned local broker and HTTPS
+contracts. Its identities do not authenticate sessions on the game protocol described here.
+
 ## Contents
 
 - [Framing](#framing)

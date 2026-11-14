@@ -1,0 +1,10 @@
+{
+  "title_id": "RE-PSN-SDK-DEMO",
+  "name": "Recomp SDK demo (synthetic)",
+  "revision": "1",
+  "trophies": [
+    {"id": 1, "name": "First steps", "description": "Report a synthetic developer event.", "grade": "bronze"},
+    {"id": 2, "name": "Finish the journey", "description": "Report a synthetic completion event.", "grade": "gold"},
+    {"id": 3, "name": "Every challenge", "description": "Report a synthetic collection event.", "grade": "platinum"}
+  ]
+}
