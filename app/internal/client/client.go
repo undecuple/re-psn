@@ -68,9 +68,9 @@ type frame struct {
 
 // Conn is one connection to a server. Its methods are safe for concurrent use.
 type Conn struct {
-	nc      net.Conn
-	wmu     sync.Mutex
-	nextReq atomic.Uint32
+	nc        net.Conn
+	writeLock chan struct{} // one writer; waiting for it observes the request context
+	nextReq   atomic.Uint32
 
 	rtt       rttTracker  // round trips of recent calls (rtt.go)
 	reportRTT atomic.Bool // Heartbeat carries the smallest of them
@@ -104,12 +104,13 @@ func Dial(ctx context.Context, addr string) (*Conn, error) {
 
 func newConn(nc net.Conn) *Conn {
 	c := &Conn{
-		nc:      nc,
-		waiting: map[uint32]chan frame{},
-		wake:    make(chan struct{}, 1),
-		done:    make(chan struct{}),
-		closed:  make(chan struct{}),
-		events:  make(chan Push),
+		nc:        nc,
+		writeLock: make(chan struct{}, 1),
+		waiting:   map[uint32]chan frame{},
+		wake:      make(chan struct{}, 1),
+		done:      make(chan struct{}),
+		closed:    make(chan struct{}),
+		events:    make(chan Push),
 	}
 	go c.readLoop()
 	go c.pump()
@@ -239,6 +240,9 @@ func (c *Conn) endErr() error {
 
 // send writes one request frame: the request id, then body's fields.
 func (c *Conn) send(ctx context.Context, t byte, req uint32, body func(*encoder)) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	e := &encoder{}
 	e.u32(req)
 	if body != nil {
@@ -248,11 +252,37 @@ func (c *Conn) send(ctx context.Context, t byte, req uint32, body func(*encoder)
 	if !ok {
 		deadline = time.Now().Add(DefaultTimeout)
 	}
-	c.wmu.Lock()
-	defer c.wmu.Unlock()
+	select {
+	case c.writeLock <- struct{}{}:
+		defer func() { <-c.writeLock }()
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-c.done:
+		return c.endErr()
+	}
+	// A cancellation can race with acquiring the writer. Refuse it before
+	// touching the socket, so queued requests cannot send after giving up.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	c.nc.SetWriteDeadline(deadline)
+	interrupted := make(chan struct{})
+	stop := context.AfterFunc(ctx, func() {
+		c.nc.SetWriteDeadline(time.Now())
+		close(interrupted)
+	})
+	defer func() {
+		// Finish a running cancellation callback before releasing the writer;
+		// otherwise it could expire the following request's deadline.
+		if !stop() {
+			<-interrupted
+		}
+	}()
 	if err := writeFrame(c.nc, t, e.b); err != nil {
 		c.nc.Close() // a part-written frame leaves the stream unusable
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		return err
 	}
 	return nil
