@@ -2,6 +2,25 @@
 (() => {
   'use strict';
   const key = 're-psn-status-appearance-v1';
+  const roleKey = 're-psn-status-role-v1';
+  const statusRole = value => ['play', 'host', 'both'].includes(value) ? value : 'play';
+  function hostRows(data) {
+    const count = value => (typeof value === 'number' && Number.isFinite(value) || typeof value === 'string' && /^\d+$/.test(value)) ? String(value) : 'Not reported';
+    const limit = value => value === 0 ? 'Unlimited' : count(value);
+    const limits = data.limits || {}, refusals = data.tcp_refusals || {};
+    const payload = count(data.relay_bytes);
+    return [
+      ['Version', typeof data.version === 'string' ? data.version : 'Not reported'],
+      ['Relay', data.relay === true ? 'Enabled' : data.relay === false ? 'Disabled' : 'Not reported'],
+      ['Relay payload', payload === 'Not reported' ? payload : payload + ' bytes'],
+      ['Connection limit', limit(limits.max_conns)],
+      ['Rooms per player', limit(limits.max_player_rooms)],
+      ['Requests / second', limit(limits.max_req_rate)],
+      ['Refused connections', count(refusals.conns)],
+      ['Per-address refusals', count(refusals.conns_per_addr)],
+      ['Request-rate refusals', count(refusals.req_rate)]
+    ];
+  }
   const slots = ['page', 'surface', 'text', 'muted', 'accent', 'good', 'warn', 'bad'];
   const hex = value => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value);
   function contrast(a, b) {
@@ -44,7 +63,7 @@
     }
     return clean;
   }
-  if (typeof module !== 'undefined' && module.exports) module.exports = {contrast, colourError, settings, parseStats};
+  if (typeof module !== 'undefined' && module.exports) module.exports = {contrast, colourError, settings, parseStats, statusRole, hostRows};
   if (typeof document === 'undefined') return;
 
   const root = document.documentElement;
@@ -119,7 +138,11 @@
 
   const tabs = [byID('overview-tab'), byID('rooms-tab'), byID('boards-tab')];
   const sections = [byID('rooms-panel'), byID('boards-panel')];
+  let role;
+  try { role = statusRole(localStorage.getItem(roleKey)); } catch { role = 'play'; }
+  let selectedTab = byID('rooms-tab');
   function selectTab(tab) {
+    selectedTab = tab;
     for (const item of tabs) {
       const selected = item === tab;
       item.setAttribute('aria-selected', String(selected));
@@ -133,6 +156,27 @@
       section.hidden = !selected;
       byID(selected ? tab.getAttribute('aria-controls') : 'overview-view').append(section);
     }
+  }
+  function applyRole() {
+    selectTab(selectedTab);
+    const player = role !== 'host';
+    byID('status-tabs').hidden = !player;
+    byID('role-guidance').hidden = !player;
+    byID('host-view').hidden = role === 'play';
+    if (!player) for (const tab of tabs) byID(tab.getAttribute('aria-controls')).hidden = true;
+    for (const button of document.querySelectorAll('button[data-role]')) button.setAttribute('aria-pressed', String(button.dataset.role === role));
+  }
+  for (const button of document.querySelectorAll('button[data-role]')) button.addEventListener('click', () => {
+    role = statusRole(button.dataset.role); applyRole();
+    try { localStorage.setItem(roleKey, role); } catch { /* Current view still works. */ }
+  });
+  function updateHost(data) {
+    const fragment = document.createDocumentFragment();
+    for (const [label, value] of hostRows(data)) {
+      const row = document.createElement('div'), dt = document.createElement('dt'), dd = document.createElement('dd');
+      dt.textContent = label; dd.textContent = value; row.append(dt, dd); fragment.append(row);
+    }
+    byID('host-metrics').replaceChildren(fragment);
   }
   tabs.forEach((tab, index) => {
     tab.addEventListener('click', () => selectTab(tab));
@@ -177,6 +221,7 @@
       if (!response.ok) throw new Error('HTTP ' + response.status);
       const data = parseStats(await response.text());
       if (!Array.isArray(data.rooms) || !Array.isArray(data.boards)) throw new Error('Invalid status response');
+      updateHost(data);
       for (const [id, value] of [['uptime', data.uptime], ['clients', data.clients], ['connections', data.connections_total], ['unlisted', data.unlisted_rooms], ['rooms-count', data.rooms.length], ['boards-count', data.boards.length]]) byID(id).textContent = String(value);
       rows('rooms-body', data.rooms, 'No public rooms. A room appears here when a player hosts one.', room => [cell(room.id, 'number'), cell(room.label || room.title, 'identifier'), cell(`${(room.members || []).length}/${room.max}${room.verified ? ` (${room.verified} verified)` : ''} ${(room.members || []).map((name, i) => name + (room.rtt_ms && Number.isInteger(room.rtt_ms[i]) ? ` (${room.rtt_ms[i]} ms)` : '')).join(' ')}`), cell(room.age)]);
       rows('boards-body', data.boards, 'No leaderboards. Scores appear after a player submits one.', board => [cell(board.label || board.title, 'identifier'), cell(board.board, 'number'), cell(board.entries), cell(board.entries ? `${board.leader} (${board.best})` : 'No scores yet')]);
@@ -196,8 +241,8 @@
     if (!state.hasAttribute('data-error')) state.textContent = paused ? 'Automatic refresh paused · snapshot retained' : 'Automatic refresh · every 5 seconds';
     if (!paused) refresh();
   });
-  apply(); selectTab(byID('rooms-tab'));
-  for (const id of ['theme-controls', 'toolbar', 'appearance']) byID(id).hidden = false;
+  apply(); applyRole();
+  for (const id of ['theme-controls', 'role-controls', 'toolbar', 'appearance']) byID(id).hidden = false;
   byID('fallback-refresh').remove();
   setInterval(() => { if (!paused && !document.hidden) refresh(); }, 5000);
   addEventListener('pagehide', () => { if (activeRequest) activeRequest.abort(); });

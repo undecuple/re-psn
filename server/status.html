@@ -14,6 +14,11 @@
   <header class="titlebar">
     <h1><span class="prompt" aria-hidden="true">&gt;_</span> re:psn <span class="muted">/ server status</span></h1>
     <span class="version">v{{version}} · read-only</span>
+    <div id="role-controls" class="role-controls" role="group" aria-label="View intent" hidden>
+      <button type="button" data-role="play" aria-pressed="true">Play / connect</button>
+      <button type="button" data-role="host" aria-pressed="false">Host</button>
+      <button type="button" data-role="both" aria-pressed="false">Both</button>
+    </div>
     <div id="theme-controls" class="theme-controls" role="group" aria-label="Colour mode" hidden>
       <button type="button" data-theme="system" aria-pressed="true">System</button>
       <button type="button" data-theme="light" aria-pressed="false">Light</button>
@@ -27,7 +32,7 @@
     <p><span class="label">unlisted rooms</span> <strong id="unlisted">{{.Unlisted}}</strong></p>
   </div>
   <div id="toolbar" class="toolbar" hidden>
-    <div role="tablist" aria-label="Status view">
+    <div id="status-tabs" role="tablist" aria-label="Status view">
       <button id="overview-tab" role="tab" aria-selected="false" aria-controls="overview-view" tabindex="-1">Overview</button>
       <button id="rooms-tab" role="tab" aria-selected="true" aria-controls="rooms-view" tabindex="0">Rooms <span id="rooms-count">{{len .Rooms}}</span></button>
       <button id="boards-tab" role="tab" aria-selected="false" aria-controls="boards-view" tabindex="-1">Leaderboards <span id="boards-count">{{len .Boards}}</span></button>
@@ -38,6 +43,12 @@
     </div>
   </div>
   <main id="main">
+    <aside id="role-guidance" class="role-guidance" hidden><strong>Play / connect</strong><p>This is a read-only server snapshot. Your game connects directly; the optional local client adds trophies and friends.</p></aside>
+    <section id="host-view" class="host-view" aria-labelledby="host-heading" hidden>
+      <div class="file-head"><h2 id="host-heading"><span aria-hidden="true">// </span>Host observation</h2><span>read-only · no administrative authority</span></div>
+      <p class="host-note">Selecting Host changes this browser's view only. Starting, stopping and configuring a server require its operator's local controls.</p>
+      <dl id="host-metrics" class="host-metrics"><div><dt>Snapshot</dt><dd>Refresh to load host counters.</dd></div></dl>
+    </section>
     <div id="overview-view" role="tabpanel" aria-labelledby="overview-tab" tabindex="0">
     <section id="rooms-panel" aria-labelledby="rooms-heading" tabindex="0">
       <div class="file-head"><h2 id="rooms-heading"><span aria-hidden="true">// </span>Rooms</h2><span>public rooms</span></div>
