@@ -372,9 +372,9 @@ func TestConformanceErrors(t *testing.T) {
 	})
 	t.Run("frame shorter than a request id", func(t *testing.T) {
 		// Not in docs/api.md: the server drops such a frame without a reply and keeps the connection.
-		c.wmu.Lock()
+		c.writeLock <- struct{}{}
 		err := writeFrame(c.nc, typeSearchRooms, []byte{0, 1})
-		c.wmu.Unlock()
+		<-c.writeLock
 		if err != nil {
 			t.Fatal(err)
 		}

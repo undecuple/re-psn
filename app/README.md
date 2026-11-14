@@ -210,6 +210,11 @@ rtt       0.2 ms (one SEARCH_ROOMS request)
 OK
 ```
 
+The app's Go protocol client observes request cancellation while waiting to write and during a blocked write.
+An already canceled request is refused before writing. When cancellation interrupts a write, the client closes the
+connection because a partial frame cannot be reused safely; canceling a queued request leaves the active writer and
+connection running. A completed request may already have been applied by the server; cancellation does not undo it.
+
 ## Settings file
 
 `re-psn.ini` lives in `$XDG_CONFIG_HOME/re-psn/` when that variable holds an absolute path, else in `~/.config/re-psn/`; on Windows
