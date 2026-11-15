@@ -355,18 +355,29 @@
 <h3>Unreleased</h3>
 <h4>Added</h4>
 <ul>
+<li>**Desktop app:** an optional local browser interface, opened by default (<code>tui</code> and the command-line actions stay).</li>
+<li>**Desktop app:** profiles, trophies and friends in the desktop: Profile, Trophies and Friends panes, explicit profile, trophy and friend command-line actions, and host-local companion administration.</li>
+<li>**Desktop app:** an app framework (<code>app/framework</code>): a bounded, atomically written local profile and trophy store, a portable identity with encrypted backup and restore (AES-GCM, key from a passphrase of at least 12 ...</li>
+<li>**Server:** the read-only status page has Play, Host and Both views (a preference kept in the browser; Host grants no permission).</li>
 <li>**Docs and tooling:** <code>CITATION.cff</code>: citation metadata that GitHub shows as &quot;Cite this repository&quot; (title, maintainer, repository and website, MIT licence, and the upstream psnr project as a reference); the repository ...</li>
 <li>**Docs and tooling:** <code>BUILDING.md</code>: a short page that points to where each part is built and tested (the server, the desktop app, the C client, the container image, release archives and the AppImage); the README&#x27;s ...</li>
 <li>**Docs and tooling:** <code>KNOWN_ISSUES.md</code>: what is known not to work or not to have been checked (early software, binaries and scripts not run on every platform, the experimental admin API, the relay off by default and ...</li>
 </ul>
 <h4>Changed</h4>
 <ul>
+<li>**Desktop app:** the app archives now contain the matching <code>re-psn-host</code> (the server, under that name) next to <code>re-psn-app</code>, and <code>install.sh</code> and <code>install.ps1</code> install both with <code>--app</code> / <code>-App</code>.</li>
 <li>**Docs and tooling:** the issue chooser&#x27;s link to the upstream issues says re-psn began as a fork of psnr, instead of &quot;This is a fork.&quot; (<code>.github/ISSUE_TEMPLATE/config.yml</code>; the link and its target are unchanged).</li>
 <li>**Docs and tooling:** the README&#x27;s longest sentences are split (the fork history, the overview, the session steps, the desktop app and build paragraphs, the security list, the roadmap line and the closing paragraph); no ...</li>
 <li>**Docs and tooling:** <code>docs/installing.md</code> starts with &quot;Install, step by step&quot;: numbered steps for Linux and for Windows, each with what the script prints, what to do when the folder is not on <code>PATH</code>, and how a failure ...</li>
 <li>**Docs and tooling:** the wording that called re-psn &quot;a fork&quot; in <code>CONTRIBUTING.md</code>, <code>AGENTS.md</code>, <code>NOTICE.md</code>, <code>SECURITY.md</code> and the website now says it began as a fork of psnr and is a repository of its own; the credit ...</li>
 <li>**Docs and tooling:** the README&#x27;s first screen is centred (banner, one-line description, badges) with a links line (Download, Quick start, Features, Install, Configuration, Documentation, Website, Report an issue), and ...</li>
 <li>**Docs and tooling:** the README and <code>docker/README.md</code> name v0.6.0 and its container image as the newest, and the features list says <code>since</code> 0.6.0, not <code>main</code>, for four rows that shipped in it (<code>-no-peer-titles</code>, the ...</li>
+</ul>
+<h4>Fixed</h4>
+<ul>
+<li>**Desktop app:** a protocol request now honors its context while it waits for and uses the connection: acquiring the writer respects cancellation, cancellation is checked before a socket write, and a blocked write is ...</li>
+<li>**Client:** the whole setup of <code>psnr_stream_connect</code> and <code>psnr_stream_accept</code> now runs under one monotonic deadline: an interrupted wait is retried with the time left (also for <code>psnr_connect_timeout</code>), partial reads and ...</li>
+<li>**Server:** replies and pushes to a connection now leave in the order the room changed.</li>
 </ul>
 <h3>0.6.0 (2026-11-12)</h3>
 <p>21 under Added, 18 under Fixed, 10 under Changed.</p>
