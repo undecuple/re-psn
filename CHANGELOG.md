@@ -7,6 +7,7 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- **Docs and tooling:** the file list in the release notes (`.github/workflows/release.yml`) says that the `re-psn-app` archives also hold the matching `re-psn-host` server binary and that `install.sh --app` and `install.ps1 -App` install both; before, it described the app archive as one binary. Only the notes text changes: no asset, name or check.
 - **Docs and tooling:** the README and `docker/README.md` name v0.7.0 and its container image as the newest (its manifest lists amd64 and arm64 and is readable without a login). No row of the features list changes its `since` value: the website row stays at `main`, as the site is deployed from `main`, not released.
 
 ## [0.7.0] - 2026-11-15
