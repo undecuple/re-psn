@@ -1297,22 +1297,33 @@
    "date": "",
    "sections": {
     "Added": [
+     "**Desktop app:** an optional local browser interface, opened by default (`tui` and the command-line actions stay).",
+     "**Desktop app:** profiles, trophies and friends in the desktop: Profile, Trophies and Friends panes, explicit profile, trophy and friend command-line actions, and host-local companion administration.",
+     "**Desktop app:** an app framework (`app/framework`): a bounded, atomically written local profile and trophy store, a portable identity with encrypted backup and restore (AES-GCM, key from a passphrase of at least 12 ...",
+     "**Server:** the read-only status page has Play, Host and Both views (a preference kept in the browser; Host grants no permission).",
      "**Docs and tooling:** `CITATION.cff`: citation metadata that GitHub shows as \"Cite this repository\" (title, maintainer, repository and website, MIT licence, and the upstream psnr project as a reference); the repository ...",
      "**Docs and tooling:** `BUILDING.md`: a short page that points to where each part is built and tested (the server, the desktop app, the C client, the container image, release archives and the AppImage); the README's ...",
      "**Docs and tooling:** `KNOWN_ISSUES.md`: what is known not to work or not to have been checked (early software, binaries and scripts not run on every platform, the experimental admin API, the relay off by default and ..."
     ],
     "Changed": [
+     "**Desktop app:** the app archives now contain the matching `re-psn-host` (the server, under that name) next to `re-psn-app`, and `install.sh` and `install.ps1` install both with `--app` / `-App`.",
      "**Docs and tooling:** the issue chooser's link to the upstream issues says re-psn began as a fork of psnr, instead of \"This is a fork.\" (`.github/ISSUE_TEMPLATE/config.yml`; the link and its target are unchanged).",
      "**Docs and tooling:** the README's longest sentences are split (the fork history, the overview, the session steps, the desktop app and build paragraphs, the security list, the roadmap line and the closing paragraph); no ...",
      "**Docs and tooling:** `docs/installing.md` starts with \"Install, step by step\": numbered steps for Linux and for Windows, each with what the script prints, what to do when the folder is not on `PATH`, and how a failure ...",
      "**Docs and tooling:** the wording that called re-psn \"a fork\" in `CONTRIBUTING.md`, `AGENTS.md`, `NOTICE.md`, `SECURITY.md` and the website now says it began as a fork of psnr and is a repository of its own; the credit ...",
      "**Docs and tooling:** the README's first screen is centred (banner, one-line description, badges) with a links line (Download, Quick start, Features, Install, Configuration, Documentation, Website, Report an issue), and ...",
      "**Docs and tooling:** the README and `docker/README.md` name v0.6.0 and its container image as the newest, and the features list says `since` 0.6.0, not `main`, for four rows that shipped in it (`-no-peer-titles`, the ..."
+    ],
+    "Fixed": [
+     "**Desktop app:** a protocol request now honors its context while it waits for and uses the connection: acquiring the writer respects cancellation, cancellation is checked before a socket write, and a blocked write is ...",
+     "**Client:** the whole setup of `psnr_stream_connect` and `psnr_stream_accept` now runs under one monotonic deadline: an interrupted wait is retried with the time left (also for `psnr_connect_timeout`), partial reads and ...",
+     "**Server:** replies and pushes to a connection now leave in the order the room changed."
     ]
    },
    "counts": {
-    "Added": 3,
-    "Changed": 6
+    "Added": 7,
+    "Changed": 7,
+    "Fixed": 3
    }
   },
   "latest": {
