@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-15
+
 ### Added
 - **Desktop app:** an optional local browser interface, opened by default (`tui` and the command-line actions stay). It has Play, Host and Both views and keeps the remote play target apart from local hosting: services start only when asked. It wires catalog approval, game grants for the trophy SDK, encrypted profile backup and restore, and the friend actions to its screens. The browser launch is private and one-use, reopening is authenticated, and a per-settings controller lock allows one controller per settings directory. Stopping the app stops only the host it started; a separately started server keeps running. This is a large change: the embedded screens, the authenticated controller, process ownership on Linux and Windows, the paired packaging and the regression tests belong to one workflow. See `docs/client-ui.md`. Not checked: hosting and the default-browser launch on native Windows, ARM hardware and a live game.
 - **Desktop app:** profiles, trophies and friends in the desktop: Profile, Trophies and Friends panes, explicit profile, trophy and friend command-line actions, and host-local companion administration. One desktop session owns its profile store, renews the game grant for its title and cancels social operations when it closes; an expired grant says it needs reissuing. The new native SDK and two-host tests are required in Linux CI and a Windows compile and link check of the SDK is added. See `docs/app-framework.md`.
