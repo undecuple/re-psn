@@ -20,6 +20,13 @@ fail=0
 ok() { pass=$((pass + 1)); printf 'ok   %s\n' "$1"; }
 bad() { fail=$((fail + 1)); printf 'FAIL %s\n' "$1"; [ ! -f "$T/out" ] || sed 's/^/     | /' "$T/out"; }
 check() { name="$1"; shift; if "$@"; then ok "$name"; else bad "$name"; fi; }
+names() {
+  for entry in "$1"/* "$1"/.[!.]* "$1"/..?*; do
+    if [ -e "$entry" ] || [ -L "$entry" ]; then
+      printf '%s\n' "${entry##*/}"
+    fi
+  done | LC_ALL=C sort | tr '\n' ' '
+}
 
 # The fake release: v9.9.9 is a draft and must be skipped; v0.4.0 is the newest published one.
 F="$T/fake"
@@ -223,7 +230,7 @@ check "--app: installs re-psn-app, not the server" \
 check "--app: mode 0755" test -n "$(find "$bin/re-psn-app" -perm 0755)"
 check "--app: matching host component installed byte for byte" cmp "$bin/re-psn-host" "$T/build/re-psn-v0.8.0-linux-amd64/re-psn"
 check "--app: host mode 0755" test -n "$(find "$bin/re-psn-host" -perm 0755)"
-check "--app: both components only, no temporary files" test "$(ls -A "$bin" | tr '\n' ' ')" = "re-psn-app re-psn-host "
+check "--app: both components only, no temporary files" test "$(names "$bin")" = "re-psn-app re-psn-host "
 check "--app: LICENSE, NOTICE.md and README.md copied" \
   test -f "$T/home/.local/share/re-psn-app/v0.8.0/README.md" -a -f "$T/home/.local/share/re-psn-app/v0.8.0/NOTICE.md"
 check "--app: no server folder created" test ! -e "$T/home/.local/share/re-psn"
@@ -291,7 +298,7 @@ chmod 0755 "$B/mv"
 run Linux x86_64 1000 --app --version v0.8.0 --dir "$pair"
 check "--app second replacement failure: exits nonzero" test "$rc" != 0
 check "--app second replacement failure: both old bytes restored" test "$(cat "$pair/re-psn-app")" = 'old app' -a "$(cat "$pair/re-psn-host")" = 'old host'
-check "--app rollback: no staging left" test "$(ls -A "$pair" | tr '\n' ' ')" = "re-psn re-psn-app re-psn-host "
+check "--app rollback: no staging left" test "$(names "$pair")" = "re-psn re-psn-app re-psn-host "
 # A failed rollback must retain recovery bytes and the lock, not hide the failure.
 cat > "$B/mv" <<EOF
 #!/bin/sh

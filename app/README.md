@@ -173,6 +173,8 @@ Windows private ACL: use a private per-user location.
 
 Starting the app again with the same settings reopens the existing controller through an authenticated local
 exchange; it does not duplicate or stop the owned host. Explicit conflicting profile/server selections are refused.
+Shutdown checks the current locator against its last published file identity before removing it. Windows captures
+that identity from the open publication file, including after republishing.
 The browser interface loads no remote fonts/scripts/assets. Its appearance follows [undecuple/me](https://undecuple.github.io/me/).
 
 For trusted local automation without opening the browser:

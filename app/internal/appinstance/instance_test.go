@@ -94,10 +94,73 @@ func TestInstanceAliasesShareOneOwner(t *testing.T) {
 		}
 		peer.Close()
 		future := Canonical(filepath.Join(link, "future", "settings.ini"))
-		if future != filepath.Join(dir, "future", "settings.ini") {
-			t.Fatal("missing descendant lost canonical ancestor")
+		parent, err := filepath.EvalSymlinks(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := filepath.Join(parent, "future", "settings.ini"); future != want {
+			t.Fatalf("missing descendant lost canonical ancestor: got %q, want %q", future, want)
 		}
 	})
+}
+
+func TestInstanceCloseRemovesOwnLatestPublication(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		count int
+	}{{"first", 1}, {"replacement", 2}} {
+		t.Run(tc.name, func(t *testing.T) {
+			owner, yes, err := Acquire(privateConfig(t))
+			if err != nil || !yes {
+				t.Fatal(yes, err)
+			}
+			defer owner.Close()
+			for n := 0; n < tc.count; n++ {
+				if err := owner.Publish(Locator{Profile: "synthetic"}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			owner.Close()
+			if _, err := os.Lstat(owner.path); !os.IsNotExist(err) {
+				t.Fatalf("owned publication remains after Close: %v", err)
+			}
+		})
+	}
+}
+
+func TestInstanceClosePreservesIdenticalReplacement(t *testing.T) {
+	owner, yes, err := Acquire(privateConfig(t))
+	if err != nil || !yes {
+		t.Fatal(yes, err)
+	}
+	defer owner.Close()
+	if err := owner.Publish(Locator{Profile: "synthetic"}); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(owner.path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.CreateTemp(filepath.Dir(owner.path), "replacement-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+	if _, err := f.Write(raw); err != nil {
+		f.Close()
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := replace(f.Name(), owner.path); err != nil {
+		t.Fatal(err)
+	}
+	owner.Close()
+	saved, err := os.ReadFile(owner.path)
+	if err != nil || string(saved) != string(raw) {
+		t.Fatalf("Close removed identical-content foreign publication: %v", err)
+	}
 }
 
 func TestInstancePrivatePublicationAndReplacementOwnership(t *testing.T) {

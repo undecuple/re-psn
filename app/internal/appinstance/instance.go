@@ -97,6 +97,12 @@ func (i *Instance) Publish(value Locator) error {
 	if err == nil {
 		err = f.Sync()
 	}
+	var published os.FileInfo
+	if err == nil {
+		// Capture identity from the open file. On Windows, path-based FileInfo
+		// can load its file ID lazily after that path has been replaced.
+		published, err = f.Stat()
+	}
 	if e := f.Close(); err == nil {
 		err = e
 	}
@@ -106,8 +112,8 @@ func (i *Instance) Publish(value Locator) error {
 	if err = replace(f.Name(), i.path); err != nil {
 		return err
 	}
-	i.published, err = os.Lstat(i.path)
-	return err
+	i.published = published
+	return nil
 }
 func (i *Instance) Close() {
 	if i.file == nil {
