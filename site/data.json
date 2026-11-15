@@ -1297,11 +1297,12 @@
    "date": "",
    "sections": {
     "Changed": [
+     "**Docs and tooling:** the file list in the release notes (`.github/workflows/release.yml`) says that the `re-psn-app` archives also hold the matching `re-psn-host` server binary and that `install.sh --app` and ...",
      "**Docs and tooling:** the README and `docker/README.md` name v0.7.0 and its container image as the newest (its manifest lists amd64 and arm64 and is readable without a login)."
     ]
    },
    "counts": {
-    "Changed": 1
+    "Changed": 2
    }
   },
   "latest": {
