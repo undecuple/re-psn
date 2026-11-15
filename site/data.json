@@ -1295,8 +1295,14 @@
   "unreleased": {
    "version": "Unreleased",
    "date": "",
-   "sections": {},
-   "counts": {}
+   "sections": {
+    "Changed": [
+     "**Docs and tooling:** the README and `docker/README.md` name v0.7.0 and its container image as the newest (its manifest lists amd64 and arm64 and is readable without a login)."
+    ]
+   },
+   "counts": {
+    "Changed": 1
+   }
   },
   "latest": {
    "version": "0.7.0",
