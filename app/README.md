@@ -1,14 +1,21 @@
 # re-psn desktop app
 
-The start of the desktop app for players and hosts of a re-psn server. It is a Go module of its own,
-`github.com/undecuple/re-psn/app`, next to the server; the server's module is not changed by it and stays standard-library only.
-The app has a terminal UI built on [Bubble Tea](https://github.com/charmbracelet/bubbletea); its dependencies are listed under
-[Dependencies](#dependencies).
+The optional Windows/Linux client opens a private local browser interface for Play, Host or Both, local trophy
+management and authenticated friends. Games connect directly to the standalone server without this app, a local
+profile or a relay account. Local trophies need no relay registration.
+
+Run `re-psn-app` or `re-psn-app ui`. The interface uses the dark palette, local monospace fonts and double framing
+of [undecuple/me](https://undecuple.github.io/me/), with accessible controls and Light/System appearance options.
+The advanced terminal interface remains available as `re-psn-app tui`.
+
+This page describes the current source. Previously published app archives can predate these screens and the paired
+host component. See the [client guide](../docs/client-ui.md) for normal operation and platform qualifications.
 
 ## Contents
 
-- [Profiles, trophies and friends](#profiles-trophies-and-friends)
 - [What is here](#what-is-here)
+- [Play, Host and Both](#play-host-and-both)
+- [Profiles, trophies and friends](#profiles-trophies-and-friends)
 - [Build and test](#build-and-test)
 - [The terminal UI](#the-terminal-ui)
 - [Optional native HTTP status](#optional-native-http-status)
@@ -20,134 +27,117 @@ The app has a terminal UI built on [Bubble Tea](https://github.com/charmbracelet
 
 ## What is here
 
-| Path | What is there |
-|---|---|
-| `internal/client/` | A Go client for the server's TCP protocol ([docs/api.md](../docs/api.md)), with no UI |
-| `internal/client/conformance_test.go` | Builds the real server from `../server`, starts it on free loopback ports and drives the client against it |
-| `internal/config/` | Reads and writes the per-user settings file, `re-psn.ini` |
-| `internal/tui/` | The terminal UI: a Bubble Tea model whose Update and View are tested with messages and a fake server, no terminal |
-| `cmd/re-psn-app/` | The program: the terminal UI with no arguments, `check` and `version` |
-| `framework/` | Exported offline profile/trophy store, local scoped game broker, encrypted backups and optional mTLS social service/client |
-| `integration/` | Generated-data native C SDK and two-host authenticated friendship scenario |
+The app is its own Go 1.26 module, `github.com/undecuple/re-psn/app`. The game server's module stays standard-library only.
 
-The client can use the game protocol alone. An explicitly configured status URL adds native HTTP status data without
-opening a browser; see [Optional native HTTP status](#optional-native-http-status).
+| Path | Purpose |
+|---|---|
+| `internal/webui/` | Embedded HTML/CSS/JavaScript and authenticated local actions; no frontend build or dependency |
+| `internal/desktop/` | Browser dispatch through a private temporary HTML launch file; advanced Linux terminal launch |
+| `internal/host/` | Explicit lifecycle control of this app's own server child |
+| `internal/appinstance/` | Per-settings ownership and authenticated reopening of a running UI |
+| `internal/client/` | The game protocol client and real-server conformance tests |
+| `internal/config/` | Per-user INI settings that preserve unknown keys/comments |
+| `internal/tui/` | Bubble Tea terminal views and shared profile session |
+| `framework/` | Exported profile/trophy store, scoped local game broker, encrypted backups and mTLS friend service/client |
+| `integration/` | Generated-data native SDK and two-host authenticated friendship scenarios |
+| `cmd/re-psn-app/` | Browser app, terminal interface and CLI commands |
+
+## Play, Host and Both
+
+| Workspace | Working actions |
+|---|---|
+| **Play / connect** | Save a remote game target, explicitly check it, view public snapshots and use optional Profile/Trophies/Friends. A check is not a live game session or game configuration adapter. |
+| **Host** | Configure a local literal IP/port and explicitly start/stop the owned server component. No player name or profile is required. |
+| **Both** | Keep the remote Play target and local host independent. An explicit button can copy the local host address into the Play target. |
+
+Choosing a role or saving settings starts no server, broker or registration. Closing a browser tab leaves the controller
+and its owned host running; launch the app again to reopen it. Stop owned host affects only that child. Stop app or
+process termination revokes its game grants and stops its owned host. Independently started servers remain untouched.
+Switching from active hosting to Play requires confirmation to stop the owned host.
+
+App archives built from this source include `re-psn-host` (`.exe` on Windows) beside the app. Keep them together.
+App installation preserves a separately installed `re-psn` server. New app installers refuse incomplete/older app
+archives without the host member. Stop the app and host before updating: two executable replacements are not
+crash-atomic, although reported replacement failures trigger best-effort rollback. See [client updates](../docs/client-ui.md#install-and-update).
 
 ## Profiles, trophies and friends
 
-The terminal desktop app adds Profile, Trophies and Friends to the existing menu (`6`, `7`, `8`). The ordinary startup
-does not create a profile, start a game broker or register with a social companion. Opening these panes reads local
-snapshots. In Profile, `c`, then `y` explicitly creates an identity. Game metadata is approved through the CLI first.
+Use Profile & backup to explicitly create a local identity or restore into an empty profile. In Trophies, choose a
+developer catalog file, review/approve it and enable game reporting for its title. Give the resulting private descriptor
+path to the recomp's SDK adapter; never share the descriptor contents. Revoke reporting explicitly or stop the app.
+Reports and first local receipt times persist; they do not verify achievements and are not uploaded.
+
+In Settings, select a friend companion's HTTPS origin and optional trusted CA file. Saving these settings contacts
+nothing. Friends offers explicit registration, refresh and request/accept/decline/cancel/remove/block/unblock.
+Snapshots are labeled cached with a timestamp; online presence is not provided. Each host independently owns
+registration and friendship consent. Reusing a public identity at multiple hosts makes those registrations linkable.
+
+The browser also downloads encrypted backups and restores an encrypted backup only when no profile exists at the
+selected location. CLI commands remain available for automation and a different private profile directory:
 
 ```sh
 re-psn-app profile create --dir /private/player-profile --name 'Player'
 re-psn-app trophies install --dir /private/player-profile --input ../client/examples/app_trophies.json
-re-psn-app --profile-dir /private/player-profile
+re-psn-app ui --profile-dir /private/player-profile
 ```
 
-Trophies are local game reports, not verified achievements. In Trophies, choose a title and press `g` to issue a
-private grant descriptor for the recomp SDK; keep the app open while the game uses it. `v` revokes it. The running
-desktop owns the profile writer, so close it before catalog installation, export/restore or separate mutating CLI
-commands. Read-only views and its own game/friend operations can coexist. No game automatically receives access.
-
-An optional `--social-relay HTTPS_ORIGIN` and `--social-ca-file FILE` select the friend service explicitly. Friends
-registration requires `e`, then `y`; `f` requests a public ID, `a` accepts, `d` declines/cancels, `u` removes, `b` blocks,
-`x` unblocks and `r` refreshes. With no origin, the screen shows cached state only. Snapshots are timestamped and do
-not imply live presence. Registration links this public identity to that host; the same key at other hosts is linkable.
-
-The CLI also provides `profile show|export|restore|serve`, `trophies show`, the friend actions and an optional
-`account-relay serve|revoke` companion for hosts. The companion has a separate TLS listener and state directory;
-the existing game server and protocol stay independent. Read the [framework guide](../docs/app-framework.md) for
-complete commands, C/C++ integration, private files, TLS/allowlist setup, encrypted recovery and unimplemented features.
+An open writer is exclusive: use the running app's actions, or stop that session before a separate mutating CLI
+command. Read-only snapshots remain available. The [framework guide](../docs/app-framework.md) preserves the full
+C/C++ SDK, broker protocol, TLS companion/allowlist and recovery instructions.
 
 ## Build and test
 
-Go 1.26 or newer:
+Go 1.26 or newer for the app; the server retains its own minimum in the root `go.mod`. From the repository root:
+
+```sh
+go build -o re-psn-host ./server
+(cd app && go build -mod=readonly -o ../re-psn-app ./cmd/re-psn-app)
+./re-psn-app
+```
+
+For a Windows browser build, use `re-psn-host.exe` beside `re-psn-app.exe`; the release builder applies
+`-ldflags "-H=windowsgui"` to the app so normal launch does not open a console. A console build is useful for
+interactive terminal development. `ui --server-binary PATH` can explicitly select a trusted compatible component;
+the browser cannot choose an executable, shell command or arbitrary child arguments.
 
 ```sh
 cd app
 go vet ./...
 go test -race ./...
-go build ./cmd/re-psn-app
 ```
 
-The conformance test needs the `go` command to build the server; it skips, saying why, when the server cannot be built. It runs
-the server with `-http ""`, so no status page is started.
+The conformance tests build and drive the real standalone server. Required Host lifecycle tests fail if their owned
+server build fails. The older protocol conformance tests retain their documented optional-tool skip behavior.
+No browser automation or actual game is implied by the package test command.
 
 ## The terminal UI
 
 ```sh
-re-psn-app            # start the terminal UI
-re-psn-app --no-tui   # do not: print a note and exit 2
+re-psn-app tui
+re-psn-app --profile-dir /private/player-profile  # advanced profile terminal screens
 ```
 
-The UI needs a terminal on stdin and stdout. On a Linux desktop it can open an installed terminal when started without
-one, for example by a file manager. See [Starting from the desktop](#starting-from-the-desktop).
+The TUI needs a usable terminal on stdin/stdout; Linux can open a supported terminal when needed. Packaged Windows
+uses a GUI subsystem for normal browser launch; interactive terminal use may need a console build and is not native
+Windows desktop evidence.
 
-**First start.** With no settings file yet, the app asks what it is for on this machine: **Play** (join servers), **Host** (run a
-server; the Host screen comes later, Status works now) or **Both**. Then the online ID (not for Host) and the server as
-`host:port`, each checked with the settings file's own rules. Enter saves `re-psn.ini`; Esc quits without saving, as does `q` on
-the first question; backspace in an empty field goes back one step. While typing the server, Ctrl+F opens **Find on LAN** (below).
+The chooser distinguishes Play, Host and Both. Host skips the player name/remote target and asks for a local bind;
+Both stores that bind separately. Menus include Overview, Rooms, Leaderboards, Settings, Help, Profile, Trophies,
+Friends and Host, with role-appropriate entries. Below 70 columns, menu and content are shown separately.
 
-**Home.** A menu (Overview, Rooms, Leaderboards, Settings, Help), the chosen item's content beside it, and a line of keys at the
-bottom. Under 70 columns the menu and the content are shown one at a time.
+Use arrows or `j`/`k`, Enter and Esc; `r` refreshes, `s` saves Settings, `t` selects dark/light, `q` or Ctrl+C quits.
+Host uses `s`, then `y` to confirm start, and `x` to stop. Quitting this terminal controller stops its owned host.
+Trophies uses `g` to grant and `v` to revoke; Friends uses `e` to register, `f` to request, `a` to accept,
+`d` to decline/cancel, `u` to remove and `b`/`x` to block/unblock. Friends and catalog/backup automation are also in the CLI.
 
-- **Overview:** mode, name, server and the connection in words: connected or not, the HELLO round trip, relay and invite-only
-  rooms on or off, the address the server sees.
-- **Rooms** and **Leaderboards** are the two tabs of the Status screen. Rooms belong to one title, so the screen asks for the
-  title's communication ID (such as `NPWR00860_00`) first. Rooms shows ID, owner, members as current/max and the room flags.
-  Leaderboards shows one board, whose id you type: rank, player, score and when it was recorded. With a configured HTTP
-  status source, these screens instead show public room/member/age data and board leader summaries across titles.
-  With a status URL set, Status has a third tab, **Server** (Tab cycles Rooms, Leaderboards, Server; Esc returns to the menu).
-  See [Server tab](#server-tab).
-- **Settings:** mode, name, server, status URL and theme. Enter changes the selected row; `s` saves to `re-psn.ini` (mode 0600).
-  A refused value says which rule it broke. The optional status URL takes effect on refresh. Its token-file path is
-  set in `re-psn.ini`; the UI does not display or edit the token itself.
-  **Find on LAN:** `f` here (or Ctrl+F while typing the server, also on the first start) broadcasts a discovery request and lists
-  the servers that answer, each with name, address:port, players, relay on or off and version. Up/down and Enter put the chosen
-  address in the server field (in Settings it is then an unsaved change; `s` saves it); `r` searches again, Esc closes. The search
-  runs in the background for about 1.5 s and never blocks the screen. With no answer the screen says: none found (the server must
-  run with discovery on; it does not cross subnets). Typing `host:port` works as before. If the server field already has a port,
-  the request goes to that UDP port, otherwise to 36100. The request is sent from a temporary UDP socket to 255.255.255.255 and to
-  the broadcast address of each IPv4 interface that is up; only servers started with discovery on answer, and only senders on a
-  private network. `internal/client` has `Discover` for it. `server = auto` in `re-psn.ini` is not supported.
-- **Help:** the keys and what the screens can show.
-
-| Key | What it does |
-|---|---|
-| ↑ / ↓, `k` / `j`, `1`-`5` | move in the menu or a list; the digits jump to a menu item |
-| Enter | open the item; change a setting; finish typing |
-| Esc | back to the menu; cancel typing |
-| Tab | switch between Rooms and Leaderboards |
-| `e`, `b` | type the title, the board id |
-| `r` | ask the server again |
-| `f`, Ctrl+F | find servers on the LAN (Settings; while typing the server) |
-| `s` | save the settings |
-| `t` | dark or light theme (saved with the settings) |
-| `q`, Ctrl+C | quit (Ctrl+C also while typing) |
-
-**Where the data comes from without a status URL.** The game protocol, through `internal/client`: each refresh connects to the configured server,
-says HELLO under a throwaway name (`view-` and 10 random hex digits) for the title on screen, sends SEARCH_ROOMS (up to 50 rooms)
-and, with a board id, GET_RANKING (the top 20), and closes the connection. Every refresh has a 5-second timeout. A failure is
-shown as text on the screen, with the error, and the app keeps running. No HTTP request is made while the status URL is unset.
-
-**What the protocol cannot show.** The server's status page shows some things the game protocol has no message for. The UI says
-"not available over the protocol" in those places:
-
-- the server's version, uptime and connection counts (Overview and the Status header);
-- a room's age (the Age column of Rooms);
-- which boards exist, for one title or across titles (so you type the title and a board id);
-- full rooms and invite-only rooms, which SEARCH_ROOMS leaves out.
-
-**Theme.** Dark by default, light with `t`; the dark colours are the ones the website uses, the light ones are gruvbox-material values
-([docs/art/palette.json](../docs/art/palette.json)). In light mode the accents that are too faint as text are replaced by the
-strong text colour in bold. No state is shown by colour alone. With `NO_COLOR` set the UI uses no colour, only bold and reverse.
+The Rooms/Leaderboards protocol view uses a throwaway name and closes after each fetch. It does not join a game.
+`f` in Settings, or Ctrl+F while entering a server, performs an explicit bounded LAN search; it does not cross subnets.
+No server is shipped as a preset. The terminal respects `NO_COLOR`; the browser supports Dark, Light and System.
 
 ## Optional native HTTP status
 
-On Windows and Linux, the same terminal app can display the server's existing `/api/stats` directly. The server must
-already have its opt-in HTTP listener enabled; setting the app's URL does not start a server, enable that listener or
-open a browser. In `re-psn.ini`, for example:
+The app backend and terminal interface can fetch a server's existing `/api/stats` directly. The listener must already
+be enabled; selecting its URL starts no remote service. These reader credentials grant no hosting authority.
 
 ```ini
 [server]
@@ -156,69 +146,45 @@ status_url = http://127.0.0.1:36101
 status_token_file = /path/to/status-token
 ```
 
-The token-file key is optional when that server requires no HTTP token. Use an absolute local path where practical;
-paths are otherwise used exactly as written, without `~` expansion. The file is read on each refresh, up to 4096 bytes,
-with surrounding whitespace removed. Empty, oversized, non-regular or control-containing token files are refused.
-The token is sent only as an `Authorization: Bearer` header, and never displayed in an error. Use HTTPS for remote
-token-bearing connections. The existing local HTTP example remains useful for loopback or a host-managed private path.
+A token file is optional when the server needs none. It is a bounded regular file, up to 4096 bytes, read on refresh;
+empty, oversized or control-containing values are refused. The backend sends the token only in an Authorization
+header. Use HTTPS for remote token-bearing requests. URLs cannot contain credentials/query/fragment; redirects
+and environment HTTP proxies are disabled. A base path is supported: `/status` becomes `/status/api/stats`.
 
-Give the status page's base URL: `/api/stats` is appended, including after a reverse proxy's prefix, so
-`https://relay.example.org/status` becomes `https://relay.example.org/status/api/stats`. An explicit URL ending in
-`/api/stats` is also accepted. URLs with user credentials, a query string or fragment are refused. Requests go directly
-to the configured host; redirects and environment HTTP proxies are not used.
-
-An HTTP refresh has a two-second request deadline inside the existing five-second refresh budget. A successful
-response opens no game-protocol session. If it fails, the app attempts the existing game-protocol view within the
-remaining budget and shows a generic HTTP-unavailable note. A failed source does not terminate the app. Press `r`
-after changing the URL or token file; clearing the URL returns to protocol-only behavior.
-
-| Screen | HTTP data |
-|---|---|
-| Overview | Uptime, current client count and total connections; the server version is on the Server tab. |
-| Rooms | Public-room IDs, titles, current/max members, names and age, including full rooms; invite-only rooms are counted without names. |
-| Leaderboards | Existing boards, entry counts, leader and best score. These are board summaries; HTTP does not provide full rankings. |
+HTTP has a two-second deadline within the five-second refresh budget. On failure the backend can use the game
+protocol within the remaining budget and labels the fallback. A successful HTTP refresh opens no game connection.
+Public room/member/age and board leader summaries are read-only; invite-only rooms remain counted without names.
 
 ### Server tab
 
-With a status URL set, the Status screen has a read-only Server tab. It shows the server's version, uptime, whether the relay
-is on, the limits in force (`none` means no limit), TCP refusals (too many connections from one address, request rate) and UDP
-drop counters, all counted since the server started. It also shows the payload the relay has carried and, from the
-difference between two refreshes (press `r`), a rate in bytes per second. These are the bytes the relay forwarded for players,
-not network bandwidth or interface traffic. If any counter is lower than at the previous refresh, the tab says the server
-restarted and starts the rate again from that refresh. The tab changes nothing on the server, and the token is never shown.
-
-A server that predates these fields leaves them out. The tab then says `not reported by this server` for each missing value
-and never shows it as 0 or off. This needs a server of v0.5.0 or newer.
-
-Leave title/board filters empty to show all shared entries, or use the existing `e`/`b` controls to filter. Up to 100
-matching rows are displayed with a count. Room IDs, connection totals and scores retain their full integer precision.
-Remote text is stripped of terminal controls and bounded for display. A response is limited to 4 MiB, 32 KiB of
-headers and 5000 rooms/boards; over-limit or malformed data uses the fallback. Additional JSON fields are ignored for
-compatibility, including the UDP drop counters. No account verification or administrative writes are added.
+The advanced terminal Server tab shows version, uptime, relay state, limits, refusals/drop counters and relay payload
+rate from successive snapshots. Missing fields are labeled unavailable rather than zero; restart detection resets
+rate comparisons. Status responses are bounded to 4 MiB, 32 KiB headers and 5000 rooms/boards; text is displayed safely
+and large integers preserve precision. Browser Host control remains a separate local capability, not a status page action.
 
 ## Starting from the desktop
 
-The same Go terminal app builds for Windows and Linux. Windows uses the normal console-subsystem executable: it can
-open a console when double-clicked, following the Windows console configuration. A physical Windows terminal has not
-been tested locally; CI tests and cross-builds provide separate evidence.
+Normal launch opens an app-owned interface on literal 127.0.0.1 at an ephemeral port. The OS dispatcher receives a
+private temporary HTML file, not an authentication secret in process arguments. It redirects to a one-use bootstrap
+link valid for one minute; frontend code removes the fragment and exchanges it for a separate in-memory/sessionStorage
+API capability. Launch-document cleanup is scheduled after 90 seconds. An interrupted/short-lived launcher can leave
+an expired private document; it cannot reuse an already spent/expired bootstrap. Unix creation modes do not prove a
+Windows private ACL: use a private per-user location.
 
-On Linux, a start with no terminal and with `DISPLAY` or `WAYLAND_DISPLAY` set opens a supported terminal. It tries
-`TERMINAL` first, then `x-terminal-emulator`, `kitty` and `xterm`. `TERMINAL` is one executable name or path, including a
-path containing spaces; command strings, shell expansion and extra options are not parsed. A custom terminal must
-support the xterm-style `-e PROGRAM ARG...` convention. Kitty is invoked with its own command syntax and no startup session.
+Starting the app again with the same settings reopens the existing controller through an authenticated local
+exchange; it does not duplicate or stop the owned host. Explicit conflicting profile/server selections are refused.
+Shutdown checks the current locator against its last published file identity before removing it. Windows captures
+that identity from the open publication file, including after republishing.
+The browser interface loads no remote fonts/scripts/assets. Its appearance follows [undecuple/me](https://undecuple.github.io/me/).
 
-Arguments and the environment are passed directly to the terminal. An internal recursion guard stops a second relaunch
-if that terminal fails to provide a TTY. The app waits for the selected terminal and does not launch another after a
-runtime error. Without a display or supported terminal, or on an error, it prints one line and exits 2. Starting
-`check`, `version`, `--help` or `--no-tui` never opens a terminal. No server or browser is started by this behavior.
+For trusted local automation without opening the browser:
 
-The repository provides a Linux desktop entry at `share/applications/re-psn.desktop` with `Terminal=true`, plus
-`share/icons/hicolor/scalable/apps/re-psn.svg`, copied from the site's favicon artwork. These are installation inputs;
-they do not install the executable, register a desktop entry automatically or add release assets. Install the app on
-the graphical session's PATH before installing the entry, and install the SVG under the matching icon name `re-psn`.
+```sh
+re-psn-app ui --no-open --url-file /private/new-launch-link.txt
+```
 
-Tests exercise selection, literal arguments, failure/recursion paths and a synthetic terminal/child process. These are
-not a physical desktop, Steam Deck game-mode or emulator compatibility run. macOS still requires an existing terminal.
+The output file must be new and contains a short-lived private launch link. Protect it; ordinary diagnostics print
+only the token-free loopback base. [Client UI](../docs/client-ui.md) covers reopen, shutdown and troubleshooting.
 
 ## The check command
 
@@ -227,61 +193,33 @@ re-psn-app check [-timeout 5s] HOST:PORT
 re-psn-app version
 ```
 
-`check` connects, says HELLO under a throwaway name (`check-` and 10 random hex digits) for a made-up title, `RE-PSN-CHECK`, so it
-never sees a game's rooms, and times one more request. It prints what the server answered and `OK`, or `FAIL` and what failed, and
-exits 0 or 1:
-
-```text
-connect   127.0.0.1:47391 in 0.3 ms
-hello     accepted as check-b9656030ba in 0.7 ms; the server sees this machine as 127.0.0.1
-features  relay on, invite-only rooms on (flags 0x03)
-version   not reported: the protocol has no version message
-rtt       0.2 ms (one SEARCH_ROOMS request)
-OK
-```
-
-The app's Go protocol client observes request cancellation while waiting to write and during a blocked write.
-An already canceled request is refused before writing. When cancellation interrupts a write, the client closes the
-connection because a partial frame cannot be reused safely; canceling a queued request leaves the active writer and
-connection running. A completed request may already have been applied by the server; cancellation does not undo it.
+`check` uses a throwaway name/title, sends HELLO and SEARCH_ROOMS, prints reachability/round-trip results and closes.
+It returns 0 for success, 1 for failure and 2 for malformed command arguments. It does not configure or connect your game.
+Canceling a completed/partially sent request does not undo a server-side action; interrupted protocol writes close
+the connection because a partial frame cannot safely be reused.
 
 ## Settings file
 
-`re-psn.ini` lives in `$XDG_CONFIG_HOME/re-psn/` when that variable holds an absolute path, else in `~/.config/re-psn/`; on Windows
-in `%AppData%\re-psn\`. It is written atomically (a temporary file, then a rename) with mode 0600.
+Settings live in `$XDG_CONFIG_HOME/re-psn/re-psn.ini` when that variable is absolute, else
+`~/.config/re-psn/re-psn.ini`; Windows uses `%APPDATA%\re-psn\re-psn.ini`. The profile defaults to its `profile/`
+subdirectory. `ui --config FILE --profile-dir DIR` selects separate locations; directories containing private state
+must be private. INI writes preserve unknown keys/comments and use temporary replacement.
 
-```ini
-# Comments are whole lines starting with # or ;
-[app]
-mode = play
-theme = dark
-
-[player]
-name = alice_01
-
-[server]
-server = play.example.org:36100
-status_url = https://play.example.org/status
-status_token_file = /etc/re-psn/status-token
-```
-
-| Section | Key | Value |
+| Section | Key | Meaning |
 |---|---|---|
-| `[app]` | `mode` | `play`, `host` or `both` |
-| `[app]` | `theme` | `dark` or `light`; unset means dark |
-| `[player]` | `name` | the online ID: 3 to 16 letters, digits, `-` or `_` |
-| `[server]` | `server` | `host:port`, port 1 to 65535 |
-| `[server]` | `status_url` | optional HTTP(S) status base or `/api/stats` URL, without credentials, query or fragment |
-| `[server]` | `status_token_file` | optional local Bearer-token file path, used exactly as written |
+| `[app]` | `mode` | `play`, `host` or `both`; selecting it starts nothing |
+| `[app]` | `theme` | `dark`, `light` or `system`; browser defaults to dark |
+| `[player]` | `name` | Optional player display name; Host needs none |
+| `[server]` | `server` | Remote game target, `HOST:PORT` |
+| `[server]` | `status_url` | Explicit HTTP(S) read-only status base |
+| `[server]` | `status_token_file` | Optional local reader-token path; never shown in the frontend |
+| `[host]` | `address` | Independent literal game IP:port; defaults to 127.0.0.1:36100 |
+| `[host]` | `relay` | `true` or `false`; applied on explicit host start |
+| `[social]` | `origin` | Explicit HTTPS friend companion origin |
+| `[social]` | `ca_file` | Optional locally trusted CA path; otherwise system trust |
 
-The rules:
-
-- `key = value` lines go under a `[section]` line; spaces around the key and the value are dropped.
-- A `#` or `;` after a value is part of the value, not a comment.
-- An empty value means the key is unset. A known key set twice is an error.
-- There are no includes, quotes, escapes or variables (`~` and `$HOME` are not expanded).
-- Other keys, other sections and comment lines are kept and written back as they were.
-- An invalid value is an error that names the section and key, such as `re-psn.ini: [app] mode: "watch": want play, host or both`.
+There are no includes, execution, interpolation or `~` expansion. Unknown lines are retained; duplicate known keys
+and invalid known values are refused. Credentials are not stored in the shared game networking INI.
 
 ## Dependencies
 
@@ -305,8 +243,11 @@ also has modules that only their tests or their own dependencies' tests use (`ay
 
 ## What the client does not do yet
 
-The client implements HELLO, HEARTBEAT, CREATE_ROOM, SEARCH_ROOMS, JOIN_ROOM, LEAVE_ROOM, RECORD_SCORE, GET_RANKING and
-GET_RANKING_BY_ID, and decodes the MEMBER_JOINED, MEMBER_LEFT and ROUTE pushes; other pushes arrive undecoded. Room data and
-messages, kicks, invite-only rooms, relay streams, UDP probes and the relay's datagrams are not in it yet. The protocol has no
-message for the server's version, uptime or connection counts. Configured HTTP supplies uptime and counts; neither
-source reports the server version. Host mode, room joining from the UI and launch profiles remain unfinished.
+The app does not launch/join a recomp game, implement its trophy/HLE semantics, verify earned trophies, award platinum,
+upload trophies or provide live friend presence/invitations. It does not authenticate legacy gameplay names or create
+GitHub/Discord verification badges. Extra theme presets and desktop custom-color editing remain separate features.
+
+Windows/Linux binaries are built. Linux synthetic browser/host/SDK checks and Windows PE controller/profile/SDK
+checks under Wine provide separate evidence; Wine is not native Windows. The Windows server's UDP setup is unsupported
+by the tested Wine environment (`WSAIoctl`, error 10045), so native Windows hosting is not established by those runs.
+No physical Windows desktop, native Windows game runtime, real title or hosted deployment is certified.

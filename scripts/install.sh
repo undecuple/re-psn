@@ -19,7 +19,9 @@
 #   5. Installs the re-psn binary (or re-psn.AppImage) into DIR, mode 0755: copied to a temporary name in DIR,
 #      then renamed over the old file, so a running server keeps its old file and nothing half-written is left.
 #      The archive's LICENSE, NOTICE.md and examples/ go to ${XDG_DATA_HOME:-~/.local/share}/re-psn/vX.Y.Z/ (with
-#      --app: re-psn-app, LICENSE, NOTICE.md and README.md, into .../re-psn-app/vX.Y.Z/).
+#      --app: re-psn-app plus its matching re-psn-host; metadata into .../re-psn-app/vX.Y.Z/).
+#      App updates stage both executables and attempt rollback on a reported move failure. Stop the app/host first;
+#      two flat files are not a crash-atomic update. Archives without re-psn-host are refused.
 #   6. Says what it did, how to start the server (or the app), and the line to add to your shell profile when DIR is not on
 #      PATH. It never edits a profile and never uses sudo.
 #
@@ -45,7 +47,7 @@ Installs the re-psn server for the current user from a GitHub release (Linux amd
                     pre-releases included
   --dir DIR         install into DIR (or set RE_PSN_INSTALL_DIR); default: ~/.local/bin
   --appimage        install re-psn.AppImage instead of the archive's binary (x86_64 only)
-  --app             install the desktop app (re-psn-app) instead of the server; needs a release after v0.4.0
+  --app             install re-psn-app and its matching re-psn-host component; keeps standalone re-psn
   --dry-run         print the steps and stop; download and write nothing
   --allow-root      run even as root (not recommended)
   -h, --help        show this help
@@ -148,6 +150,10 @@ if [ "$dry" = 1 ]; then
   say "            $dl/$v/SHA256SUMS"
   say "  check:    the SHA-256 of $asset against its line in SHA256SUMS; stop on a mismatch or no line"
   say "  install:  $dir/$target (mode 0755, renamed into place)"
+  if [ "$app" = 1 ]; then
+    say "            $dir/re-psn-host (mode 0755, matching app component)"
+    say "  update:   stop the app and its host first; staged pair replacement is not crash-atomic"
+  fi
   if [ "$appimage" = 0 ] && [ -n "$data" ]; then
     if [ "$app" = 1 ]; then say "  extras:   $data/$pkg/$v (LICENSE, NOTICE.md, README.md)"
     else say "  examples: $data/$pkg/$v/examples"; fi
@@ -158,9 +164,36 @@ fi
 
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/re-psn-install.XXXXXX")"
 part=''
+pair_lock=''
+pair_host_changed=0
+pair_app_changed=0
+pair_complete=0
+pair_had_host=0
+pair_had_app=0
 cleanup() {
+  install_status=$?
+  recovery_failed=0
+  if [ -n "$pair_lock" ] && [ "$pair_complete" = 0 ]; then
+    if [ "$pair_app_changed" = 1 ]; then
+      if [ "$pair_had_app" = 1 ]; then mv -f "$pair_lock/old-app" "$dir/re-psn-app" || recovery_failed=1
+      else rm -f "$dir/re-psn-app" || recovery_failed=1; fi
+    fi
+    if [ "$pair_host_changed" = 1 ]; then
+      if [ "$pair_had_host" = 1 ]; then mv -f "$pair_lock/old-host" "$dir/re-psn-host" || recovery_failed=1
+      else rm -f "$dir/re-psn-host" || recovery_failed=1; fi
+    fi
+  fi
+  if [ -n "$pair_lock" ]; then
+    if [ "$recovery_failed" = 0 ]; then rm -rf "$pair_lock"
+    else
+      say "re-psn install: pair rollback incomplete; keep recovery files in $pair_lock and restore manually." >&2
+      install_status=1
+    fi
+  fi
   [ -z "$part" ] || rm -f "$part"
   rm -rf "$tmp"
+  trap - EXIT
+  exit "$install_status"
 }
 trap cleanup EXIT
 trap 'exit 1' HUP INT TERM
@@ -219,16 +252,48 @@ else
   if [ ! -f "$src" ] || [ -L "$src" ]; then
     die "the archive has no $pkg binary where expected; nothing was installed."
   fi
+  if [ "$app" = 1 ]; then
+    host_src="$extras/re-psn-host"
+    if [ ! -f "$host_src" ] || [ -L "$host_src" ]; then
+      die "the app archive has no matching re-psn-host component; nothing was installed."
+    fi
+  fi
 fi
 
-# 5. The install: a temporary name in the same directory, then one rename.
+# 5. Stage before replacement. The app pair has rollback for reported move
+# failures, but two flat filenames cannot be replaced atomically across a crash.
 mkdir -p "$dir"
+if [ "$app" = 1 ]; then
+  for old_target in "$dir/re-psn-app" "$dir/re-psn-host"; do
+    if [ -L "$old_target" ] || { [ -e "$old_target" ] && [ ! -f "$old_target" ]; }; then
+      die "app component target is not a regular file: $old_target; nothing was replaced."
+    fi
+  done
+  # mkdir is exclusive. Never remove another installer's or a stale lock by guess.
+  candidate_lock="$dir/.re-psn-app.install.lock"
+  (umask 077; mkdir "$candidate_lock") || die "app update lock exists or cannot be created: $candidate_lock; stop other installers and inspect a stale lock manually."
+  pair_lock="$candidate_lock"
+  cp "$src" "$pair_lock/new-app"
+  cp "$host_src" "$pair_lock/new-host"
+  chmod 0755 "$pair_lock/new-app" "$pair_lock/new-host"
+  if [ -f "$dir/re-psn-app" ]; then cp -p "$dir/re-psn-app" "$pair_lock/old-app"; pair_had_app=1; fi
+  if [ -f "$dir/re-psn-host" ]; then cp -p "$dir/re-psn-host" "$pair_lock/old-host"; pair_had_host=1; fi
+  # Set rollback intent before each move so an interrupt between commands is covered.
+  pair_host_changed=1
+  mv -f "$pair_lock/new-host" "$dir/re-psn-host"
+  pair_app_changed=1
+  mv -f "$pair_lock/new-app" "$dir/re-psn-app"
+  pair_complete=1
+  say "Installed $dir/re-psn-app and $dir/re-psn-host"
+  say "Pair update staged and replaced; it is not crash-atomic. No process was stopped or started."
+else
 part="$dir/.$target.part.$$"
 cp "$src" "$part"
 chmod 0755 "$part"
 mv -f "$part" "$dir/$target"
 part=''
 say "Installed $dir/$target"
+fi
 
 shared=''
 if [ -n "$extras" ] && [ -n "$data" ]; then
@@ -258,7 +323,8 @@ else
   if [ "$app" = 1 ]; then say "Start the app:          $dir/$target"; else say "Start the server:       $dir/$target"; fi
 fi
 if [ "$app" = 1 ]; then
-  say "The app is a terminal program; run it in a terminal."
+  say "The app opens its private local browser interface."
+  say "Its matching host component is $dir/re-psn-host; standalone re-psn was not changed."
   [ -z "$shared" ] || say "Its README:              $shared/README.md"
   exit 0
 fi

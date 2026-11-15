@@ -112,6 +112,10 @@ func (m Model) renderChooser() string {
 		}
 		b = append(b, "", m.st.muted.Render("Enter saves to "+m.opt.Path+"."), "",
 			m.hints("enter", "save", "ctrl+f", "find on LAN", "backspace", "back (when empty)", "esc", "quit"))
+	case stageHost:
+		b = append(b, m.st.text.Render("Host game TCP/UDP bind address (separate from the remote Play server)."), "", "  "+m.st.muted.Render("Bind   ")+m.cursorField(m.input))
+		b = append(b, m.problemLines()...)
+		b = append(b, "", m.st.muted.Render("Empty uses 127.0.0.1:36100. Hosting starts only after a later confirmation."), "", m.hints("enter", "save", "backspace", "back (when empty)", "esc", "quit"))
 	}
 	return lipgloss.NewStyle().Padding(1, 2).Render(strings.Join(b, "\n"))
 }
@@ -148,6 +152,17 @@ func (m Model) renderHome() string {
 }
 
 func (m Model) summary() string {
+	if m.set.Mode == config.ModeHost {
+		address := m.set.HostAddress
+		if address == "" {
+			address = "127.0.0.1:36100"
+		}
+		status := "stopped"
+		if m.opt.Host != nil && m.opt.Host.View().Running {
+			status = "hosting"
+		}
+		return "host · " + status + " · " + address
+	}
 	name := m.set.Name
 	if name == "" {
 		name = "no name"
@@ -169,7 +184,7 @@ func (m Model) box(s string, w, h int, focus bool) string {
 	if focus {
 		c = m.st.frameFocus
 	}
-	st := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Padding(0, 1).
+	st := lipgloss.NewStyle().Border(lipgloss.DoubleBorder()).Padding(0, 1).
 		Width(w).Height(h).MaxWidth(w).MaxHeight(h)
 	if c != nil {
 		st = st.BorderForeground(c)
@@ -184,6 +199,9 @@ func (m Model) renderMenu() string {
 		cur = paneRooms // the Server tab belongs to Status
 	}
 	for i, n := range paneNames {
+		if !m.paneAllowed(pane(i)) {
+			continue
+		}
 		if pane(i) == cur {
 			b = append(b, m.st.selected.Render("> "+n))
 		} else {
@@ -211,6 +229,8 @@ func (m Model) hintBar() string {
 		return m.hints("↑/↓", "title", "g", "game grant", "v", "revoke", "r", "reload", "esc", "menu")
 	case m.menu == paneFriends:
 		return m.hints("r", "refresh", "e", "register", "f", "request", "a/d", "accept/decline", "u", "remove", "b/x", "block/unblock", "esc", "menu")
+	case m.menu == paneHost:
+		return m.hints("s", "start", "x", "stop", "esc", "menu", "q", "quit")
 	case m.menu == paneRooms:
 		return m.hints("tab", "leaderboards", "e", "title", "r", "refresh", "esc", "menu", "t", "theme", "q", "quit")
 	case m.menu == paneBoards:
@@ -242,6 +262,8 @@ func (m Model) renderContent(w int) string {
 		lines = m.renderHelp()
 	case paneProfile, paneTrophies, paneFriends:
 		lines = m.profileLines()
+	case paneHost:
+		lines = m.hostLines()
 	}
 	return lipgloss.NewStyle().Width(w).Render(strings.Join(lines, "\n"))
 }
@@ -258,6 +280,9 @@ func orUnset(v string) string {
 }
 
 func (m Model) renderOverview() []string {
+	if m.set.Mode == config.ModeHost {
+		return m.hostLines()
+	}
 	b := []string{
 		m.row("Mode", orUnset(string(m.set.Mode))),
 		m.row("Name", orUnset(m.set.Name)),
@@ -276,7 +301,7 @@ func (m Model) renderOverview() []string {
 			m.row("Players", notOverProtocol+" (connection counts)"))
 	}
 	if m.set.Mode == config.ModeHost || m.set.Mode == config.ModeBoth {
-		b = append(b, "", m.st.muted.Render("Hosting from the app comes in a later version. For now, run the re-psn server and set its address as Server."))
+		b = append(b, "", m.st.muted.Render("Host controls use their own bind address; choose Host (9)."))
 	}
 	return b
 }
@@ -308,14 +333,14 @@ func (m Model) connectionLines() []string {
 		return []string{m.st.muted.Render("Not checked yet: press r.")}
 	}
 	if h := m.httpStats(); h != nil {
-		return []string{m.st.good.Render("HTTP status connected") + m.st.text.Render("; read-only server snapshot."), m.st.muted.Render("Checked at " + m.fetchedAt.Format("15:04:05") + ". No game-protocol session was opened.")}
+		return []string{m.st.good.Render("HTTP status reachable") + m.st.text.Render("; read-only server snapshot."), m.st.muted.Render("Checked at " + m.fetchedAt.Format("15:04:05") + ". No game-protocol session was opened.")}
 	}
 	if m.snap.HTTP != nil {
 		return []string{m.st.muted.Render("Status source changed: press r.")}
 	}
 	a := m.snap.Ack
 	return []string{
-		m.st.good.Render("Connected") + m.st.text.Render(fmt.Sprintf(" to %s; HELLO answered in %s.", server, ms(m.snap.RTT))),
+		m.st.good.Render("Reachable") + m.st.text.Render(fmt.Sprintf(" at last check: %s; HELLO answered in %s. The game connects independently.", server, ms(m.snap.RTT))),
 		m.st.text.Render(fmt.Sprintf("Relay %s, invite-only rooms %s. The server sees this machine as %s.", onOff(a.Relay()), onOff(a.RoomCodes()), a.PublicIP)),
 		m.st.muted.Render("Checked at " + m.fetchedAt.Format("15:04:05") + " as " + clean(m.snap.Name) + "."),
 	}
@@ -440,8 +465,10 @@ func (m Model) renderSettings() []string {
 		{"Server", orUnset(m.set.Server), "host:port; f finds one on the LAN"},
 		{"Status URL", orUnset(m.set.StatusURL), "optional HTTP status; r refreshes"},
 		{"Theme", m.themeName(), "enter or t"},
+		{"Host bind", orUnset(m.set.HostAddress), "literal IP:port; separate from Play"},
+		{"Host relay", orUnset(m.set.HostRelay), "explicitly uses host bandwidth"},
 	}
-	edits := []edit{editNone, editName, editServer, editStatusURL, editNone}
+	edits := []edit{editNone, editName, editServer, editStatusURL, editNone, editHostAddress, editNone}
 	b := []string{m.st.heading.Render("Settings"), ""}
 	for i, r := range rows {
 		mark := "  "

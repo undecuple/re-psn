@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=re-psn
-Comment=Rooms, leaderboards and connection status for re-psn
+Comment=Optional player extras and local hosting for re-psn
 Exec=re-psn-app
 Icon=re-psn
-Terminal=true
+Terminal=false
 Categories=Game;Network;
 StartupNotify=false

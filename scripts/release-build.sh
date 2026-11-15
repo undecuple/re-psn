@@ -51,8 +51,19 @@ for target in windows/amd64 linux/amd64 linux/arm64; do
   exe=re-psn-app; [ "$os" = windows ] && exe=re-psn-app.exe
   name="re-psn-app-$tag-$os-$arch"
   d="$stage/$name"; mkdir -p "$d"
+  app_ldflags="-s -w -X main.version=$version"
+  host_exe=re-psn-host
+  server_exe=re-psn
+  if [ "$os" = windows ]; then
+    app_ldflags="$app_ldflags -H=windowsgui"
+    host_exe=re-psn-host.exe
+    server_exe=re-psn.exe
+  fi
   (cd "$root/app" && CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" \
-    go build -mod=readonly -trimpath -ldflags "-s -w -X main.version=$version" -o "$d/$exe" ./cmd/re-psn-app)
+    go build -mod=readonly -trimpath -ldflags "$app_ldflags" -o "$d/$exe" ./cmd/re-psn-app)
+  # Copy the already-built server bytes. Its distinct installed name keeps an
+  # app update from replacing the user's independent standalone server.
+  cp "$stage/re-psn-$tag-$os-$arch/$server_exe" "$d/$host_exe"
   cp "$root/LICENSE" "$root/NOTICE.md" "$d/"
   cp "$root/app/README.md" "$d/README.md"
   if [ "$os" = windows ]; then

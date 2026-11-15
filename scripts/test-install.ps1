@@ -49,6 +49,9 @@ try {
     $ab = Join-Path $T "build\app\$an"
     New-Item -ItemType Directory -Path $ab | Out-Null
     Set-Content -LiteralPath (Join-Path $ab 're-psn-app.exe') -Value 'app v0.8.0'
+    $hostFixture = Join-Path $T 'synthetic-server-v0.8.0.exe'
+    [IO.File]::WriteAllBytes($hostFixture, [Text.Encoding]::UTF8.GetBytes("synthetic server bytes v0.8.0`n"))
+    Copy-Item -LiteralPath $hostFixture -Destination (Join-Path $ab 're-psn-host.exe')
     Set-Content -LiteralPath (Join-Path $ab 'LICENSE') -Value 'license'
     Set-Content -LiteralPath (Join-Path $ab 'NOTICE.md') -Value 'notice'
     Set-Content -LiteralPath (Join-Path $ab 'README.md') -Value 'app readme'
@@ -57,6 +60,24 @@ try {
     Compress-Archive -Path $ab -DestinationPath $azip
     $ah = (Get-FileHash -Algorithm SHA256 -LiteralPath $azip).Hash.ToLowerInvariant()
     [IO.File]::WriteAllText((Join-Path $F 'v0.8.0\SHA256SUMS'), "$ah  $an.zip`n")
+    # A checksum-valid old/incomplete app payload, missing only the host component.
+    $missingName = 're-psn-app-v0.9.0-windows-amd64'
+    $missingDir = Join-Path $T "build\missing\$missingName"
+    New-Item -ItemType Directory -Path $missingDir | Out-Null
+    foreach ($name in 're-psn-app.exe', 'LICENSE', 'NOTICE.md', 'README.md') {
+        Copy-Item -LiteralPath (Join-Path $ab $name) -Destination $missingDir
+    }
+    New-Item -ItemType Directory -Path (Join-Path $F 'v0.9.0') | Out-Null
+    $missingZip = Join-Path $F "v0.9.0\$missingName.zip"
+    Compress-Archive -Path $missingDir -DestinationPath $missingZip
+    $missingHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $missingZip).Hash.ToLowerInvariant()
+    [IO.File]::WriteAllText((Join-Path $F 'v0.9.0\SHA256SUMS'), "$missingHash  $missingName.zip`n")
+
+    # An app checksum failure must preserve an already installed pair as well.
+    New-Item -ItemType Directory -Path (Join-Path $F 'v0.10.0') | Out-Null
+    $badName = 're-psn-app-v0.10.0-windows-amd64.zip'
+    Copy-Item -LiteralPath $azip -Destination (Join-Path $F "v0.10.0\$badName")
+    [IO.File]::WriteAllText((Join-Path $F 'v0.10.0\SHA256SUMS'), "$('0' * 64)  $badName`n")
     $script:releases = '[{"tag_name":"v9.9.9","draft":true},{"tag_name":"v0.4.0","draft":false,"prerelease":true},{"tag_name":"v0.3.0","draft":false}]' | ConvertFrom-Json
     $script:calls = @()
     $script:userPathValue = 'C:\Other'
@@ -126,7 +147,8 @@ try {
     Check '-App: only the app zip and SHA256SUMS fetched' (($script:calls -join ' ') -eq 'https://github.com/undecuple/re-psn/releases/download/v0.8.0/SHA256SUMS https://github.com/undecuple/re-psn/releases/download/v0.8.0/re-psn-app-v0.8.0-windows-amd64.zip')
     Check '-App: README.md and NOTICE.md copied' ((Test-Path -LiteralPath (Join-Path $local 're-psn-app\v0.8.0\README.md')) -and (Test-Path -LiteralPath (Join-Path $local 're-psn-app\v0.8.0\NOTICE.md')))
     Check '-App: no server folder created' (-not (Test-Path -LiteralPath (Join-Path $local 're-psn\v0.8.0')))
-    Check '-App: no temporary file left' (@(Get-ChildItem -LiteralPath $bin -Force).Count -eq 1)
+    Check '-App: host component installed byte for byte' ((Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $bin 're-psn-host.exe')).Hash -eq (Get-FileHash -Algorithm SHA256 -LiteralPath $hostFixture).Hash)
+    Check '-App: no temporary file left' (@(Get-ChildItem -LiteralPath $bin -Force).Count -eq 2)
     Check '-App: says how to start it, no server hints' ((@($out) -join "`n") -like '*Start the app:*' -and (@($out) -join "`n") -notlike '*status page*')
     $local = Reset
     Check '-App on a release without app archives refused' (Fails { Install-RePsn -Version 'v0.4.0' -Dir '' -AddToPath $false -DryRun $false -App $true } 'start after v0.4.0')
@@ -135,6 +157,65 @@ try {
     $out = Install-RePsn -Version 'v0.8.0' -Dir '' -AddToPath $false -DryRun $true -App $true
     Check '-App dry run: no download, nothing written' ($script:calls.Count -eq 0 -and (Empty $local))
     Check '-App dry run: app zip URL and path' ((@($out) -join "`n") -like '*re-psn-app-v0.8.0-windows-amd64.zip*re-psn-app.exe*')
+    Check '-App dry run: host path and honest pair limit' ((@($out) -join "`n") -like '*re-psn-host.exe*not crash-atomic*')
+
+    $local = Reset
+    New-Item -ItemType Directory -Path $bin | Out-Null
+    Set-Content -LiteralPath (Join-Path $bin 're-psn-app.exe') -Value 'old app'
+    Set-Content -LiteralPath (Join-Path $bin 're-psn-host.exe') -Value 'old host'
+    Set-Content -LiteralPath (Join-Path $bin 're-psn.exe') -Value 'standalone stays'
+    Check '-App missing host refused before replacement' (Fails { Install-RePsn -Version 'v0.9.0' -Dir '' -AddToPath $false -DryRun $false -App $true } 'no matching re-psn-host.exe')
+    Check '-App missing host: both old components preserved' ((Get-Content -LiteralPath (Join-Path $bin 're-psn-app.exe')) -eq 'old app' -and (Get-Content -LiteralPath (Join-Path $bin 're-psn-host.exe')) -eq 'old host')
+    Check '-App missing host: standalone preserved' ((Get-Content -LiteralPath (Join-Path $bin 're-psn.exe')) -eq 'standalone stays')
+    Check '-App checksum mismatch refused' (Fails { Install-RePsn -Version 'v0.10.0' -Dir '' -AddToPath $false -DryRun $false -App $true } 'checksum mismatch')
+    Check '-App checksum mismatch: old pair preserved' ((Get-Content -LiteralPath (Join-Path $bin 're-psn-app.exe')) -eq 'old app' -and (Get-Content -LiteralPath (Join-Path $bin 're-psn-host.exe')) -eq 'old host')
+
+
+    $lockPath = Join-Path $bin '.re-psn-app.install.lock'
+    Set-Content -LiteralPath $lockPath -Value 'other owner'
+    Check '-App existing update lock refused' (Fails { Install-RePsn -Version 'v0.8.0' -Dir '' -AddToPath $false -DryRun $false -App $true } 'update lock exists')
+    Check '-App other update lock retained' ((Get-Content -LiteralPath $lockPath) -eq 'other owner')
+    Remove-Item -LiteralPath $lockPath -Force
+
+    $held = [IO.File]::Open((Join-Path $bin 're-psn-app.exe'), [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+    try {
+        Check '-App locked file refused before either replacement' (Fails { Install-RePsn -Version 'v0.8.0' -Dir '' -AddToPath $false -DryRun $false -App $true } 'locked or unwritable')
+    } finally { $held.Dispose() }
+    Check '-App locked file: old pair unchanged' ((Get-Content -LiteralPath (Join-Path $bin 're-psn-app.exe')) -eq 'old app' -and (Get-Content -LiteralPath (Join-Path $bin 're-psn-host.exe')) -eq 'old host')
+
+    # Inject a failure after the host replacement, to prove pair rollback.
+    $script:realMove = ${function:Move-InstallPayload}
+    function Move-InstallPayload([string]$Source, [string]$Target) {
+        if ([IO.Path]::GetFileName($Source) -eq 'new-re-psn-app.exe') { throw 'synthetic second replacement failure' }
+        & $script:realMove $Source $Target
+    }
+    try {
+        Check '-App second replacement failure is reported' (Fails { Install-RePsn -Version 'v0.8.0' -Dir '' -AddToPath $false -DryRun $false -App $true } 'synthetic second replacement failure')
+    } finally { Set-Item function:Move-InstallPayload -Value $script:realMove }
+    Check '-App second replacement failure: old bytes restored' ((Get-Content -LiteralPath (Join-Path $bin 're-psn-app.exe')) -eq 'old app' -and (Get-Content -LiteralPath (Join-Path $bin 're-psn-host.exe')) -eq 'old host')
+    Check '-App rollback leaves no staging files' (@(Get-ChildItem -LiteralPath $bin -Force).Count -eq 3)
+    function Move-InstallPayload([string]$Source, [string]$Target) {
+        if ([IO.Path]::GetFileName($Source) -in @('new-re-psn-app.exe', 'old-re-psn-host.exe')) { throw 'synthetic replacement/rollback failure' }
+        & $script:realMove $Source $Target
+    }
+    try {
+        Check '-App rollback failure explicitly reported' (Fails { Install-RePsn -Version 'v0.8.0' -Dir '' -AddToPath $false -DryRun $false -App $true } 'rollback incomplete')
+    } finally { Set-Item function:Move-InstallPayload -Value $script:realMove }
+    $recovery = @(Get-ChildItem -LiteralPath $bin -Force -Directory -Filter '.re-psn-app.update.*')
+    Check '-App failed rollback keeps recovery and lock' ($recovery.Count -eq 1 -and (Test-Path -LiteralPath $lockPath))
+    Check '-App failed rollback keeps original host bytes' ((Get-Content -LiteralPath (Join-Path $recovery[0].FullName 'old-re-psn-host.exe')) -eq 'old host')
+    Move-InstallPayload (Join-Path $recovery[0].FullName 'old-re-psn-host.exe') (Join-Path $bin 're-psn-host.exe')
+    Remove-Item -LiteralPath $recovery[0].FullName -Recurse -Force
+    Remove-Item -LiteralPath $lockPath -Force
+
+    $null = Install-RePsn -Version 'v0.8.0' -Dir '' -AddToPath $false -DryRun $false -App $true
+    Check '-App valid update: host byte identity' ((Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $bin 're-psn-host.exe')).Hash -eq (Get-FileHash -Algorithm SHA256 -LiteralPath $hostFixture).Hash)
+    Check '-App valid update: standalone not overwritten' ((Get-Content -LiteralPath (Join-Path $bin 're-psn.exe')) -eq 'standalone stays')
+
+    Remove-Item -LiteralPath (Join-Path $bin 're-psn-app.exe')
+    New-Item -ItemType Directory -Path (Join-Path $bin 're-psn-app.exe') | Out-Null
+    Check '-App directory target refused' (Fails { Install-RePsn -Version 'v0.8.0' -Dir '' -AddToPath $false -DryRun $false -App $true } 'regular non-link file')
+
 
     $onWindows = ($PSVersionTable.PSEdition -eq 'Desktop') -or ((Test-Path variable:IsWindows) -and $IsWindows)
     if (-not $onWindows) {

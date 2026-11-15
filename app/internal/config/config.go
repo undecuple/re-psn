@@ -36,8 +36,9 @@ const (
 type Theme string
 
 const (
-	ThemeDark  Theme = "dark"
-	ThemeLight Theme = "light"
+	ThemeDark   Theme = "dark"
+	ThemeLight  Theme = "light"
+	ThemeSystem Theme = "system"
 )
 
 // Settings are the keys this package knows. An empty value means unset.
@@ -48,6 +49,10 @@ type Settings struct {
 	Server          string // [server] server: host:port
 	StatusURL       string // [server] status_url
 	StatusTokenFile string // [server] status_token_file: a path, used as written
+	HostAddress     string // [host] address: independent of the remote player endpoint
+	HostRelay       string // [host] relay: true or false
+	SocialOrigin    string // [social] origin: explicit HTTPS origin
+	SocialCAFile    string // [social] ca_file: optional local CA file
 }
 
 // key is where a known setting lives and how to reach its field.
@@ -64,6 +69,10 @@ var keys = []key{
 	{"server", "server", func(s *Settings) *string { return &s.Server }, checkServer},
 	{"server", "status_url", func(s *Settings) *string { return &s.StatusURL }, checkURL},
 	{"server", "status_token_file", func(s *Settings) *string { return &s.StatusTokenFile }, nil},
+	{"host", "address", func(s *Settings) *string { return &s.HostAddress }, checkHostAddress},
+	{"host", "relay", func(s *Settings) *string { return &s.HostRelay }, checkBool},
+	{"social", "origin", func(s *Settings) *string { return &s.SocialOrigin }, checkSocialOrigin},
+	{"social", "ca_file", func(s *Settings) *string { return &s.SocialCAFile }, nil},
 }
 
 func lookup(section, name string) *key {
@@ -178,10 +187,31 @@ func checkMode(v string) error {
 
 func checkTheme(v string) error {
 	switch Theme(v) {
-	case ThemeDark, ThemeLight:
+	case ThemeDark, ThemeLight, ThemeSystem:
 		return nil
 	}
-	return fmt.Errorf("%q: want dark or light", v)
+	return fmt.Errorf("%q: want dark, light or system", v)
+}
+
+func checkHostAddress(v string) error {
+	h, _, err := net.SplitHostPort(v)
+	if err != nil || net.ParseIP(h) == nil || checkServer(v) != nil {
+		return errors.New("want a literal IP:port, for example 127.0.0.1:36100")
+	}
+	return nil
+}
+func checkBool(v string) error {
+	if v != "true" && v != "false" {
+		return errors.New("want true or false")
+	}
+	return nil
+}
+func checkSocialOrigin(v string) error {
+	u, err := url.Parse(v)
+	if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || u.Opaque != "" || u.RawPath != "" || (u.Path != "" && u.Path != "/") {
+		return errors.New("want an HTTPS origin without credentials, path, query or fragment")
+	}
+	return nil
 }
 
 // checkName follows PSN online IDs: 3-16 letters, digits, - or _.
@@ -235,7 +265,7 @@ func (f *File) Bytes() ([]byte, error) {
 			f.addMissing(&b, l.section, written)
 		}
 	}
-	for _, sec := range []string{"app", "player", "server"} {
+	for _, sec := range []string{"app", "player", "server", "host", "social"} {
 		if !f.hasSection(sec) && f.anySet(sec) {
 			if b.Len() > 0 {
 				b.WriteString("\n")

@@ -17,13 +17,13 @@ func TestLaunchSelection(t *testing.T) {
 		name, preferred, installed string
 		args                       []string
 	}{
-		{"alternative", "", "x-terminal-emulator", []string{"-e", self, "--"}},
-		{"kitty", "", "kitty", []string{"--session=none", self, "--"}},
-		{"xterm", "", "xterm", []string{"-e", self, "--"}},
-		{"preferred", "my-terminal", "my-terminal", []string{"-e", self, "--"}},
-		{"preferred kitty", "kitty", "kitty", []string{"--session=none", self, "--"}},
-		{"literal path", filepath.Join(t.TempDir(), "terminal with spaces"), "", []string{"-e", self, "--"}},
-		{"not shell words", "missing --option", "xterm", []string{"-e", self, "--"}},
+		{"alternative", "", "x-terminal-emulator", []string{"-e", self, "tui"}},
+		{"kitty", "", "kitty", []string{"--session=none", self, "tui"}},
+		{"xterm", "", "xterm", []string{"-e", self, "tui"}},
+		{"preferred", "my-terminal", "my-terminal", []string{"-e", self, "tui"}},
+		{"preferred kitty", "kitty", "kitty", []string{"--session=none", self, "tui"}},
+		{"literal path", filepath.Join(t.TempDir(), "terminal with spaces"), "", []string{"-e", self, "tui"}},
+		{"not shell words", "missing --option", "xterm", []string{"-e", self, "tui"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			installed := tc.installed
@@ -132,7 +132,7 @@ func TestLaunchFailuresDoNotLeakOrRetry(t *testing.T) {
 func init() {
 	switch os.Getenv("RE_PSN_DESKTOP_TEST_HELPER") {
 	case "terminal":
-		if len(os.Args) != 4 || os.Args[1] != "-e" || os.Args[3] != "--" {
+		if len(os.Args) != 4 || os.Args[1] != "-e" || os.Args[3] != "tui" {
 			os.Exit(91)
 		}
 		cmd := exec.Command(os.Args[2], os.Args[3:]...)
@@ -190,7 +190,7 @@ func TestLaunchSyntheticTerminalProcess(t *testing.T) {
 		Keep  string
 		Guard string
 	}
-	if json.Unmarshal(raw, &got) != nil || !reflect.DeepEqual(got.Args, []string{"--"}) ||
+	if json.Unmarshal(raw, &got) != nil || !reflect.DeepEqual(got.Args, []string{"tui"}) ||
 		got.Keep != "literal ; $(value)" || got.Guard != "1" {
 		t.Fatalf("unexpected child arguments/environment: %s", raw)
 	}
