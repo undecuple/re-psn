@@ -10,6 +10,8 @@ component. Games still connect directly to the standalone server without this ap
 
 ## Choose a workspace
 
+![First run: three cards to choose Play, Host or Both; choosing one starts no server and creates no identity](img/app-welcome.png)
+
 | Workspace | What it does |
 |---|---|
 | **Play / connect** | Select/check a remote game server, inspect public snapshots and use optional local trophies/friends. |
@@ -21,6 +23,8 @@ not need a remote server. Role-appropriate controls stay separate; a successful 
 live game session. The app does not change a recomp's networking files or launch/join a game for you.
 
 ## Play and read-only snapshots
+
+![Play: a checked server with its public room and leaderboard snapshot](img/app-play.png)
 
 Enter a game `HOST:PORT` and optionally the server's HTTP status URL. Choose **Save & check server** explicitly.
 Protocol filters let you select a title/leaderboard; an HTTP source supplies its public room and board summaries.
@@ -34,6 +38,8 @@ credential never grants host control. See [native status configuration](../app/R
 server or refresh a friend relay. Those network actions have their own explicit controls.
 
 ## Own a local host
+
+![Host: the app's own server running on 127.0.0.1:37100, with its listen address and relay choice](img/app-host.png)
 
 Keep the app's matching `re-psn-host` component beside it (`re-psn-host.exe` on Windows). In Host, choose a literal
 IP and port, such as `127.0.0.1:36100`, optionally enable relay traffic and choose **Save & start host**. A LAN/public
@@ -88,6 +94,8 @@ Operators can run the separate [TLS friend companion](app-framework.md#host-an-a
 the Host game-server button does not automatically start it.
 
 ## Backup and restore
+
+![Profile and backup: a local profile with its public account ID, encrypted backup and restore](img/app-profile.png)
 
 Profile & backup downloads an encrypted recovery bundle using a long, unique passphrase. Keep the passphrase
 separately; no server can reset it. The fields clear after the action. The bundle carries your identity/local trophies,
