@@ -175,7 +175,7 @@ func (s *Server) actionRequest(w http.ResponseWriter, r *http.Request) error {
 		writeJSON(w, s.state())
 		s.cancel()
 		return nil
-	case "/api/servers/add", "/api/servers/remove", "/api/servers/check", "/api/servers/check-all", "/api/servers/use", "/api/servers/export":
+	case "/api/servers/add", "/api/servers/remove", "/api/servers/check", "/api/servers/check-all", "/api/servers/use", "/api/servers/export", "/api/servers/preview", "/api/servers/import":
 		if err := s.serverAction(w, r); err != nil {
 			if errors.Is(err, errNoState) {
 				return nil

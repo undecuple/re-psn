@@ -84,7 +84,8 @@
             <form id="servers-form"><div class="form-grid"><label>Name<input id="server-name" maxlength="64" autocomplete="off" placeholder="Friends' server"></label><label>Game server<input id="server-address" maxlength="255" autocomplete="off" placeholder="play.example.org:36100"></label><label>Optional status URL<input id="server-status-url" maxlength="2048" autocomplete="off" placeholder="https://play.example.org/status"></label></div>
             <div class="actions"><button class="primary" type="submit" data-mutates>Add server</button></div></form></div>
             <div class="table-scroll"><table><thead><tr><th scope="col">Name</th><th scope="col">Game server</th><th scope="col">Last check</th><th scope="col">Rooms</th><th scope="col">Actions</th></tr></thead><tbody id="servers-body"></tbody></table></div>
-            <div class="panel-pad"><div class="actions"><button type="button" id="servers-check-all" data-mutates>Check all</button><button type="button" id="servers-export" data-mutates>Export list</button></div></div>
+            <div class="panel-pad"><div class="actions"><button type="button" id="servers-check-all" data-mutates>Check all</button><button type="button" id="servers-export" data-mutates>Export list</button></div>
+            <label>Import a list<input type="file" id="servers-import-file" accept=".json,application/json" data-mutates></label></div>
           </div>
           <p class="section-note" id="play-message">A successful check is a completed snapshot request, not a live game session.</p>
           <div class="panel table-panel"><div class="panel-heading"><h2>Public rooms</h2><span class="muted">Read-only snapshot</span></div><div class="table-scroll"><table><thead><tr><th scope="col">Room</th><th scope="col">Title</th><th scope="col">Players</th><th scope="col">Members</th></tr></thead><tbody id="rooms-body"></tbody></table></div></div>

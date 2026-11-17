@@ -6,7 +6,7 @@
   // Check all runs 4 servers at a time with 5 s each; 64 unreachable ones take 80 s.
   const CHECK_ALL_MS = 100000;
   const SESSION_KEY = 're-psn-ui-token-v1';
-  const ROUTES = new Set(['/api/settings', '/api/play', '/api/host/start', '/api/host/stop', '/api/profile/create', '/api/catalog', '/api/grant', '/api/revoke', '/api/friends', '/api/profile/export', '/api/profile/restore', '/api/shutdown', '/api/servers/add', '/api/servers/remove', '/api/servers/check', '/api/servers/check-all', '/api/servers/use', '/api/servers/export']);
+  const ROUTES = new Set(['/api/settings', '/api/play', '/api/host/start', '/api/host/stop', '/api/profile/create', '/api/catalog', '/api/grant', '/api/revoke', '/api/friends', '/api/profile/export', '/api/profile/restore', '/api/shutdown', '/api/servers/add', '/api/servers/remove', '/api/servers/check', '/api/servers/check-all', '/api/servers/use', '/api/servers/export', '/api/servers/preview', '/api/servers/import']);
   const personal = mode => mode === 'play' || mode === 'both';
   const hosting = mode => mode === 'host' || mode === 'both';
   function readGuard() { let generation = 0; return {capture: () => generation, invalidate: () => {generation++;}, current: value => value === generation}; }
@@ -248,6 +248,18 @@
     if (!await confirm('Check all saved servers?', detail, 'Check all')) return null;
     const next = await api.post('/api/servers/check-all'); message('Checked ' + entries.length + ' saved servers.'); return next;
   }
+  async function importServers() {
+    const input = $('servers-import-file'), file = input.files[0];
+    try {
+      if (!file) return null;
+      if (file.size > 64 * 1024) throw new Error('Choose a saved servers file of at most 64 KiB.');
+      const body = {file: await file.text()}, found = await api.post('/api/servers/preview', body);
+      if (!found.add) { message('Nothing new: all ' + found.total + ' servers in that file are already in your list, or the list is full.'); return null; }
+      const detail = 'The file lists ' + found.total + ' servers. ' + found.add + ' will be added and ' + found.skip + ' skipped because they are already in your list or it is full. Nothing is contacted until you press Check.';
+      if (!await confirm('Import ' + found.add + ' servers?', detail, 'Import')) return null;
+      const next = await api.post('/api/servers/import', body); message('Imported ' + found.add + ' servers. They are not checked yet.'); return next;
+    } finally { input.value = ''; }
+  }
   async function exportServers() {
     const file = await api.post('/api/servers/export'), url = URL.createObjectURL(new Blob([JSON.stringify(file, null, 2) + '\n'], {type: 'application/json'})), link = node('a');
     link.href = url; link.download = 're-psn-servers.json'; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -352,6 +364,7 @@
   submit('servers-form', async () => { const next = await api.post('/api/servers/add', {name: $('server-name').value.trim(), server: $('server-address').value.trim(), status_url: $('server-status-url').value.trim()}); for (const id of ['server-name', 'server-address', 'server-status-url']) $(id).value = ''; return next; });
   $('servers-check-all').addEventListener('click', () => action(checkAllServers, null));
   $('servers-export').addEventListener('click', () => action(exportServers, null));
+  $('servers-import-file').addEventListener('change', () => action(importServers, null));
   $('refresh-state').addEventListener('click', () => readState());
   $('shutdown').addEventListener('click', () => action(async () => { if (!await confirm('Stop the local app?', state.host.running ? 'This also stops the server owned by this app and revokes game reporting. Close this tab instead to leave them running.' : 'This revokes any local game grant. Ordinary game networking and separately hosted servers are unaffected.', 'Stop app')) return null; await api.post('/api/shutdown'); stopped = true; authenticated = false; try { sessionStorage.removeItem(SESSION_KEY); } catch {} message('The app has stopped. You can close this tab.'); text('bridge-state', 'App stopped'); return null; }));
   controls();

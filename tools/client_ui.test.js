@@ -46,11 +46,11 @@ test('API requests stay on fixed local routes with header authorization and stri
 });
 test('saved-server routes are fixed local POSTs and nothing else under that prefix is reachable', async () => {
   const calls = [], api = ui.makeAPI(token, async (url, options) => {calls.push([url, options]); return json({settings: {mode: 'play'}});});
-  for (const route of ['add', 'remove', 'check', 'check-all', 'use', 'export']) await api.post('/api/servers/' + route, {server: 'h:1'});
-  assert.deepEqual(calls.map(c => c[0]), ['add', 'remove', 'check', 'check-all', 'use', 'export'].map(r => '/api/servers/' + r));
+  for (const route of ['add', 'remove', 'check', 'check-all', 'use', 'export', 'preview', 'import']) await api.post('/api/servers/' + route, {server: 'h:1'});
+  assert.deepEqual(calls.map(c => c[0]), ['add', 'remove', 'check', 'check-all', 'use', 'export', 'preview', 'import'].map(r => '/api/servers/' + r));
   assert.ok(calls.every(c => c[1].method === 'POST' && c[1].redirect === 'error' && c[1].credentials === 'omit' && c[1].headers.Authorization === 'Bearer ' + token));
-  for (const other of ['/api/servers', '/api/servers/', '/api/servers/import', '/api/servers/../settings', '/api/servers/add?x=1']) await assert.rejects(api.post(other, {}), /Unsupported/);
-  assert.equal(calls.length, 6);
+  for (const other of ['/api/servers', '/api/servers/', '/api/servers/import/', '/api/servers/../settings', '/api/servers/add?x=1']) await assert.rejects(api.post(other, {}), /Unsupported/);
+  assert.equal(calls.length, 8);
 });
 test('API errors are bounded text, redact capabilities and distinguish an expired session', async () => {
   const api = ui.makeAPI(token, async () => json({error: '<script>bad</script> ' + token}, 400));

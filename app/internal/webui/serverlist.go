@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 	"unicode"
@@ -242,6 +243,36 @@ func (s *Server) serverAction(w http.ResponseWriter, r *http.Request) error {
 			return errors.New("That server is not in the list")
 		}
 		return s.useServer(e)
+	case "/api/servers/preview", "/api/servers/import":
+		var q struct {
+			File string `json:"file"`
+		}
+		if err := decode(r, &q); err != nil {
+			return err
+		}
+		other, err := servers.Parse(strings.NewReader(q.File))
+		if err != nil {
+			return errors.New("That is not a saved servers file: " + err.Error())
+		}
+		if r.URL.Path == "/api/servers/preview" {
+			s.servers.mu.Lock()
+			trial := &servers.List{Entries: append([]servers.Entry(nil), s.servers.list.Entries...)}
+			bad := s.servers.err
+			s.servers.mu.Unlock()
+			if bad != nil {
+				return errors.New("Saved servers could not be read; fix or remove servers.json first")
+			}
+			added, skipped := trial.Merge(other.Entries)
+			writeJSON(w, map[string]int{"total": len(other.Entries), "add": added, "skip": skipped})
+			return errNoState
+		}
+		// Import adds entries and contacts nothing: they stay "Not checked" until Check is pressed.
+		return s.servers.edit(func(l *servers.List) error {
+			if added, _ := l.Merge(other.Entries); added == 0 {
+				return errors.New("nothing new to import")
+			}
+			return nil
+		})
 	case "/api/servers/export":
 		if err := decode(r, &struct{}{}); err != nil {
 			return err
