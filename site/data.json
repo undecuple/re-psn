@@ -1297,6 +1297,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "**Desktop app:** a Saved servers list on the Play screen: add, remove, check one or all (4 at a time, 5 seconds each, after a confirmation), use an entry as the Play target, and export the list.",
      "**Desktop app:** `re-psn-app` opens the app in `re-psn-window` when that program is beside it, and `--browser` opens a browser tab instead; it passes its `ui` flags on to the window, and falls back to the browser when ...",
      "**Desktop app:** a native window for the app, `re-psn-window` (a small Tauri program in `app/shell/`): it starts `re-psn-app`, shows its private launch link in a window of its own and stops the app when the window ..."
     ],
@@ -1312,7 +1313,7 @@
     ]
    },
    "counts": {
-    "Added": 2,
+    "Added": 3,
     "Changed": 5,
     "Fixed": 1
    }

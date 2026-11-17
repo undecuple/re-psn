@@ -198,6 +198,16 @@ It returns 0 for success, 1 for failure and 2 for malformed command arguments. I
 Canceling a completed/partially sent request does not undo a server-side action; interrupted protocol writes close
 the connection because a partial frame cannot safely be reused.
 
+## Saved servers file
+
+`servers.json` sits beside `re-psn.ini` and holds the Play screen's saved-servers list:
+`{"version": 1, "servers": [{"name": "...", "server": "host:port", "status_url": "..."}]}`. At most 64 entries, names of 1 to
+64 characters without control characters, a `host:port` that the settings file would accept, an optional `http://` or
+`https://` status URL without a user name or password, and no two entries with the same server and status URL once
+host names are lower-cased and default ports dropped. The file is at most 64 KiB, mode 0600, written by atomic replacement,
+and read strictly (unknown fields, a different version or trailing data are refused). An unreadable file is reported and
+never overwritten. Last-check results are not stored. See [Saved servers](../docs/client-ui.md#saved-servers).
+
 ## Settings file
 
 Settings live in `$XDG_CONFIG_HOME/re-psn/re-psn.ini` when that variable is absolute, else

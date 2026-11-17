@@ -44,6 +44,14 @@ test('API requests stay on fixed local routes with header authorization and stri
   for (const foreign of ['https://example.invalid/api/state', '//example.invalid', '/api/open', '/api/state?token=' + token, '/api/exec']) await assert.rejects(api.post(foreign), /Unsupported/);
   await assert.rejects(api.post('/api/state'), /Unsupported/); assert.equal(calls.length, 2);
 });
+test('saved-server routes are fixed local POSTs and nothing else under that prefix is reachable', async () => {
+  const calls = [], api = ui.makeAPI(token, async (url, options) => {calls.push([url, options]); return json({settings: {mode: 'play'}});});
+  for (const route of ['add', 'remove', 'check', 'check-all', 'use', 'export']) await api.post('/api/servers/' + route, {server: 'h:1'});
+  assert.deepEqual(calls.map(c => c[0]), ['add', 'remove', 'check', 'check-all', 'use', 'export'].map(r => '/api/servers/' + r));
+  assert.ok(calls.every(c => c[1].method === 'POST' && c[1].redirect === 'error' && c[1].credentials === 'omit' && c[1].headers.Authorization === 'Bearer ' + token));
+  for (const other of ['/api/servers', '/api/servers/', '/api/servers/import', '/api/servers/../settings', '/api/servers/add?x=1']) await assert.rejects(api.post(other, {}), /Unsupported/);
+  assert.equal(calls.length, 6);
+});
 test('API errors are bounded text, redact capabilities and distinguish an expired session', async () => {
   const api = ui.makeAPI(token, async () => json({error: '<script>bad</script> ' + token}, 400));
   await assert.rejects(api.post('/api/settings', {}), error => error.message === '<script>bad</script> [redacted]');
