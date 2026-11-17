@@ -536,6 +536,9 @@ Limits, the UDP source check and how to report a vulnerability privately are in 
 is out of scope. re-psn is for groups running their own server, not a public PSN replacement. Issues and pull requests are
 welcome; [CONTRIBUTING.md](CONTRIBUTING.md) has the ground rules and the tests to run.
 
+There is also a Discord server with a forum for re-psn players and hosts: [join it](https://discord.gg/W8fMT78Q7k). It is unofficial fan work and
+not affiliated with Sony. Bug reports still belong in [issues](https://github.com/undecuple/re-psn/issues).
+
 | Document | What is in it |
 |---|---|
 | [docs/client-ui.md](docs/client-ui.md) | Optional browser client, Play/Host/Both, reopen, local trophies/friends, updates and platform evidence |
