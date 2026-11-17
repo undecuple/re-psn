@@ -229,6 +229,9 @@ Routers and the relay are tested in Docker by the
 
 ![Terminal-style server status in dark mode: alice's room and her leaderboard score of 100, shown together in Overview](docs/status.png)
 
+"connections total" counts every connection since the server started, including the ones the C client's test suite makes
+on purpose to be refused, so it is higher than the one player shown.
+
 ---
 
 ## Features
@@ -257,6 +260,10 @@ desktop apps and more) is in [ROADMAP.md](ROADMAP.md) too.
 The optional [Windows/Linux app](app/README.md) opens a local browser interface with `re-psn-app` or
 `re-psn-app ui`; the advanced terminal interface is `re-psn-app tui`. Its colors, local monospace fonts and double
 frames follow [undecuple/me](https://undecuple.github.io/me/), with Light and System browser appearance options.
+With `re-psn-window` beside it (app archives of releases after v0.7.0 hold it) the same interface opens in a window of its
+own instead of a browser tab ([the native window](docs/client-ui.md#the-native-window)).
+
+![The app's Overview in Both mode: a checked Play target at 127.0.0.1:36100 and the app's own running host at 127.0.0.1:37100, with local trophies and friends below](docs/img/app-overview.png)
 
 Choose **Play / connect** to save/check a remote game server and inspect public snapshots, **Host** to explicitly
 start/stop the app's own local server, or **Both** to keep those targets independent. Selecting a role starts no
