@@ -114,7 +114,8 @@
   if (typeof document === 'undefined') return;
 
   const $ = id => document.getElementById(id);
-  const text = (id, value) => { $(id).textContent = clean(value); };
+  // Write only when the text changes, so a poll that finds nothing new leaves selections and live regions alone.
+  const text = (id, value) => { const target = $(id), next = clean(value); if (target.textContent !== next) target.textContent = next; };
   const show = (id, visible) => { $(id).hidden = !visible; };
   const stamp = ms => ms ? new Date(ms).toLocaleString() : 'Not checked';
   const node = (tag, value, className) => { const n = document.createElement(tag); if (value !== undefined) n.textContent = clean(value); if (className) n.className = className; return n; };
@@ -160,7 +161,13 @@
   function confirm(title, description, accept = 'Continue') {
     text('confirm-title', title); text('confirm-description', description); text('confirm-accept', accept);
     const dialog = $('confirm-dialog'); dialog.returnValue = 'cancel';
-    return new Promise(resolve => { dialog.addEventListener('close', () => resolve(dialog.returnValue === 'accept'), {once: true}); dialog.showModal(); });
+    return new Promise(resolve => {
+      // The buttons close the dialog themselves, so the answer never depends on form submission (the page's CSP has form-action 'none').
+      const buttons = [...dialog.querySelectorAll('button[value]')], answer = event => { event.preventDefault(); dialog.close(event.currentTarget.value); };
+      for (const button of buttons) button.addEventListener('click', answer);
+      dialog.addEventListener('close', () => { for (const button of buttons) button.removeEventListener('click', answer); resolve(dialog.returnValue === 'accept'); }, {once: true});
+      dialog.showModal();
+    });
   }
   function navigate(page, focus = true) {
     if (!state) return;
@@ -262,7 +269,7 @@
     text('profile-error', state.profile_error || ''); text('restore-note', profile ? 'A profile already exists here. Restore into a new private profile location using the CLI; this interface never replaces it.' : 'Restore into this new, empty profile. Remote registration and friendships are fetched from each relay after authentication.');
     text('grant-message', state.grant.message || (state.grant.active ? 'Game reporting is enabled. Keep this app running; revoke it when finished.' : 'Local game reporting is off.')); show('grant-path', state.grant.active && !!state.grant.path); text('grant-path', state.grant.active ? 'Private descriptor: ' + state.grant.path : '');
     fillSettings(); renderPlay(); renderTrophies(); renderFriends(); navigate(currentPage, false); controls();
-    text('bridge-state', 'Private app session · local state updated ' + new Date().toLocaleTimeString());
+    text('bridge-state', 'Private app session · local state updated'); text('bridge-time', new Date().toLocaleTimeString());
   }
   async function readState(initial = false) {
     if (reading || busy || !authenticated || stopped) return;
