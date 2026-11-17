@@ -243,7 +243,6 @@
   });
   apply(); applyRole();
   for (const id of ['theme-controls', 'role-controls', 'toolbar', 'appearance']) byID(id).hidden = false;
-  byID('fallback-refresh').remove();
   setInterval(() => { if (!paused && !document.hidden) refresh(); }, 5000);
   addEventListener('pagehide', () => { if (activeRequest) activeRequest.abort(); });
 })();

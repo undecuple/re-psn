@@ -33,6 +33,11 @@ func TestStatusTerminalPage(t *testing.T) {
 		t.Fatal(err)
 	}
 	html := out.String()
+	// The reload fallback must sit in <noscript>: a refresh tag outside it reloads the whole page every 5 seconds even when
+	// the script runs, because removing the tag after load does not cancel the refresh the browser has already scheduled.
+	if !strings.Contains(html, `<noscript><meta id="fallback-refresh" http-equiv="refresh" content="5"></noscript>`) || strings.Count(html, "http-equiv=\"refresh\"") != 1 {
+		t.Error("the page refresh fallback must be the only refresh tag and sit inside <noscript>")
+	}
 	for _, want := range []string{"re:psn", "lang=\"en\"", "fallback-refresh", "Rooms", "Leaderboards", "&lt;script&gt;bad&lt;/script&gt;", "&lt;img src=x&gt;", "&lt;svg&gt;", "&lt;script&gt;leader&lt;/script&gt;"} {
 		if !strings.Contains(html, want) {
 			t.Errorf("missing %q", want)

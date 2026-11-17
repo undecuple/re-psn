@@ -1304,11 +1304,15 @@
      "**Local browser interface:** the page now rewrites a piece of text only when it changes, so a refresh every 4 seconds no longer clears a text selection or makes screen readers announce the status line again (the clock ...",
      "**Docs and tooling:** the file list in the release notes (`.github/workflows/release.yml`) says that the `re-psn-app` archives also hold the matching `re-psn-host` server binary and that `install.sh --app` and ...",
      "**Docs and tooling:** the README and `docker/README.md` name v0.7.0 and its container image as the newest (its manifest lists amd64 and arm64 and is readable without a login)."
+    ],
+    "Fixed": [
+     "**Server status page:** the page no longer reloads itself every 5 seconds."
     ]
    },
    "counts": {
     "Added": 2,
-    "Changed": 3
+    "Changed": 3,
+    "Fixed": 1
    }
   },
   "latest": {
