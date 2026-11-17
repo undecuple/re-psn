@@ -1,0 +1,20 @@
+[package]
+name = "re-psn-shell"
+version = "0.7.0"
+edition = "2021"
+description = "Native window for the re-psn desktop app"
+license = "MIT"
+publish = false
+
+[build-dependencies]
+tauri-build = "=2.7.5"
+
+[dependencies]
+tauri = "=2.12.6"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

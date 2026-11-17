@@ -37,3 +37,5 @@ psnr.env
 
 # Fonts and other downloads for tools/art/make_art.py (never committed)
 /work/
+/app/shell/target/
+/app/shell/gen/
