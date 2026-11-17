@@ -23,7 +23,52 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The native window program (app/shell, a Tauri program) cannot be cross-built like the Go binaries: each target is built
+  # on a runner of its own system, with the runner's rustup at the pinned version and Cargo.lock enforced (--locked).
+  # `build` below puts the three results into the app archives. Linux needs WebKitGTK to build; the user needs it to run
+  # the window (the app still works in a browser without it), and Windows uses the WebView2 runtime that ships with
+  # Windows 10 and 11.
+  window:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - {runner: ubuntu-latest, os: linux, arch: amd64, ext: ''}
+          - {runner: ubuntu-24.04-arm, os: linux, arch: arm64, ext: ''}
+          - {runner: windows-latest, os: windows, arch: amd64, ext: '.exe'}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Rust toolchain
+        shell: bash
+        run: |
+          rustup toolchain install 1.99.1 --profile minimal
+          rustup default 1.99.1
+          rustc --version
+      - name: system packages
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev
+      - name: build
+        working-directory: app/shell
+        shell: bash
+        run: |
+          cargo build --release --locked
+          mkdir "$RUNNER_TEMP/out"
+          cp "target/release/re-psn-shell${{ matrix.ext }}" "$RUNNER_TEMP/out/re-psn-window-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: window-${{ matrix.os }}-${{ matrix.arch }}
+          path: ${{ runner.temp }}/out/
+          if-no-files-found: error
+          retention-days: 3
+
   build:
+    needs: window
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -35,6 +80,11 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
         with:
           go-version: stable
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          pattern: window-*
+          path: ${{ runner.temp }}/window
+          merge-multiple: true
       - name: Tag is v + VERSION
         if: github.ref_type == 'tag'
         run: scripts/check-release.sh --tag "$TAG"
@@ -55,14 +105,14 @@ jobs:
           printf '%s  %s\n' "$APPIMAGETOOL_SHA256" "$d/appimagetool-x86_64.AppImage" "$RUNTIME_SHA256" "$d/runtime-x86_64" \
             | sha256sum -c - || { echo "::error::a pinned AppImage tool does not match its SHA-256"; rm -rf "$d"; exit 1; }
       - name: Build archives, the AppImage (with its smoke test), the install scripts and checksums
-        run: scripts/release-build.sh "$TAG" --appimage-tools "$RUNNER_TEMP/appimage-tools"
+        run: scripts/release-build.sh "$TAG" --appimage-tools "$RUNNER_TEMP/appimage-tools" --shell-dir "$RUNNER_TEMP/window"
       - name: Release notes
         run: |
           {
             echo "### Files"
             echo
             echo "Each archive holds one self-contained server binary (no installer, no runtime needed), LICENSE, NOTICE.md and an examples folder (settings file, systemd unit, proxy configs)."
-            echo "The \`re-psn-app\` archives hold the desktop app (one static binary), the matching \`re-psn-host\` server binary the app starts for local hosting, LICENSE, NOTICE.md and its README, for the same three platforms. \`install.sh --app\` and \`install.ps1 -App\` install the app and its host from a release instead of the server; or unpack one by hand."
+            echo "The \`re-psn-app\` archives hold the desktop app (one static binary), the matching \`re-psn-host\` server binary the app starts for local hosting, \`re-psn-window\` (the same app in a window of its own: on Linux it needs WebKitGTK 4.1 installed, on Windows the WebView2 runtime that ships with Windows 10 and 11, and without it the app still opens in your browser), LICENSE, NOTICE.md and its README, for the same three platforms. \`install.sh --app\` and \`install.ps1 -App\` install the app and its host from a release instead of the server; or unpack one by hand."
             echo "The x86_64 AppImage holds the same Linux binary and examples as one runnable file; it needs FUSE to mount, or run it with \`--appimage-extract-and-run\`. It is not signed."
             echo "\`install.sh\` (Linux) and \`install.ps1\` (Windows) are the install scripts from this tag, listed in SHA256SUMS too: download one with SHA256SUMS, check it, read it, then run it (see docs/installing.md)."
             echo "Check a download with \`sha256sum -c SHA256SUMS --ignore-missing\`."

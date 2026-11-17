@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **Desktop app:** a native window for the app, `re-psn-window` (a small Tauri program in `app/shell/`): it starts `re-psn-app`, shows its private launch link in a window of its own and stops the app when the window closes. `re-psn-app ui` gets `--exit-with-parent`, which stops the app cleanly when its standard input closes, so a parent program can stop it on any system. The release builds it natively for Linux (x86_64 and arm64) and Windows and puts it in the app archives. Dependencies are pinned in `app/shell/Cargo.lock`. Linux needs WebKitGTK 4.1 installed to run it, Windows the WebView2 runtime. Run on Linux with a virtual display; not run on Windows, and the install scripts do not install it yet. See `docs/client-ui.md`.
+
 ### Changed
 - **Docs and tooling:** the file list in the release notes (`.github/workflows/release.yml`) says that the `re-psn-app` archives also hold the matching `re-psn-host` server binary and that `install.sh --app` and `install.ps1 -App` install both; before, it described the app archive as one binary. Only the notes text changes: no asset, name or check.
 - **Docs and tooling:** the README and `docker/README.md` name v0.7.0 and its container image as the newest (its manifest lists amd64 and arm64 and is readable without a login). No row of the features list changes its `since` value: the website row stays at `main`, as the site is deployed from `main`, not released.

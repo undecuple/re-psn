@@ -36,7 +36,11 @@ struct State {
 
 fn app_binary() -> Result<PathBuf, String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    let name = if cfg!(windows) { "re-psn-app.exe" } else { "re-psn-app" };
+    let name = if cfg!(windows) {
+        "re-psn-app.exe"
+    } else {
+        "re-psn-app"
+    };
     let path = exe.parent().ok_or("no program folder")?.join(name);
     if path.is_file() {
         Ok(path)
@@ -77,9 +81,13 @@ fn read_link(file: &Path, child: &mut Child) -> Result<String, String> {
     }
 }
 
-fn stop(mut b: Backend) {
+fn stop(b: Backend) {
+    stop_within(b, STOP_TIMEOUT)
+}
+
+fn stop_within(mut b: Backend, timeout: Duration) {
     drop(b.stdin.take());
-    let deadline = Instant::now() + STOP_TIMEOUT;
+    let deadline = Instant::now() + timeout;
     loop {
         match b.child.try_wait() {
             Ok(Some(_)) => return,
@@ -133,7 +141,10 @@ fn main() {
             std::process::exit(1);
         }
     };
-    let state = State { backend: Mutex::new(Some(backend)), reopened };
+    let state = State {
+        backend: Mutex::new(Some(backend)),
+        reopened,
+    };
     tauri::Builder::default()
         .manage(state)
         .setup(move |app| {
@@ -182,4 +193,110 @@ fn main() {
         })
         .run(tauri::generate_context!())
         .expect("could not start the window");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn quick_exit(code: i32) -> Child {
+        let mut c = if cfg!(windows) {
+            let mut c = Command::new("cmd");
+            c.args(["/C", &format!("exit {code}")]);
+            c
+        } else {
+            let mut c = Command::new("sh");
+            c.args(["-c", &format!("exit {code}")]);
+            c
+        };
+        c.spawn().unwrap()
+    }
+
+    fn long_running() -> Child {
+        let mut c = if cfg!(windows) {
+            let mut c = Command::new("cmd");
+            c.args(["/C", "ping -n 30 127.0.0.1 >nul"]);
+            c
+        } else {
+            let mut c = Command::new("sleep");
+            c.arg("30");
+            c
+        };
+        c.stdout(Stdio::null()).spawn().unwrap()
+    }
+
+    #[test]
+    fn private_dir_is_new_each_time_and_private() {
+        let a = private_dir().unwrap();
+        let b = private_dir().unwrap();
+        assert_ne!(a, b);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            for d in [&a, &b] {
+                assert_eq!(fs::metadata(d).unwrap().permissions().mode() & 0o077, 0);
+            }
+        }
+        fs::remove_dir_all(a).unwrap();
+        fs::remove_dir_all(b).unwrap();
+    }
+
+    #[test]
+    fn read_link_waits_for_a_complete_line() {
+        let dir = private_dir().unwrap();
+        let file = dir.join("link.txt");
+        fs::write(&file, "http://127.0.0.1:1/#token=ab").unwrap();
+        let writer = file.clone();
+        let t = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(300));
+            fs::write(&writer, "http://127.0.0.1:1/#token=abcd\n").unwrap();
+        });
+        let mut child = long_running();
+        let link = read_link(&file, &mut child).unwrap();
+        assert_eq!(link, "http://127.0.0.1:1/#token=abcd");
+        let _ = child.kill();
+        let _ = child.wait();
+        t.join().unwrap();
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn read_link_reports_an_app_that_stopped_early() {
+        let dir = private_dir().unwrap();
+        let mut child = quick_exit(3);
+        let err = read_link(&dir.join("never.txt"), &mut child).unwrap_err();
+        assert!(err.contains("stopped before it was ready"), "{err}");
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn app_binary_must_be_beside_the_program() {
+        // The test program's folder holds no re-psn-app.
+        assert!(app_binary().is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn stop_closes_input_first_and_kills_only_if_needed() {
+        // cat ends when its standard input closes: a clean stop well before the limit.
+        let mut child = Command::new("cat")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .spawn()
+            .unwrap();
+        let stdin = child.stdin.take();
+        let t = Instant::now();
+        stop_within(Backend { child, stdin }, Duration::from_secs(5));
+        assert!(t.elapsed() < Duration::from_secs(3));
+        // sleep ignores its input: it is killed after the limit.
+        let mut child = Command::new("sleep")
+            .arg("30")
+            .stdin(Stdio::piped())
+            .spawn()
+            .unwrap();
+        let stdin = child.stdin.take();
+        let t = Instant::now();
+        stop_within(Backend { child, stdin }, Duration::from_millis(300));
+        assert!(t.elapsed() < Duration::from_secs(5));
+    }
 }

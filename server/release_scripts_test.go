@@ -77,7 +77,7 @@ func newTree(t *testing.T, files map[string]string) string {
 	for rel, text := range files {
 		write(rel, []byte(text), 0o644)
 	}
-	for _, s := range []string{"bump-version.sh", "release-notes.sh", "check-release.sh", "build-appimage.sh", "install.sh", "install.ps1"} {
+	for _, s := range []string{"bump-version.sh", "release-notes.sh", "check-release.sh", "build-appimage.sh", "release-build.sh", "install.sh", "install.ps1"} {
 		b, err := os.ReadFile(filepath.Join("..", "scripts", s))
 		if err != nil {
 			t.Fatal(err)
@@ -715,5 +715,48 @@ esac
 				}
 			}
 		})
+	}
+}
+
+// release-build.sh --shell-dir needs all three native window programs and checks that before it clears dist/ or builds
+// anything; a bad option stops with usage.
+func TestReleaseBuildShellDir(t *testing.T) {
+	needShell(t, "bash")
+	root := newTree(t, nil)
+	dist := filepath.Join(root, "dist")
+	if err := os.MkdirAll(dist, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	keep := filepath.Join(dist, "keep.txt")
+	if err := os.WriteFile(keep, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	shells := t.TempDir()
+	names := []string{"re-psn-window-windows-amd64.exe", "re-psn-window-linux-amd64", "re-psn-window-linux-arm64"}
+	for _, n := range names[:2] {
+		if err := os.WriteFile(filepath.Join(shells, n), []byte("bin"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// arm64 is missing; an empty file does not count either.
+	for _, missing := range []string{"", "empty"} {
+		if missing == "empty" {
+			if err := os.WriteFile(filepath.Join(shells, names[2]), nil, 0o755); err != nil {
+				t.Fatal(err)
+			}
+		}
+		_, errout, err := run(t, root, "bash", "scripts/release-build.sh", "v0.3.1", "--shell-dir", shells)
+		if err == nil || !strings.Contains(errout, "re-psn-window-linux-arm64 is missing or empty") {
+			t.Fatalf("%q: want a missing-window error, got %v %q", missing, err, errout)
+		}
+		if _, e := os.Stat(keep); e != nil {
+			t.Fatal("dist/ was cleared before the window programs were checked")
+		}
+	}
+	for _, args := range [][]string{{"--shell-dir"}, {"--shell-dir", ""}, {"--bogus", shells}, {"--shell-dir", filepath.Join(shells, "nope")}} {
+		_, errout, err := run(t, root, "bash", append([]string{"scripts/release-build.sh", "v0.3.1"}, args...)...)
+		if err == nil || !strings.Contains(errout, "usage:") && !strings.Contains(errout, "not a directory") {
+			t.Fatalf("%q: want usage or a directory error, got %v %q", args, err, errout)
+		}
 	}
 }
