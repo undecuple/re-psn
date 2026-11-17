@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -102,5 +103,73 @@ func TestUIExitsCleanlyWhenParentPipeCloses(t *testing.T) {
 	}
 	if _, err := os.Stat(link); !os.IsNotExist(err) {
 		t.Fatal("link file left behind", err)
+	}
+}
+
+func fakeWindow(t *testing.T, body string) string {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell script stand-in for the window program")
+	}
+	path := filepath.Join(t.TempDir(), "re-psn-window")
+	if err := os.WriteFile(path, []byte("#!/bin/sh\n"+body+"\n"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestDelegateToWindowPassesFlagsAndExitCode(t *testing.T) {
+	old := windowProgram
+	defer func() { windowProgram = old }()
+	rec := filepath.Join(t.TempDir(), "args.txt")
+	prog := fakeWindow(t, `printf '%s\n' "$@" > '`+rec+`'; echo shown; exit 0`)
+	windowProgram = func() string { return prog }
+	var out, errs bytes.Buffer
+	handled, code := delegateToWindow([]string{"--config", "/x/re-psn.ini", "--profile-dir", "/x/p"}, false, false, "", &out, &errs)
+	if !handled || code != 0 || !strings.Contains(out.String(), "shown") {
+		t.Fatal("window not used", handled, code, out.String(), errs.String())
+	}
+	b, err := os.ReadFile(rec)
+	if err != nil || string(b) != "--config\n/x/re-psn.ini\n--profile-dir\n/x/p\n" {
+		t.Fatal("flags not passed through", string(b), err)
+	}
+}
+
+func TestDelegateToWindowSkippedForBrowserHeadlessOrMissing(t *testing.T) {
+	old := windowProgram
+	defer func() { windowProgram = old }()
+	windowProgram = func() string {
+		t.Fatal("looked for a window program although it was not wanted")
+		return ""
+	}
+	for _, c := range []struct {
+		browser, noOpen bool
+		urlFile         string
+	}{{true, false, ""}, {false, true, ""}, {false, false, "/x/link"}} {
+		if handled, _ := delegateToWindow(nil, c.browser, c.noOpen, c.urlFile, io.Discard, io.Discard); handled {
+			t.Fatal("delegated although the caller asked otherwise", c)
+		}
+	}
+	windowProgram = func() string { return "" }
+	if handled, _ := delegateToWindow(nil, false, false, "", io.Discard, io.Discard); handled {
+		t.Fatal("delegated with no window program installed")
+	}
+}
+
+func TestDelegateToWindowFallsBackWhenItFailsAtOnce(t *testing.T) {
+	old := windowProgram
+	defer func() { windowProgram = old }()
+	windowProgram = func() string { return fakeWindow(t, `echo "no web view" >&2; exit 127`) }
+	var errs bytes.Buffer
+	handled, _ := delegateToWindow(nil, false, false, "", io.Discard, &errs)
+	if handled || !strings.Contains(errs.String(), "opening your browser instead") {
+		t.Fatal("a window that fails at once must fall back to the browser", handled, errs.String())
+	}
+}
+
+func TestFindWindowProgramRequiresARegularFileBesideTheProgram(t *testing.T) {
+	// The test program's folder holds no re-psn-window.
+	if p := findWindowProgram(); p != "" {
+		t.Fatal("found a window program in the test folder", p)
 	}
 }

@@ -61,6 +61,12 @@ make_release() { # TAG
       echo license > "$T/build/$n/LICENSE"
       echo notice > "$T/build/$n/NOTICE.md"
       echo 'app readme' > "$T/build/$n/README.md"
+      case "${WINDOW:-}" in
+        '') ;;
+        link) ln -s /etc/hostname "$T/build/$n/re-psn-window" ;;   # a symlink where a program is expected
+        *) printf '#!/bin/sh\necho "re-psn-window %s %s"\n' "$1" "$arch" > "$T/build/$n/re-psn-window"
+           chmod 0755 "$T/build/$n/re-psn-window" ;;
+      esac
       tar -C "$T/build" -czf "$F/$1/$n.tar.gz" "$n"
     done ;;
   esac
@@ -254,6 +260,71 @@ check "--app dry run: app asset URL" has "re-psn-app-v0.8.0-linux-amd64.tar.gz"
 check "--app dry run: install path" has "$bin/re-psn-app"
 check "--app dry run: host path and honest update qualification" has "$bin/re-psn-host"
 check "--app dry run: pair is not crash-atomic" has "not crash-atomic"
+
+# A release with the window program (v0.10.0): installed with the app and host, and rolled back with them.
+WINDOW=1
+make_release v0.10.0
+WINDOW=
+run Linux x86_64 1000 --app --dry-run --version v0.10.0
+check "--app dry run: names the window program" has "$bin/re-psn-window"
+check "--app dry run with a window: nothing written" nothing_written
+run Linux x86_64 1000 --app --version v0.10.0
+check "--app with a window: installs app, host and window" \
+  test "$rc" = 0 -a "$(names "$bin")" = "re-psn-app re-psn-host re-psn-window "
+check "--app with a window: window bytes and mode" \
+  test "$("$bin/re-psn-window")" = "re-psn-window v0.10.0 amd64" -a -n "$(find "$bin/re-psn-window" -perm 0755)"
+check "--app with a window: says the app opens in its own window" has "own window"
+check "--app with a window: temporary directory removed" empty "$T/tmp"
+run Linux aarch64 1000 --app --version v0.10.0
+check "--app with a window on arm64: installs the arm64 window" test "$rc" = 0 -a "$("$bin/re-psn-window")" = "re-psn-window v0.10.0 arm64"
+
+# An older release without a window leaves an installed window alone and says so.
+oldwin="$T/oldwin"
+mkdir -p "$oldwin"
+printf '#!/bin/sh\necho old window\n' > "$oldwin/re-psn-window"
+chmod 0755 "$oldwin/re-psn-window"
+run Linux x86_64 1000 --app --version v0.8.0 --dir "$oldwin"
+check "--app without a window over an installed one: succeeds" test "$rc" = 0 -a "$("$oldwin/re-psn-app")" = "re-psn-app v0.8.0 amd64"
+check "--app without a window: the old window is kept" test "$("$oldwin/re-psn-window")" = "old window"
+check "--app without a window: says the window is from an older release" has "older release"
+rm -rf "$oldwin"
+
+# A symlink in the archive where the window program belongs is refused before anything is replaced.
+WINDOW='link'
+make_release v0.11.0
+WINDOW=
+winpair="$T/winpair"
+mkdir -p "$winpair"
+printf 'old app\n' > "$winpair/re-psn-app"
+printf 'old host\n' > "$winpair/re-psn-host"
+printf 'old window\n' > "$winpair/re-psn-window"
+run Linux x86_64 1000 --app --version v0.11.0 --dir "$winpair"
+check "--app with a linked window in the archive: refused, nothing replaced" \
+  test "$rc" != 0 -a "$(cat "$winpair/re-psn-app")" = 'old app' -a "$(cat "$winpair/re-psn-host")" = 'old host' -a "$(cat "$winpair/re-psn-window")" = 'old window'
+check "--app with a linked window: names the window" has "re-psn-window"
+
+# A failure while the app is replaced restores the host and the window too.
+real_mv="$(command -v mv)"
+rm "$B/mv"
+cat > "$B/mv" <<EOF
+#!/bin/sh
+for arg in "\$@"; do
+  case "\$arg" in */.re-psn-app.install.lock/new-app) exit 75 ;; esac
+done
+exec "$real_mv" "\$@"
+EOF
+chmod 0755 "$B/mv"
+run Linux x86_64 1000 --app --version v0.10.0 --dir "$winpair"
+check "--app failure after the window moved: exits nonzero" test "$rc" != 0
+check "--app failure after the window moved: all three old files restored" \
+  test "$(cat "$winpair/re-psn-app")" = 'old app' -a "$(cat "$winpair/re-psn-host")" = 'old host' -a "$(cat "$winpair/re-psn-window")" = 'old window'
+check "--app failure after the window moved: no staging left" test "$(names "$winpair")" = "re-psn-app re-psn-host re-psn-window "
+rm "$B/mv"
+ln -s "$real_mv" "$B/mv"
+run Linux x86_64 1000 --app --version v0.10.0 --dir "$winpair"
+check "--app update with a window: all three replaced" \
+  test "$rc" = 0 -a "$("$winpair/re-psn-window")" = "re-psn-window v0.10.0 amd64" -a "$("$winpair/re-psn-app")" = "re-psn-app v0.10.0 amd64"
+rm -rf "$winpair"
 
 # A checksum-valid legacy/incomplete app archive must not replace either old component.
 make_release v0.9.0

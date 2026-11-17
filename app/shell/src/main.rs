@@ -114,12 +114,28 @@ fn stop_within(mut b: Backend, timeout: Duration) {
     let _ = b.child.wait();
 }
 
+/// The command line for the app: the caller's own `re-psn-app ui` flags (a settings file or
+/// profile folder, say) first, then the flags this window needs, which win over any repeat.
+fn app_args(user: &[String], link_file: &Path) -> Vec<std::ffi::OsString> {
+    let mut args: Vec<std::ffi::OsString> = vec!["ui".into()];
+    args.extend(user.iter().map(Into::into));
+    args.extend([
+        "--no-open".into(),
+        "--exit-with-parent".into(),
+        "--url-file".into(),
+        link_file.into(),
+    ]);
+    args
+}
+
 fn start() -> Result<(Backend, tauri::Url, Arc<AtomicBool>), String> {
     let dir = private_dir()?;
     let file = dir.join("link.txt");
     let mut child = Command::new(app_binary()?)
-        .args(["ui", "--no-open", "--exit-with-parent", "--url-file"])
-        .arg(&file)
+        .args(app_args(
+            &std::env::args().skip(1).collect::<Vec<_>>(),
+            &file,
+        ))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
@@ -302,6 +318,33 @@ mod tests {
         ] {
             assert!(check_link(bad).is_err(), "{bad}");
         }
+    }
+
+    #[test]
+    fn app_args_put_the_callers_flags_first_and_the_windows_last() {
+        let a = app_args(
+            &[
+                "--config".into(),
+                "/x/re-psn.ini".into(),
+                "--no-open".into(),
+            ],
+            Path::new("/tmp/l.txt"),
+        );
+        let a: Vec<String> = a.iter().map(|s| s.to_string_lossy().into_owned()).collect();
+        assert_eq!(
+            a,
+            [
+                "ui",
+                "--config",
+                "/x/re-psn.ini",
+                "--no-open",
+                "--no-open",
+                "--exit-with-parent",
+                "--url-file",
+                "/tmp/l.txt"
+            ]
+        );
+        assert_eq!(app_args(&[], Path::new("/l")).len(), 5);
     }
 
     #[test]

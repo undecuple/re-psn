@@ -2,9 +2,9 @@
 # Window behaviour of the desktop shell, on a virtual X display with a window manager. Run it under xvfb-run, with
 # xdotool, wmctrl and openbox installed:
 #   xvfb-run -a sh scripts/test-shell-window.sh DIR
-# DIR holds the built re-psn-shell and re-psn-app. It checks that the shell opens one window onto one app, that a
+# DIR holds the built re-psn-shell and re-psn-app (it adds a copy named re-psn-window). It checks that the shell opens one window onto one app, that a
 # second shell shares that app and closing it leaves the app running, that closing the first window stops the app
-# and the shell, and that an app that stops on its own closes its shell. It uses a private HOME and never touches
+# and the shell, that an app that stops on its own closes its shell, and that re-psn-app with no arguments opens the window program beside it. It uses a private HOME and never touches
 # the real settings.
 set -eu
 
@@ -94,5 +94,17 @@ wait_for "the app" one_app
 wait_for "the window" one_window
 pkill -TERM -f "$dir/re-psn-app ui"
 wait_for "the shell to end" shell_gone "$s3"
+
+echo "6. re-psn-app with no arguments opens the window program beside it, and closing the window ends both"
+# re-psn-app only hands over to a regular file named re-psn-window in its own folder.
+cp "$dir/re-psn-shell" "$dir/re-psn-window"
+"$dir/re-psn-app" >/dev/null 2>&1 &
+a1=$!
+pids="$pids $a1"
+wait_for "the window" one_window
+[ "$(apps)" -eq 1 ] || fail "expected one app, found $(apps)"
+wmctrl -c 're:psn'
+wait_for "the app to stop" no_app
+wait_for "re-psn-app to end" shell_gone "$a1"
 
 echo "ok"

@@ -78,6 +78,20 @@ try {
     $badName = 're-psn-app-v0.10.0-windows-amd64.zip'
     Copy-Item -LiteralPath $azip -Destination (Join-Path $F "v0.10.0\$badName")
     [IO.File]::WriteAllText((Join-Path $F 'v0.10.0\SHA256SUMS'), "$('0' * 64)  $badName`n")
+    # v0.11.0 also carries the window program re-psn-window.exe.
+    $wn = 're-psn-app-v0.11.0-windows-amd64'
+    $wb = Join-Path $T "build\window\$wn"
+    New-Item -ItemType Directory -Path $wb | Out-Null
+    foreach ($name in 're-psn-app.exe', 're-psn-host.exe', 'LICENSE', 'NOTICE.md', 'README.md') {
+        Copy-Item -LiteralPath (Join-Path $ab $name) -Destination $wb
+    }
+    Set-Content -LiteralPath (Join-Path $wb 're-psn-app.exe') -Value 'app v0.11.0'
+    Set-Content -LiteralPath (Join-Path $wb 're-psn-window.exe') -Value 'window v0.11.0'
+    New-Item -ItemType Directory -Path (Join-Path $F 'v0.11.0') | Out-Null
+    $wzip = Join-Path $F "v0.11.0\$wn.zip"
+    Compress-Archive -Path $wb -DestinationPath $wzip
+    $wh = (Get-FileHash -Algorithm SHA256 -LiteralPath $wzip).Hash.ToLowerInvariant()
+    [IO.File]::WriteAllText((Join-Path $F 'v0.11.0\SHA256SUMS'), "$wh  $wn.zip`n")
     $script:releases = '[{"tag_name":"v9.9.9","draft":true},{"tag_name":"v0.4.0","draft":false,"prerelease":true},{"tag_name":"v0.3.0","draft":false}]' | ConvertFrom-Json
     $script:calls = @()
     $script:userPathValue = 'C:\Other'
@@ -211,6 +225,37 @@ try {
     $null = Install-RePsn -Version 'v0.8.0' -Dir '' -AddToPath $false -DryRun $false -App $true
     Check '-App valid update: host byte identity' ((Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $bin 're-psn-host.exe')).Hash -eq (Get-FileHash -Algorithm SHA256 -LiteralPath $hostFixture).Hash)
     Check '-App valid update: standalone not overwritten' ((Get-Content -LiteralPath (Join-Path $bin 're-psn.exe')) -eq 'standalone stays')
+
+    # A release with the window program: installed with the app and host, and rolled back with them.
+    $local = Reset
+    $out = Install-RePsn -Version 'v0.11.0' -Dir '' -AddToPath $false -DryRun $true -App $true
+    Check '-App dry run: names the window program' ((@($out) -join "`n") -like '*re-psn-window.exe*')
+    Check '-App dry run with a window: nothing written' (Empty $local)
+    $out = Install-RePsn -Version 'v0.11.0' -Dir '' -AddToPath $false -DryRun $false -App $true
+    Check '-App with a window: app, host and window installed' ((@(Get-ChildItem -LiteralPath $bin -Force | ForEach-Object Name | Sort-Object) -join ' ') -eq 're-psn-app.exe re-psn-host.exe re-psn-window.exe')
+    Check '-App with a window: window bytes' ((Get-Content -LiteralPath (Join-Path $bin 're-psn-window.exe')) -eq 'window v0.11.0')
+    Check '-App with a window: says the app opens in its own window' ((@($out) -join "`n") -like '*own window*')
+
+    # An older release without a window leaves an installed window alone and says so.
+    $out = Install-RePsn -Version 'v0.8.0' -Dir '' -AddToPath $false -DryRun $false -App $true
+    Check '-App without a window over an installed one: window kept' ((Get-Content -LiteralPath (Join-Path $bin 're-psn-window.exe')) -eq 'window v0.11.0' -and (Get-Content -LiteralPath (Join-Path $bin 're-psn-app.exe')) -eq 'app v0.8.0')
+    Check '-App without a window: says the window is from an older release' ((@($out) -join "`n") -like '*older release*')
+
+    # A failure while the app is replaced restores the host and the window too.
+    $local = Reset
+    New-Item -ItemType Directory -Path $bin | Out-Null
+    Set-Content -LiteralPath (Join-Path $bin 're-psn-app.exe') -Value 'old app'
+    Set-Content -LiteralPath (Join-Path $bin 're-psn-host.exe') -Value 'old host'
+    Set-Content -LiteralPath (Join-Path $bin 're-psn-window.exe') -Value 'old window'
+    function Move-InstallPayload([string]$Source, [string]$Target) {
+        if ([IO.Path]::GetFileName($Source) -eq 'new-re-psn-app.exe') { throw 'synthetic failure after the window moved' }
+        & $script:realMove $Source $Target
+    }
+    try {
+        Check '-App failure after the window moved is reported' (Fails { Install-RePsn -Version 'v0.11.0' -Dir '' -AddToPath $false -DryRun $false -App $true } 'synthetic failure after the window moved')
+    } finally { Set-Item function:Move-InstallPayload -Value $script:realMove }
+    Check '-App failure after the window moved: all three old files restored' ((Get-Content -LiteralPath (Join-Path $bin 're-psn-app.exe')) -eq 'old app' -and (Get-Content -LiteralPath (Join-Path $bin 're-psn-host.exe')) -eq 'old host' -and (Get-Content -LiteralPath (Join-Path $bin 're-psn-window.exe')) -eq 'old window')
+    Check '-App failure after the window moved: no staging left' (@(Get-ChildItem -LiteralPath $bin -Force).Count -eq 3)
 
     Remove-Item -LiteralPath (Join-Path $bin 're-psn-app.exe')
     New-Item -ItemType Directory -Path (Join-Path $bin 're-psn-app.exe') | Out-Null

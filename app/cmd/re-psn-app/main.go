@@ -85,7 +85,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 
 func usage(w io.Writer) {
 	fmt.Fprint(w, `usage:
-  re-psn-app [ui]                            open the optional local browser app
+  re-psn-app [ui] [--browser]                open the app: in re-psn-window when it is beside this program, else in your browser
   re-psn-app tui                             open the advanced terminal interface
   re-psn-app ui --no-open --url-file FILE     write a private one-use launch link
   re-psn-app host serve [--listen IP:PORT]     explicitly run the owned server component

@@ -136,19 +136,21 @@ function Move-InstallPayload([string]$Source, [string]$Target) {
     else { [IO.File]::Move($Source, $Target) }
 }
 
-function Install-AppPair([string]$AppSource, [string]$HostSource, [string]$Dir) {
+function Install-AppPair([string]$AppSource, [string]$HostSource, [string]$Dir, [string]$WindowSource = '') {
     # Two flat filenames cannot form a crash-atomic transaction. Preflight/stage
     # both, and attempt rollback for a reported replacement failure. Never stop
     # a process or touch the separately installed re-psn.exe.
     Assert-RegularPayload $AppSource
     Assert-RegularPayload $HostSource
+    if ($WindowSource) { Assert-RegularPayload $WindowSource }
     New-Item -ItemType Directory -Force -Path $Dir | Out-Null
     $lockPath = Join-Path $Dir '.re-psn-app.install.lock'
     $lock = $null
     $stage = ''
     $preserveRecovery = $false
     $changed = @()
-    $targets = @('re-psn-host.exe', 're-psn-app.exe')
+    # The window program is optional (releases before it was added do not carry it); the app is replaced last.
+    $targets = if ($WindowSource) { @('re-psn-host.exe', 're-psn-window.exe', 're-psn-app.exe') } else { @('re-psn-host.exe', 're-psn-app.exe') }
     $had = @{}
     try {
         try { $lock = [IO.File]::Open($lockPath, [IO.FileMode]::CreateNew, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None) }
@@ -169,6 +171,7 @@ function Install-AppPair([string]$AppSource, [string]$HostSource, [string]$Dir) 
         New-Item -ItemType Directory -Path $stage | Out-Null
         Copy-Item -LiteralPath $AppSource -Destination (Join-Path $stage 'new-re-psn-app.exe')
         Copy-Item -LiteralPath $HostSource -Destination (Join-Path $stage 'new-re-psn-host.exe')
+        if ($WindowSource) { Copy-Item -LiteralPath $WindowSource -Destination (Join-Path $stage 'new-re-psn-window.exe') }
         foreach ($name in $targets) {
             if ($had[$name]) { Copy-Item -LiteralPath (Join-Path $Dir $name) -Destination (Join-Path $stage "old-$name") }
         }
@@ -223,6 +226,7 @@ function Install-RePsn([string]$Version, [string]$Dir, [bool]$AddToPath, [bool]$
         Write-Output "  install:  $(Join-Path $Dir "$pkg.exe") (moved into place)"
         if ($App) {
             Write-Output "            $(Join-Path $Dir 're-psn-host.exe') (matching app component)"
+            Write-Output "            $(Join-Path $Dir 're-psn-window.exe') (the window program, when the zip has it)"
             Write-Output '  update:   stop the app and host first; staged pair replacement is not crash-atomic'
         }
         if ($App) { Write-Output "  extras:   $(Join-Path $base $v) (LICENSE, NOTICE.md, README.md)" }
@@ -270,15 +274,30 @@ function Install-RePsn([string]$Version, [string]$Dir, [bool]$AddToPath, [bool]$
             if (-not (Test-Path -LiteralPath $hostSource -PathType Leaf)) { throw 'the app zip has no matching re-psn-host.exe component; nothing was installed.' }
             Assert-RegularPayload $src
             Assert-RegularPayload $hostSource
+            # The window program is optional: releases before it was added do not carry it.
+            $windowSource = Join-Path $extras 're-psn-window.exe'
+            if (Test-Path -LiteralPath $windowSource) {
+                Assert-RegularPayload $windowSource
+            } else {
+                $windowSource = ''
+            }
         }
 
         # A temporary name in the same folder, then one move over the old file.
         New-Item -ItemType Directory -Force -Path $Dir | Out-Null
         $target = Join-Path $Dir "$pkg.exe"
         if ($App) {
-            Install-AppPair $src $hostSource $Dir
-            Write-Output "Installed $target and $(Join-Path $Dir 're-psn-host.exe')"
-            Write-Output 'Pair update staged and replaced; it is not crash-atomic. No process was stopped or started.'
+            Install-AppPair $src $hostSource $Dir $windowSource
+            $windowTarget = Join-Path $Dir 're-psn-window.exe'
+            if ($windowSource) {
+                Write-Output "Installed $target, $(Join-Path $Dir 're-psn-host.exe') and $windowTarget"
+            } else {
+                Write-Output "Installed $target and $(Join-Path $Dir 're-psn-host.exe')"
+                if (Test-Path -LiteralPath $windowTarget) {
+                    Write-Output "This release has no window program; the re-psn-window.exe already in $Dir is from an older release."
+                }
+            }
+            Write-Output 'The files were staged and replaced together; this is not crash-atomic. No process was stopped or started.'
         } else {
         $part = Join-Path $Dir ".$pkg.exe.part.$PID"
         Copy-Item -LiteralPath $src -Destination $part
@@ -325,7 +344,11 @@ function Install-RePsn([string]$Version, [string]$Dir, [bool]$AddToPath, [bool]$
             Write-Output "$what& '$target'"
         }
         if ($App) {
-            Write-Output 'The app opens its private local browser interface.'
+            if ($windowSource) {
+                Write-Output "The app opens in its own window ($(Join-Path $Dir 're-psn-window.exe') beside it); run it with --browser for a browser tab."
+            } else {
+                Write-Output 'The app opens its private local browser interface.'
+            }
             Write-Output 'Its matching re-psn-host.exe component was installed beside it; standalone re-psn.exe was not changed.'
             Write-Output "Its README:              $(Join-Path $shared 'README.md')"
             return

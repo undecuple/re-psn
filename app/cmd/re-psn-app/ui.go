@@ -44,6 +44,7 @@ func runUI(args []string, stdout, stderr io.Writer) int {
 	binary := fs.String("server-binary", "", "trusted local server component (default beside app)")
 	noOpen := fs.Bool("no-open", false, "serve without opening a browser; requires --url-file")
 	exitWithParent := fs.Bool("exit-with-parent", false, "stop cleanly when standard input closes; for a window shell that owns this process")
+	browser := fs.Bool("browser", false, "open a browser tab even when re-psn-window is installed beside this program")
 	urlFile := fs.String("url-file", "", "new private file for the one-use launch link")
 	if fs.Parse(args) != nil || fs.NArg() != 0 {
 		return 2
@@ -51,6 +52,9 @@ func runUI(args []string, stdout, stderr io.Writer) int {
 	if *noOpen && *urlFile == "" {
 		fmt.Fprintln(stderr, "re-psn-app: --no-open requires a private --url-file")
 		return 2
+	}
+	if handled, code := delegateToWindow(args, *browser, *noOpen, *urlFile, stdout, stderr); handled {
+		return code
 	}
 	var err error
 	if *configPath == "" {
