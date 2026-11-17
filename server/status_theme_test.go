@@ -52,6 +52,33 @@ func TestStatusTerminalPage(t *testing.T) {
 	}
 }
 
+// Every number in the summary has a plain-words caption that its value points to, and the page explains its terms in a
+// glossary that needs no script.
+func TestStatusPlainWords(t *testing.T) {
+	var out strings.Builder
+	if err := page.Execute(&out, statsJSON{Uptime: "1m"}); err != nil {
+		t.Fatal(err)
+	}
+	html := out.String()
+	for _, id := range []string{"uptime", "clients", "connections", "unlisted"} {
+		if !strings.Contains(html, `id="`+id+`" aria-describedby="`+id+`-hint"`) || !strings.Contains(html, `id="`+id+`-hint"`) {
+			t.Errorf("the %s value has no caption linked to it", id)
+		}
+	}
+	for _, want := range []string{
+		"Every connection accepted since the server started, including ones that have closed.",
+		`<details id="glossary" class="words">`, "What do these words mean?",
+		"<dt>connections total</dt>", "<dt>Members</dt>", "<dt>Request-rate refusals</dt>",
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	if strings.Contains(html, `id="glossary" class="words" hidden`) {
+		t.Error("the glossary must not depend on script to be shown")
+	}
+}
+
 func TestStatusThemeAuthenticationAndHeaders(t *testing.T) {
 	s := NewServer(10, false)
 	s.httpToken = "synthetic-status-token"

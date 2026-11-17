@@ -26,10 +26,10 @@
     </div>
   </header>
   <div class="summary" aria-label="Server summary">
-    <p><span class="label">uptime</span> <strong id="uptime">{{.Uptime}}</strong></p>
-    <p><span class="label">connected</span> <strong id="clients">{{.Clients}}</strong></p>
-    <p><span class="label">connections total</span> <strong id="connections">{{.Connections}}</strong></p>
-    <p><span class="label">unlisted rooms</span> <strong id="unlisted">{{.Unlisted}}</strong></p>
+    <p><span class="label">uptime</span> <strong id="uptime" aria-describedby="uptime-hint">{{.Uptime}}</strong><span class="hint" id="uptime-hint">How long this server has been running.</span></p>
+    <p><span class="label">connected</span> <strong id="clients" aria-describedby="clients-hint">{{.Clients}}</strong><span class="hint" id="clients-hint">Connections open right now, normally one per player.</span></p>
+    <p><span class="label">connections total</span> <strong id="connections" aria-describedby="connections-hint">{{.Connections}}</strong><span class="hint" id="connections-hint">Every connection accepted since the server started, including ones that have closed. Connections refused at a limit are not counted.</span></p>
+    <p><span class="label">unlisted rooms</span> <strong id="unlisted" aria-describedby="unlisted-hint">{{.Unlisted}}</strong><span class="hint" id="unlisted-hint">Invite-only rooms. They are counted here but never listed.</span></p>
   </div>
   <div id="toolbar" class="toolbar" hidden>
     <div id="status-tabs" role="tablist" aria-label="Status view">
@@ -89,6 +89,25 @@
       </form>
       <p class="muted">Appearance is saved for this server origin, when browser storage is available. It changes no server settings.</p>
     </div>
+  </details>
+  <details id="glossary" class="words">
+    <summary>What do these words mean?</summary>
+    <dl>
+      <dt>connected</dt><dd>Connections open to the server right now. Normally one per player.</dd>
+      <dt>connections total</dt><dd>Every connection the server has accepted since it started, including ones that have closed and ones the server then turned away for a bad request. It only counts up, so it is higher than the number of players. Connections refused at a limit are not counted.</dd>
+      <dt>unlisted rooms</dt><dd>Invite-only rooms. The server counts them but never lists them.</dd>
+      <dt>Room</dt><dd>A group a player creates for a game so others can join it. Only public rooms are listed.</dd>
+      <dt>ID</dt><dd>The number the server gave the room.</dd>
+      <dt>Title</dt><dd>The game the room is for. It shows the game's name when the server knows it, and its title ID otherwise.</dd>
+      <dt>Members</dt><dd>The players in the room, out of its maximum. "(1 verified)" counts members whose network test the server has accepted. A number in ms is the delay the player reported for themselves; the server did not measure it.</dd>
+      <dt>Age</dt><dd>How long ago the room was created.</dd>
+      <dt>Leaderboard</dt><dd>Scores players have recorded for a game. Board is the leaderboard's number within the game, Entries is how many scores it holds, and Leader is the player with the best score, shown with that score.</dd>
+      <dt>Relay</dt><dd>An optional mode where the server passes game traffic between players who cannot reach each other directly. Relay payload is the amount it has carried since the server started, not the network traffic of the machine.</dd>
+      <dt>Connection limit</dt><dd>The most connections the server allows open at once. "Unlimited" means no limit is set.</dd>
+      <dt>Refused connections</dt><dd>Connections the server turned away because too many were already open in total.</dd>
+      <dt>Per-address refusals</dt><dd>Connections the server turned away because one address already had too many open.</dd>
+      <dt>Request-rate refusals</dt><dd>Connections the server closed because they sent requests too fast.</dd>
+    </dl>
   </details>
   <footer class="statusbar">
     <span id="refresh-state" role="status">Snapshot · refreshes every 5 seconds</span>

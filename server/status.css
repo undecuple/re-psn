@@ -104,6 +104,10 @@ h1 .muted { font-weight: normal; }
 .summary p + p { border-left: 1px solid var(--frame); }
 .label { color: var(--muted); display: block; font-size: .8rem; }
 .summary strong { display: block; font-size: 1.5rem; color: var(--good); font-weight: normal; }
+.hint { color: var(--muted); display: block; font-size: .75rem; margin-top: .3rem; }
+.words dl { margin: 0; padding: 0 1rem 1rem; }
+.words dt { color: var(--text); margin-top: .8rem; }
+.words dd { color: var(--muted); margin: .15rem 0 0; font-size: .85rem; }
 .toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .75rem; padding: .75rem 1rem; border-bottom: 1px solid var(--frame); }
 [role="tablist"] { display: flex; flex-wrap: wrap; gap: .4rem; }
 [role="tab"] span { color: var(--muted); font-weight: normal; }

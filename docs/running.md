@@ -91,6 +91,11 @@ contrast on both backgrounds; invalid changes leave the current colours intact. 
 Choices stay in this browser's storage for the server origin; they change no server flags or other visitors' settings.
 If storage is unavailable, choices work for the current page and a message explains that they cannot be saved.
 
+Each number at the top has a one-line caption saying what it counts, and "What do these words mean?" at the bottom explains
+the room, member and leaderboard columns and the host counters in plain words. For example, "connections total" counts every
+connection the server has accepted since it started, including ones that have closed and ones it turned away for a bad
+request, so it is higher than the number of players.
+
 With JavaScript, status data refreshes every five seconds while the page is visible. Pause refresh keeps a snapshot;
 Refresh now still works while paused. A failed refresh retains the previous snapshot and shows an error. Theme, focus
 and tabs stay in place during updates. The browser fetches only this server's `/api/stats`; nothing loads from other sites.
