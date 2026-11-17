@@ -22,6 +22,20 @@ import (
 
 var startUI = runUI
 
+// uiStdin is what --exit-with-parent watches; tests replace it.
+var uiStdin io.Reader = os.Stdin
+
+// cancelWhenClosed calls cancel once r reports end of input or an error. A
+// parent that owns the other end of the pipe closes it to ask for a clean stop,
+// and the system closes it if that parent dies, so no signal is needed (Windows
+// has none that stops a console-less process cleanly).
+func cancelWhenClosed(r io.Reader, cancel func()) {
+	go func() {
+		_, _ = io.Copy(io.Discard, r)
+		cancel()
+	}()
+}
+
 func runUI(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("ui", flag.ContinueOnError)
 	fs.SetOutput(stderr)
@@ -29,6 +43,7 @@ func runUI(args []string, stdout, stderr io.Writer) int {
 	profile := fs.String("profile-dir", "", "private local profile directory")
 	binary := fs.String("server-binary", "", "trusted local server component (default beside app)")
 	noOpen := fs.Bool("no-open", false, "serve without opening a browser; requires --url-file")
+	exitWithParent := fs.Bool("exit-with-parent", false, "stop cleanly when standard input closes; for a window shell that owns this process")
 	urlFile := fs.String("url-file", "", "new private file for the one-use launch link")
 	if fs.Parse(args) != nil || fs.NArg() != 0 {
 		return 2
@@ -94,6 +109,9 @@ func runUI(args []string, stdout, stderr io.Writer) int {
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	if *exitWithParent {
+		cancelWhenClosed(uiStdin, cancel)
+	}
 	cleanup := func() {}
 	defer func() { cleanup() }()
 	err = s.Serve(ctx, ln, func(link string) error {

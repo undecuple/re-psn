@@ -75,7 +75,9 @@ checked on the way. Pre-releases come often and on no schedule, whenever there i
    `scripts/check-release.sh --tag <tag>`, which fails unless the tag is `v` + `VERSION` at the tagged commit and the
    version checks pass; nothing is built after a failure. Then vet and tests, the server archives for windows/amd64, linux/amd64
    and linux/arm64, the same three archives for the desktop app (`re-psn-app-vX.Y.Z-<os>-<arch>`, built from `app/`),
-   and the x86_64 [AppImage](#the-appimage), copies of `scripts/install.sh` and `scripts/install.ps1`
+   (each also holds `re-psn-window`, the native window program from `app/shell/`: three `window` jobs build it, one per
+   system, on native runners with the runner's rustup at Rust 1.99.1 and `Cargo.lock` enforced, and `scripts/release-build.sh
+   --shell-dir` checks that every app archive holds it), and the x86_64 [AppImage](#the-appimage), copies of `scripts/install.sh` and `scripts/install.ps1`
    (byte for byte, as `install.sh` and `install.ps1`; see [installing.md](installing.md)), and one `SHA256SUMS` listing
    those nine files (LF, no BOM); `scripts/check-release.sh --assets` then checks that exactly the ten assets are there.
    Then the notes, and a **draft** pre-release
@@ -205,6 +207,10 @@ How it is built ([`scripts/build-appimage.sh`](../scripts/build-appimage.sh), ru
 
 ## Not checked yet
 
+- The window program (`re-psn-window`): no release has carried it yet. It is built per system with a Rust toolchain that
+  the runner downloads from the official server at the pinned version. The release `window` jobs have not run, the
+  Windows window has not been run at all, and `install.sh --app` / `install.ps1 -App` do not install it yet (unpack the
+  archive to use it). The binaries are unsigned.
 - That the Windows and arm64 binaries run; they are cross-built. The exe, the AppImage and `SHA256SUMS` are unsigned.
 - The AppImage on other distributions: it was built and run (with FUSE and with `--appimage-extract-and-run`) on one
   x86_64 Linux machine only.

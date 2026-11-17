@@ -2,26 +2,40 @@
 # Build the release into dist/: archives of static server binaries (no cgo) for the three targets, archives of the desktop
 # app (app/, a Go module of its own, also no cgo) for the same three targets, copies of
 # scripts/install.sh and scripts/install.ps1 (byte for byte, under those names), and one SHA256SUMS (LF, no BOM) listing
-# them. With --appimage-tools DIR it also builds re-psn-vX.Y.Z-x86_64.AppImage with scripts/build-appimage.sh (DIR holds
+# them. With --shell-dir DIR the app archives also hold the native window program re-psn-window (re-psn-window.exe on
+# Windows): DIR holds re-psn-window-windows-amd64.exe, re-psn-window-linux-amd64 and re-psn-window-linux-arm64, each built
+# natively by release.yml, since the window needs a native toolchain and cannot be cross-built from here; all three must be
+# there. Without it the app archives are as before. With --appimage-tools DIR it also builds re-psn-vX.Y.Z-x86_64.AppImage with scripts/build-appimage.sh (DIR holds
 # the pinned files from `scripts/build-appimage.sh fetch DIR`), SHA256SUMS lists it too, and
 # `scripts/check-release.sh --assets` then checks that dist/ holds exactly the ten release assets.
 # Used by .github/workflows/release.yml and runnable locally.
-# usage: scripts/release-build.sh vX.Y.Z [--appimage-tools DIR]
+# usage: scripts/release-build.sh vX.Y.Z [--appimage-tools DIR] [--shell-dir DIR]
 set -euo pipefail
-usage="usage: scripts/release-build.sh vX.Y.Z [--appimage-tools DIR]"
+usage="usage: scripts/release-build.sh vX.Y.Z [--appimage-tools DIR] [--shell-dir DIR]"
 tag="${1:?$usage}"
+shift
 tools=''
-case "$#" in
-  1) ;;
-  3) [ "$2" = --appimage-tools ] && [ -n "$3" ] || { echo "$usage" >&2; exit 2; }
-     tools="$(cd "$3" && pwd)" ;;
-  *) echo "$usage" >&2; exit 2 ;;
-esac
+shells=''
+while [ "$#" -gt 0 ]; do
+  [ "$#" -ge 2 ] && [ -n "$2" ] || { echo "$usage" >&2; exit 2; }
+  [ -d "$2" ] || { echo "$2 is not a directory" >&2; exit 2; }
+  case "$1" in
+    --appimage-tools) tools="$(cd "$2" && pwd)" ;;
+    --shell-dir) shells="$(cd "$2" && pwd)" ;;
+    *) echo "$usage" >&2; exit 2 ;;
+  esac
+  shift 2
+done
 case "$tag" in v[0-9]*.[0-9]*.[0-9]*) ;; *) echo "tag '$tag' is not vMAJOR.MINOR.PATCH" >&2; exit 1 ;; esac
 case "$tag" in *[!0-9v.]*) echo "tag '$tag' has odd characters" >&2; exit 1 ;; esac
 version="${tag#v}"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 dist="$root/dist"
+if [ -n "$shells" ]; then
+  for f in re-psn-window-windows-amd64.exe re-psn-window-linux-amd64 re-psn-window-linux-arm64; do
+    [ -s "$shells/$f" ] || { echo "release-build: $shells/$f is missing or empty" >&2; exit 1; }
+  done
+fi
 rm -rf "$dist" && mkdir -p "$dist"
 stage="$(mktemp -d)"
 trap 'rm -rf "$stage"' EXIT
@@ -66,12 +80,33 @@ for target in windows/amd64 linux/amd64 linux/arm64; do
   cp "$stage/re-psn-$tag-$os-$arch/$server_exe" "$d/$host_exe"
   cp "$root/LICENSE" "$root/NOTICE.md" "$d/"
   cp "$root/app/README.md" "$d/README.md"
+  if [ -n "$shells" ]; then
+    if [ "$os" = windows ]; then
+      cp "$shells/re-psn-window-$os-$arch.exe" "$d/re-psn-window.exe"
+    else
+      cp "$shells/re-psn-window-$os-$arch" "$d/re-psn-window"
+      chmod 0755 "$d/re-psn-window"
+    fi
+  fi
   if [ "$os" = windows ]; then
     (cd "$stage" && zip -qrX "$dist/$name.zip" "$name")
   else
     tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -C "$stage" -czf "$dist/$name.tar.gz" "$name"
   fi
 done
+
+# With --shell-dir, every app archive must hold the window program next to the app.
+if [ -n "$shells" ]; then
+  for target in windows/amd64 linux/amd64 linux/arm64; do
+    os="${target%/*}"; arch="${target#*/}"
+    name="re-psn-app-$tag-$os-$arch"
+    if [ "$os" = windows ]; then
+      unzip -Z1 "$dist/$name.zip" | grep -qx "$name/re-psn-window.exe" || { echo "release-build: $name.zip lacks re-psn-window.exe" >&2; exit 1; }
+    else
+      tar -tzf "$dist/$name.tar.gz" | grep -qx "$name/re-psn-window" || { echo "release-build: $name.tar.gz lacks re-psn-window" >&2; exit 1; }
+    fi
+  done
+fi
 
 cp "$root/scripts/install.sh" "$root/scripts/install.ps1" "$dist/"
 

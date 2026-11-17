@@ -5,7 +5,7 @@ interface on a private loopback address; no website account, frontend package ma
 Its dark colors, local monospace fonts, compact metadata and double frames follow
 [undecuple/me](https://undecuple.github.io/me/). Settings also offers Light and System appearance.
 
-This guide describes the current source. Published app archives can predate this interface and its paired host
+Release archives also hold `re-psn-window`, which shows the same interface in a window of its own: see [The native window](#the-native-window). This guide describes the current source. Published app archives can predate this interface and its paired host
 component. Games still connect directly to the standalone server without this app, a profile or a friend account.
 
 ## Choose a workspace
@@ -108,6 +108,25 @@ or server-component selections that do not match the running controller are refu
 Use **Stop app** to stop its owned server, revoke local game reporting and close the controller. Process Ctrl+C also
 shuts down what that process owns. The advanced `re-psn-app tui` interface has terminal controls for the same roles;
 quitting that terminal controller stops its own host. Neither controller gains authority over an independently started server.
+
+## The native window
+
+`re-psn-window` (`re-psn-window.exe` on Windows, in the app archives next to `re-psn-app`) shows the same interface in a
+window of its own, with no tabs or address bar. It is a small [Tauri](https://tauri.app/) program in `app/shell/`: it
+starts `re-psn-app ui --no-open --exit-with-parent` from its own folder (and nothing else), reads the private one-use
+launch link from a new private file, shows it in the system web view and deletes the file. The interface, its token
+exchange and its limits are those of the browser version.
+
+- **Closing the window stops the app**, like **Stop app**: the window closes the app's standard input, the app stops what
+  it owns, and the window waits 8 seconds before it ends the app by force. If the window program itself dies, the
+  closed input stops the app too. If the app stops on its own (**Stop app**), the window closes.
+- Running a second `re-psn-window` while one is open opens another window onto the same app; closing it leaves the app
+  running.
+- It needs the system's web view: WebKitGTK 4.1 on Linux (for example `libwebkit2gtk-4.1-0`), the WebView2 runtime on
+  Windows (part of Windows 10 and 11). Without it, `re-psn-app` still opens in your browser.
+- It keeps no settings, profile or credentials of its own. The system web view is Chromium (WebView2) on Windows and
+  WebKit on Linux, so small differences in how a page looks or behaves are possible and have been checked on Linux only.
+- It is not signed. Building it: [BUILDING.md](../BUILDING.md).
 
 ## Private launch and local data
 
