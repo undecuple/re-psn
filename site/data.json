@@ -1297,6 +1297,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "**Desktop app:** `re-psn-app` opens the app in `re-psn-window` when that program is beside it, and `--browser` opens a browser tab instead; it passes its `ui` flags on to the window, and falls back to the browser when ...",
      "**Desktop app:** a native window for the app, `re-psn-window` (a small Tauri program in `app/shell/`): it starts `re-psn-app`, shows its private launch link in a window of its own and stops the app when the window ..."
     ],
     "Changed": [
@@ -1305,7 +1306,7 @@
     ]
    },
    "counts": {
-    "Added": 1,
+    "Added": 2,
     "Changed": 2
    }
   },

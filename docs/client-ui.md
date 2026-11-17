@@ -113,13 +113,17 @@ quitting that terminal controller stops its own host. Neither controller gains a
 
 `re-psn-window` (`re-psn-window.exe` on Windows, in the app archives next to `re-psn-app`) shows the same interface in a
 window of its own, with no tabs or address bar. It is a small [Tauri](https://tauri.app/) program in `app/shell/`: it
-starts `re-psn-app ui --no-open --exit-with-parent` from its own folder (and nothing else), reads the private one-use
-launch link from a new private file, shows it in the system web view and deletes the file. The interface, its token
+starts `re-psn-app ui --no-open --exit-with-parent` from its own folder (and nothing else; any `re-psn-app ui` flags it
+is given, such as `--config` or `--profile-dir`, are passed on), reads the private one-use launch link from a new private file, shows it in the system web view and deletes the file. The interface, its token
 exchange and its limits are those of the browser version.
 
 - **Closing the window stops the app**, like **Stop app**: the window closes the app's standard input, the app stops what
   it owns, and the window waits 8 seconds before it ends the app by force. If the window program itself dies, the
   closed input stops the app too. If the app stops on its own (**Stop app**), the window closes.
+- **Starting it:** with `re-psn-window` beside it, `re-psn-app` (or `re-psn-app ui`) opens the window and passes its flags on, so
+  one command opens the same app everywhere. `--browser` opens a browser tab instead; `--no-open` and `--url-file` keep their
+  headless meaning. If the window program ends with an error within 5 seconds (no web view installed, no display), `re-psn-app`
+  says so and opens your browser instead. The install scripts put `re-psn-window` beside the app.
 - Running a second `re-psn-window` while one is open opens another window onto the same app; closing it leaves the app
   running.
 - It needs the system's web view: WebKitGTK 4.1 on Linux (for example `libwebkit2gtk-4.1-0`), the WebView2 runtime on

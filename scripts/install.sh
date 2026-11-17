@@ -152,6 +152,7 @@ if [ "$dry" = 1 ]; then
   say "  install:  $dir/$target (mode 0755, renamed into place)"
   if [ "$app" = 1 ]; then
     say "            $dir/re-psn-host (mode 0755, matching app component)"
+    say "            $dir/re-psn-window (mode 0755, the window program, when the archive has it)"
     say "  update:   stop the app and its host first; staged pair replacement is not crash-atomic"
   fi
   if [ "$appimage" = 0 ] && [ -n "$data" ]; then
@@ -170,6 +171,8 @@ pair_app_changed=0
 pair_complete=0
 pair_had_host=0
 pair_had_app=0
+pair_window_changed=0
+pair_had_window=0
 cleanup() {
   install_status=$?
   recovery_failed=0
@@ -177,6 +180,10 @@ cleanup() {
     if [ "$pair_app_changed" = 1 ]; then
       if [ "$pair_had_app" = 1 ]; then mv -f "$pair_lock/old-app" "$dir/re-psn-app" || recovery_failed=1
       else rm -f "$dir/re-psn-app" || recovery_failed=1; fi
+    fi
+    if [ "$pair_window_changed" = 1 ]; then
+      if [ "$pair_had_window" = 1 ]; then mv -f "$pair_lock/old-window" "$dir/re-psn-window" || recovery_failed=1
+      else rm -f "$dir/re-psn-window" || recovery_failed=1; fi
     fi
     if [ "$pair_host_changed" = 1 ]; then
       if [ "$pair_had_host" = 1 ]; then mv -f "$pair_lock/old-host" "$dir/re-psn-host" || recovery_failed=1
@@ -257,6 +264,12 @@ else
     if [ ! -f "$host_src" ] || [ -L "$host_src" ]; then
       die "the app archive has no matching re-psn-host component; nothing was installed."
     fi
+    # The window program is optional: releases before it was added do not carry it.
+    window_src="$extras/re-psn-window"
+    if [ -L "$window_src" ] || { [ -e "$window_src" ] && [ ! -f "$window_src" ]; }; then
+      die "the app archive has a re-psn-window that is not a regular file; nothing was installed."
+    fi
+    [ -f "$window_src" ] || window_src=''
   fi
 fi
 
@@ -264,7 +277,7 @@ fi
 # failures, but two flat filenames cannot be replaced atomically across a crash.
 mkdir -p "$dir"
 if [ "$app" = 1 ]; then
-  for old_target in "$dir/re-psn-app" "$dir/re-psn-host"; do
+  for old_target in "$dir/re-psn-app" "$dir/re-psn-host" "$dir/re-psn-window"; do
     if [ -L "$old_target" ] || { [ -e "$old_target" ] && [ ! -f "$old_target" ]; }; then
       die "app component target is not a regular file: $old_target; nothing was replaced."
     fi
@@ -276,16 +289,32 @@ if [ "$app" = 1 ]; then
   cp "$src" "$pair_lock/new-app"
   cp "$host_src" "$pair_lock/new-host"
   chmod 0755 "$pair_lock/new-app" "$pair_lock/new-host"
+  if [ -n "$window_src" ]; then
+    cp "$window_src" "$pair_lock/new-window"
+    chmod 0755 "$pair_lock/new-window"
+    if [ -f "$dir/re-psn-window" ]; then cp -p "$dir/re-psn-window" "$pair_lock/old-window"; pair_had_window=1; fi
+  fi
   if [ -f "$dir/re-psn-app" ]; then cp -p "$dir/re-psn-app" "$pair_lock/old-app"; pair_had_app=1; fi
   if [ -f "$dir/re-psn-host" ]; then cp -p "$dir/re-psn-host" "$pair_lock/old-host"; pair_had_host=1; fi
   # Set rollback intent before each move so an interrupt between commands is covered.
   pair_host_changed=1
   mv -f "$pair_lock/new-host" "$dir/re-psn-host"
+  if [ -n "$window_src" ]; then
+    pair_window_changed=1
+    mv -f "$pair_lock/new-window" "$dir/re-psn-window"
+  fi
   pair_app_changed=1
   mv -f "$pair_lock/new-app" "$dir/re-psn-app"
   pair_complete=1
-  say "Installed $dir/re-psn-app and $dir/re-psn-host"
-  say "Pair update staged and replaced; it is not crash-atomic. No process was stopped or started."
+  if [ -n "$window_src" ]; then
+    say "Installed $dir/re-psn-app, $dir/re-psn-host and $dir/re-psn-window"
+  else
+    say "Installed $dir/re-psn-app and $dir/re-psn-host"
+    if [ -f "$dir/re-psn-window" ]; then
+      say "This release has no window program; the re-psn-window already in $dir is from an older release."
+    fi
+  fi
+  say "The files were staged and replaced together; this is not crash-atomic. No process was stopped or started."
 else
 part="$dir/.$target.part.$$"
 cp "$src" "$part"
@@ -323,7 +352,11 @@ else
   if [ "$app" = 1 ]; then say "Start the app:          $dir/$target"; else say "Start the server:       $dir/$target"; fi
 fi
 if [ "$app" = 1 ]; then
-  say "The app opens its private local browser interface."
+  if [ -n "$window_src" ]; then
+    say "The app opens in its own window ($dir/re-psn-window beside it); run it with --browser for a browser tab."
+  else
+    say "The app opens its private local browser interface."
+  fi
   say "Its matching host component is $dir/re-psn-host; standalone re-psn was not changed."
   [ -z "$shared" ] || say "Its README:              $shared/README.md"
   exit 0

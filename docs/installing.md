@@ -129,8 +129,11 @@ Then `re-psn` starts the server; `re-psn -http 127.0.0.1:36101` also turns on th
 
 With `--app` the script installs `re-psn-app` (from `re-psn-app-vX.Y.Z-linux-<arch>.tar.gz`) in the same way, with the same
 checks and the same folder, and copies the archive's `LICENSE`, `NOTICE.md` and `README.md` to `~/.local/share/re-psn-app/vX.Y.Z/`.
-It installs the app *instead of* the server (run it twice for both), and cannot be combined with `--appimage`. The app is a terminal
-program: start it with `re-psn-app` in a terminal. If the release has no app archive the download fails and the script says the app
+It installs the app *instead of* the server (run it twice for both), and cannot be combined with `--appimage`. If the archive also holds
+`re-psn-window` (releases after v0.7.0 do), it is installed beside the app and its host, and the three files are replaced, and restored if a
+replacement fails, together; an older release without it leaves an installed `re-psn-window` alone and the script says so. Start the app
+with `re-psn-app`: it opens in the window when `re-psn-window` is beside it (needs WebKitGTK 4.1 on Linux, see
+[client-ui.md](client-ui.md#the-native-window)), and in your browser otherwise (`re-psn-app --browser` forces a browser tab). If the release has no app archive the download fails and the script says the app
 archives start with v0.5.0; nothing is installed.
 
 ## Windows
@@ -151,7 +154,10 @@ command that would add the folder to the user PATH. `-AddToPath` rewrites the us
 
 With `-App` the script installs `re-psn-app.exe` (from `re-psn-app-vX.Y.Z-windows-amd64.zip`) the same way, into the same folder,
 and copies `LICENSE`, `NOTICE.md` and `README.md` to `%LOCALAPPDATA%\re-psn-app\vX.Y.Z\`. It installs the app instead of the server and
-needs v0.5.0 or later. The app is a terminal program: run it in Windows Terminal or PowerShell. The app is not code-signed,
+needs v0.5.0 or later. If the zip also holds `re-psn-window.exe` (releases after v0.7.0 do), it is installed beside the app and its host and
+the three files are replaced, and restored if a replacement fails, together; an older release without it leaves an installed one alone and the
+script says so. Run `re-psn-app.exe`: it opens in the window when `re-psn-window.exe` is beside it, and in your browser otherwise
+(`re-psn-app --browser` forces a browser tab). The app is not code-signed,
 so Windows SmartScreen may warn about a downloaded `.exe`; the script checks the zip against `SHA256SUMS` first.
 
 ## What the scripts never do
