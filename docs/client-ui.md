@@ -37,6 +37,23 @@ credential never grants host control. See [native status configuration](../app/R
 **Refresh local view** reads the local controller/profile state. It does not automatically check the remote game
 server or refresh a friend relay. Those network actions have their own explicit controls.
 
+## Saved servers
+
+Below the Play target, **Saved servers** is a list you keep yourself. Add a name, a game `HOST:PORT` and optionally a status
+URL; the list holds at most 64 entries. **Check** asks one server, **Check all** asks every entry (a few at a time, up to
+five seconds each, after a confirmation that says how many), and **Use** copies an entry into the Play target above, which
+you then save and check as usual. **Export list** downloads the list as a small JSON file.
+
+Nothing is contacted until you press a check button. The app never fetches a list from anywhere, and there is no central
+directory. Entries on a loopback, private or link-local address (for example `192.168.0.5:36100` or `localhost`) carry a
+"local network address" tag, so you can see when a check would reach inside your own network. A check shows reachable or
+not, when it ran and how many public rooms it saw; those results are kept in memory only. A check never sends the Play
+status-reader token, and **Use** forgets that token file when the status URL changes, as saving settings does. A status URL
+that answers with a redirect counts as unavailable: it is not followed.
+
+The list is stored in `servers.json` beside `re-psn.ini` (private, mode 0600, replaced atomically). If that file cannot be
+read, the panel says so and leaves the file as it is. Names are shown as plain text.
+
 ## Own a local host
 
 ![Host: the app's own server running on 127.0.0.1:37100, with its listen address and relay choice](img/app-host.png)

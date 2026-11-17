@@ -3,8 +3,10 @@
   'use strict';
   const MAX_ARCHIVE = 4 * 1024 * 1024 + 52;
   const MAX_JSON = 8 * 1024 * 1024;
+  // Check all runs 4 servers at a time with 5 s each; 64 unreachable ones take 80 s.
+  const CHECK_ALL_MS = 100000;
   const SESSION_KEY = 're-psn-ui-token-v1';
-  const ROUTES = new Set(['/api/settings', '/api/play', '/api/host/start', '/api/host/stop', '/api/profile/create', '/api/catalog', '/api/grant', '/api/revoke', '/api/friends', '/api/profile/export', '/api/profile/restore', '/api/shutdown']);
+  const ROUTES = new Set(['/api/settings', '/api/play', '/api/host/start', '/api/host/stop', '/api/profile/create', '/api/catalog', '/api/grant', '/api/revoke', '/api/friends', '/api/profile/export', '/api/profile/restore', '/api/shutdown', '/api/servers/add', '/api/servers/remove', '/api/servers/check', '/api/servers/check-all', '/api/servers/use', '/api/servers/export']);
   const personal = mode => mode === 'play' || mode === 'both';
   const hosting = mode => mode === 'host' || mode === 'both';
   function readGuard() { let generation = 0; return {capture: () => generation, invalidate: () => {generation++;}, current: value => value === generation}; }
@@ -88,7 +90,7 @@
     async function request(path, body, binary = false) {
       if (path !== '/api/state' && !ROUTES.has(path) || path === '/api/state' && body !== undefined) throw new Error('Unsupported local action.');
       const controller = new AbortController();
-      const deadline = setTimeout(() => controller.abort(), 30000);
+      const deadline = setTimeout(() => controller.abort(), path === '/api/servers/check-all' ? CHECK_ALL_MS : 30000);
       try {
         const headers = {Authorization: 'Bearer ' + token};
         const options = {method: body === undefined ? 'GET' : 'POST', headers, cache: 'no-store', credentials: 'omit', redirect: 'error', referrerPolicy: 'no-referrer', signal: controller.signal};
@@ -121,7 +123,7 @@
   const node = (tag, value, className) => { const n = document.createElement(tag); if (value !== undefined) n.textContent = clean(value); if (className) n.className = className; return n; };
   let state, api, currentPage = 'overview', busy = false, reading = false, authenticated = false, stopped = false;
   let settingsDirty = false, playDirty = false, hostDirty = false, rawCatalog = '', catalogSequence = 0;
-  let friendsKey = '', trophiesKey = '', playKey = '';
+  let friendsKey = '', trophiesKey = '', playKey = '', serversKey = '';
   const generations = readGuard();
   function message(value, error = false) { const id = error ? 'error' : 'notice'; text(id, value); show(id, !!value); if (!error) show('error', false); }
   function fail(error) {
@@ -209,6 +211,48 @@
     tableRows('rooms-body', p.rooms, 4, 'No room snapshot. Check a server to load its public rooms.', r => [r.id, r.title, r.current + '/' + r.max, (r.members || []).join(', ')]);
     tableRows('boards-body', p.boards, 4, 'No leaderboard snapshot available.', b => [b.title + ' / ' + b.id, b.entries, b.leader || '—', b.best || '—']);
   }
+  const savedServers = () => state.servers || {entries: [], error: '', max: 64};
+  const ref = e => ({server: e.server, status_url: e.status_url || ''});
+  function serverCheck(c) {
+    if (c.status === 'reachable') return 'Reachable · ' + stamp(c.checked_at) + (c.round_trip_ms ? ' · ' + Math.round(c.round_trip_ms) + ' ms' : '');
+    if (c.status === 'unavailable') return 'Unavailable · ' + stamp(c.checked_at);
+    return 'Not checked';
+  }
+  function serverButton(label, entry, run) { const b = node('button', label); b.type = 'button'; b.dataset.mutates = ''; b.addEventListener('click', () => action(() => run(entry), null)); return b; }
+  function renderServers() {
+    const list = savedServers(), key = JSON.stringify(list); if (key === serversKey) return; serversKey = key;
+    text('servers-count', list.entries.length + ' of ' + list.max); text('servers-error', list.error); show('servers-error', !!list.error);
+    tableRows('servers-body', list.entries, 5, 'No saved servers yet. Add one above.', e => {
+      const name = node('span', e.name), address = node('span', e.server); if (e.status_url) { address.append(node('br'), node('span', e.status_url, 'muted')); }
+      if (e.local) { name.append(' ', node('span', 'local network address', 'tag')); }
+      const buttons = node('span', undefined, 'actions');
+      buttons.append(serverButton('Check', e, checkServer), serverButton('Use', e, useServer), serverButton('Remove', e, removeServer));
+      return [name, address, serverCheck(e.check), e.check.status === 'reachable' ? String(e.check.rooms) : '—', buttons];
+    });
+    controls();
+  }
+  async function checkServer(e) { const next = await api.post('/api/servers/check', ref(e)); message('Checked ' + e.name + '.'); return next; }
+  async function useServer(e) {
+    if ((playDirty || settingsDirty) && !await confirm('Replace your unsaved edits?', 'Using ' + e.name + ' replaces the Play server and status URL you are editing.', 'Use this server')) return null;
+    const next = await api.post('/api/servers/use', ref(e)); settingsDirty = playDirty = false;
+    message('Play target is now ' + e.name + '. Press Save & check server when you are ready to contact it.'); return next;
+  }
+  async function removeServer(e) {
+    if (!await confirm('Remove this server?', e.name + ' (' + e.server + ') is removed from your list. Nothing else changes.', 'Remove')) return null;
+    return api.post('/api/servers/remove', ref(e));
+  }
+  async function checkAllServers() {
+    const entries = savedServers().entries; if (!entries.length) { message('Add a server first.'); return null; }
+    const local = entries.filter(e => e.local).length, seconds = Math.ceil(entries.length / 4) * 5;
+    const detail = 'This contacts all ' + entries.length + ' saved servers, 4 at a time, waiting up to 5 seconds for each; it can take up to ' + seconds + ' seconds.' + (local ? ' ' + local + ' of them ' + (local === 1 ? 'is' : 'are') + ' on a local network address.' : '');
+    if (!await confirm('Check all saved servers?', detail, 'Check all')) return null;
+    const next = await api.post('/api/servers/check-all'); message('Checked ' + entries.length + ' saved servers.'); return next;
+  }
+  async function exportServers() {
+    const file = await api.post('/api/servers/export'), url = URL.createObjectURL(new Blob([JSON.stringify(file, null, 2) + '\n'], {type: 'application/json'})), link = node('a');
+    link.href = url; link.download = 're-psn-servers.json'; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    message('Server list downloaded. It holds names and addresses only.'); return null;
+  }
   function renderTrophies(force = false) {
     const titles = state.profile && state.profile.titles || [], key = JSON.stringify(titles);
     if (!force && key === trophiesKey) return; trophiesKey = key;
@@ -268,7 +312,7 @@
     text('profile-label', profile ? profile.label : 'Local profile'); $('profile-id').value = profile ? profile.account_id : '';
     text('profile-error', state.profile_error || ''); text('restore-note', profile ? 'A profile already exists here. Restore into a new private profile location using the CLI; this interface never replaces it.' : 'Restore into this new, empty profile. Remote registration and friendships are fetched from each relay after authentication.');
     text('grant-message', state.grant.message || (state.grant.active ? 'Game reporting is enabled. Keep this app running; revoke it when finished.' : 'Local game reporting is off.')); show('grant-path', state.grant.active && !!state.grant.path); text('grant-path', state.grant.active ? 'Private descriptor: ' + state.grant.path : '');
-    fillSettings(); renderPlay(); renderTrophies(); renderFriends(); navigate(currentPage, false); controls();
+    fillSettings(); renderPlay(); renderServers(); renderTrophies(); renderFriends(); navigate(currentPage, false); controls();
     text('bridge-state', 'Private app session · local state updated'); text('bridge-time', new Date().toLocaleTimeString());
   }
   async function readState(initial = false) {
@@ -305,6 +349,9 @@
   $('friend-request-form').addEventListener('submit', e => { e.preventDefault(); friendAction('request', $('friend-id').value.trim()); });
   submit('export-form', async () => { try { const passphrase = $('export-passphrase').value; if (passphrase !== $('export-confirm').value) throw new Error('The passphrases do not match.'); const bytes = await api.export(passphrase), url = URL.createObjectURL(new Blob([bytes], {type: 'application/octet-stream'})), link = node('a'); link.href = url; link.download = 're-psn-profile.backup'; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); message('Encrypted backup downloaded. Keep its passphrase separately.'); return null; } finally { $('export-passphrase').value = ''; $('export-confirm').value = ''; } });
   submit('restore-form', async () => { try { const file = $('restore-file').files[0]; if (!file || file.size > MAX_ARCHIVE) throw new Error('Choose a bounded encrypted profile backup.'); const archive = base64(new Uint8Array(await file.arrayBuffer())); const result = await api.post('/api/profile/restore', {archive, passphrase: $('restore-passphrase').value}); $('restore-file').value = ''; return result; } finally { $('restore-passphrase').value = ''; } });
+  submit('servers-form', async () => { const next = await api.post('/api/servers/add', {name: $('server-name').value.trim(), server: $('server-address').value.trim(), status_url: $('server-status-url').value.trim()}); for (const id of ['server-name', 'server-address', 'server-status-url']) $(id).value = ''; return next; });
+  $('servers-check-all').addEventListener('click', () => action(checkAllServers, null));
+  $('servers-export').addEventListener('click', () => action(exportServers, null));
   $('refresh-state').addEventListener('click', () => readState());
   $('shutdown').addEventListener('click', () => action(async () => { if (!await confirm('Stop the local app?', state.host.running ? 'This also stops the server owned by this app and revokes game reporting. Close this tab instead to leave them running.' : 'This revokes any local game grant. Ordinary game networking and separately hosted servers are unaffected.', 'Stop app')) return null; await api.post('/api/shutdown'); stopped = true; authenticated = false; try { sessionStorage.removeItem(SESSION_KEY); } catch {} message('The app has stopped. You can close this tab.'); text('bridge-state', 'App stopped'); return null; }));
   controls();

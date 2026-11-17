@@ -82,6 +82,7 @@ type State struct {
 	Profile      *framework.View `json:"profile"`
 	ProfileError string          `json:"profile_error"`
 	Grant        Grant           `json:"grant"`
+	Servers      ServerList      `json:"servers"`
 }
 type Server struct {
 	mu               sync.Mutex
@@ -95,6 +96,8 @@ type Server struct {
 	bootstrap        string
 	bootstrapExpires time.Time
 	reopenKey        string
+	servers          *serverStore
+	fetch            tui.Fetcher
 	ctx              context.Context
 	cancel           context.CancelFunc
 	closed           bool
@@ -118,7 +121,7 @@ func New(opts Options) (*Server, error) {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Server{opts: opts, file: f, profile: tui.NewProfileSession(opts.ProfileDir), host: host.New(opts.ServerBinary), action: make(chan struct{}, 1), play: Play{Status: "unchecked", Rooms: []Room{}, Boards: []Board{}}, token: hex.EncodeToString(token[:]), bootstrap: hex.EncodeToString(bootstrap[:]), bootstrapExpires: time.Now().Add(time.Minute), reopenKey: hex.EncodeToString(reopen[:]), ctx: ctx, cancel: cancel}, nil
+	return &Server{servers: newServerStore(opts.ConfigPath), fetch: tui.NativeStatus{}, opts: opts, file: f, profile: tui.NewProfileSession(opts.ProfileDir), host: host.New(opts.ServerBinary), action: make(chan struct{}, 1), play: Play{Status: "unchecked", Rooms: []Room{}, Boards: []Board{}}, token: hex.EncodeToString(token[:]), bootstrap: hex.EncodeToString(bootstrap[:]), bootstrapExpires: time.Now().Add(time.Minute), reopenKey: hex.EncodeToString(reopen[:]), ctx: ctx, cancel: cancel}, nil
 }
 
 // Locator is passed only to the native per-user controller; HTTP never returns its key.
@@ -143,7 +146,7 @@ func (s *Server) state() State {
 	s.mu.Lock()
 	settings, play := s.settings(), s.play
 	s.mu.Unlock()
-	out := State{Version: s.opts.Version, Settings: settings, Play: play, Host: s.host.View()}
+	out := State{Version: s.opts.Version, Settings: settings, Play: play, Host: s.host.View(), Servers: s.servers.view()}
 	if v, err := s.profile.Read(); err == nil {
 		out.Profile = &v
 	} else if !errors.Is(err, framework.ErrNotFound) && !os.IsNotExist(err) {

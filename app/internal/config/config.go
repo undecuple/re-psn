@@ -246,6 +246,12 @@ func checkURL(v string) error {
 	return nil
 }
 
+// ValidateServer reports whether v is a game server address: host:port with a port from 1 to 65535.
+func ValidateServer(v string) error { return checkServer(v) }
+
+// ValidateURL reports whether v is an http:// or https:// status URL.
+func ValidateURL(v string) error { return checkURL(v) }
+
 // Bytes renders the file: every line as read, known keys with their current
 // values, and known keys that were not in the file added to their section.
 func (f *File) Bytes() ([]byte, error) {

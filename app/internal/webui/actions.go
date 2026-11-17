@@ -98,7 +98,7 @@ func (s *Server) actionRequest(w http.ResponseWriter, r *http.Request) error {
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 		defer cancel()
-		snapshot, err := (tui.NativeStatus{}).Fetch(ctx, tui.Query{Server: v.Server, StatusURL: v.StatusURL, StatusTokenFile: v.StatusTokenFile, Title: q.Title, Board: q.Board, Boards: q.Boards})
+		snapshot, err := s.fetch.Fetch(ctx, tui.Query{Server: v.Server, StatusURL: v.StatusURL, StatusTokenFile: v.StatusTokenFile, Title: q.Title, Board: q.Board, Boards: q.Boards})
 		play := Play{Status: "reachable", CheckedAt: time.Now().UnixMilli(), Message: "Reachable at last check; the game connects independently", RoundTripMS: float64(snapshot.RTT) / float64(time.Millisecond), Rooms: []Room{}, Boards: []Board{}}
 		if err != nil {
 			play.Status = "unavailable"
@@ -175,6 +175,13 @@ func (s *Server) actionRequest(w http.ResponseWriter, r *http.Request) error {
 		writeJSON(w, s.state())
 		s.cancel()
 		return nil
+	case "/api/servers/add", "/api/servers/remove", "/api/servers/check", "/api/servers/check-all", "/api/servers/use", "/api/servers/export":
+		if err := s.serverAction(w, r); err != nil {
+			if errors.Is(err, errNoState) {
+				return nil
+			}
+			return err
+		}
 	default:
 		if err := s.role(false); err != nil {
 			return err
