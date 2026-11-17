@@ -42,7 +42,11 @@ server or refresh a friend relay. Those network actions have their own explicit 
 Below the Play target, **Saved servers** is a list you keep yourself. Add a name, a game `HOST:PORT` and optionally a status
 URL; the list holds at most 64 entries. **Check** asks one server, **Check all** asks every entry (a few at a time, up to
 five seconds each, after a confirmation that says how many), and **Use** copies an entry into the Play target above, which
-you then save and check as usual. **Export list** downloads the list as a small JSON file.
+you then save and check as usual. **Export list** downloads the list as a small JSON file, and **Import a list** reads one
+back (yours on another computer, or one a friend sent): a confirmation first says how many entries it will add and how many it
+skips because they are already in your list or the list is full. Imported entries are added as "Not checked"; import contacts
+no server. A file that is not a valid list (an unknown field, another version, a bad address, a status URL with a password, a
+duplicate, more than 64 entries or 64 KiB) is refused whole and changes nothing.
 
 Nothing is contacted until you press a check button. The app never fetches a list from anywhere, and there is no central
 directory. Entries on a loopback, private or link-local address (for example `192.168.0.5:36100` or `localhost`) carry a

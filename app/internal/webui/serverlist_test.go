@@ -344,3 +344,71 @@ func TestCancelledProbeKeepsTheEarlierResult(t *testing.T) {
 		t.Errorf("a cancelled probe changed the result to %q", c.Status)
 	}
 }
+
+const importFile = `{"version": 1, "servers": [{"name": "New one", "server": "new.example.org:1"}, {"name": "Same, other case", "server": "OLD.example.org:1"}, {"name": "Second", "server": "10.0.0.9:36100"}]}`
+
+func TestServerImportPreviewsThenAddsAndContactsNothing(t *testing.T) {
+	f := serveUI(t)
+	saveRole(t, f, "play", nil)
+	ff := &fakeFetch{}
+	f.server.fetch = ff
+	addServer(t, f, "Old", "old.example.org:1", "", 200)
+	before, _ := os.ReadFile(servers.PathFor(f.server.opts.ConfigPath))
+	var p map[string]int
+	if err := json.Unmarshal(callUI(t, f, f.token, "/api/servers/preview", map[string]string{"file": importFile}, 200), &p); err != nil || p["total"] != 3 || p["add"] != 2 || p["skip"] != 1 {
+		t.Fatalf("preview %v %v; want total 3, add 2, skip 1", p, err)
+	}
+	if after, _ := os.ReadFile(servers.PathFor(f.server.opts.ConfigPath)); string(after) != string(before) || len(serverState(t, f).Entries) != 1 {
+		t.Error("a preview changed the list")
+	}
+	callUI(t, f, f.token, "/api/servers/import", map[string]string{"file": importFile}, 200)
+	l := serverState(t, f)
+	if len(l.Entries) != 3 || !l.Entries[2].Local {
+		t.Fatalf("wrong list after import: %+v", l.Entries)
+	}
+	for _, e := range l.Entries[1:] {
+		if e.Check.Status != "unchecked" {
+			t.Errorf("an imported entry was checked: %+v", e)
+		}
+	}
+	if len(ff.queries) != 0 {
+		t.Errorf("import and preview contacted %d servers; want none", len(ff.queries))
+	}
+	callUI(t, f, f.token, "/api/servers/import", map[string]string{"file": importFile}, 400) // nothing new left
+}
+
+func TestServerImportRefusesBadFilesAndChangesNothing(t *testing.T) {
+	f := serveUI(t)
+	saveRole(t, f, "play", nil)
+	addServer(t, f, "Old", "old.example.org:1", "", 200)
+	bad := []string{``, `nope`, `{"version": 2, "servers": []}`, `{"version": 1, "servers": [{"name":"a","server":"h:1","token_file":"/x"}]}`,
+		`{"version": 1, "servers": [{"name":"a","server":"h:1","status_url":"https://u:p@h/s"}]}`,
+		`{"version": 1, "servers": [{"name":"a","server":"h:1"},{"name":"b","server":"H:1"}]}`,
+		`{"version": 1, "servers": []} trailing`, `{"version": 1, "servers": [], "pad": "` + strings.Repeat("x", servers.MaxFileBytes) + `"}`}
+	for _, file := range bad {
+		callUI(t, f, f.token, "/api/servers/preview", map[string]string{"file": file}, 400)
+		callUI(t, f, f.token, "/api/servers/import", map[string]string{"file": file}, 400)
+	}
+	if l := serverState(t, f); len(l.Entries) != 1 {
+		t.Errorf("a refused file changed the list: %+v", l.Entries)
+	}
+	saveRole(t, f, "host", nil)
+	callUI(t, f, f.token, "/api/servers/import", map[string]string{"file": importFile}, 403)
+}
+
+func TestServerImportStopsAtTheCap(t *testing.T) {
+	f := serveUI(t)
+	saveRole(t, f, "play", nil)
+	for i := 0; i < servers.MaxEntries-1; i++ {
+		addServer(t, f, "s", "h"+strconv.Itoa(i)+":1", "", 200)
+	}
+	var p map[string]int
+	_ = json.Unmarshal(callUI(t, f, f.token, "/api/servers/preview", map[string]string{"file": importFile}, 200), &p)
+	if p["add"] != 1 || p["skip"] != 2 {
+		t.Fatalf("preview %v; want add 1, skip 2 with one place left", p)
+	}
+	callUI(t, f, f.token, "/api/servers/import", map[string]string{"file": importFile}, 200)
+	if n := len(serverState(t, f).Entries); n != servers.MaxEntries {
+		t.Errorf("%d entries, want %d", n, servers.MaxEntries)
+	}
+}
