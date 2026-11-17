@@ -81,6 +81,19 @@ fn read_link(file: &Path, child: &mut Child) -> Result<String, String> {
     }
 }
 
+/// The window may only show the app's own loopback page. The app is trusted to print a
+/// link like that, but the window checks it before it loads anything from it.
+fn check_link(link: &str) -> Result<tauri::Url, String> {
+    let url: tauri::Url = link
+        .parse()
+        .map_err(|_| "the app printed an invalid launch link".to_string())?;
+    let local = matches!(url.host_str(), Some("127.0.0.1") | Some("localhost"));
+    if url.scheme() != "http" || !local || !url.username().is_empty() || url.password().is_some() {
+        return Err("the app printed a launch link that is not a plain local http address".into());
+    }
+    Ok(url)
+}
+
 fn stop(b: Backend) {
     stop_within(b, STOP_TIMEOUT)
 }
@@ -99,7 +112,7 @@ fn stop_within(mut b: Backend, timeout: Duration) {
     let _ = b.child.wait();
 }
 
-fn start() -> Result<(Backend, String, Arc<AtomicBool>), String> {
+fn start() -> Result<(Backend, tauri::Url, Arc<AtomicBool>), String> {
     let dir = private_dir()?;
     let file = dir.join("link.txt");
     let mut child = Command::new(app_binary()?)
@@ -122,7 +135,7 @@ fn start() -> Result<(Backend, String, Arc<AtomicBool>), String> {
             }
         });
     }
-    let link = read_link(&file, &mut child);
+    let link = read_link(&file, &mut child).and_then(|l| check_link(&l));
     let _ = fs::remove_dir_all(&dir);
     match link {
         Ok(link) => Ok((Backend { child, stdin }, link, reopened)),
@@ -148,7 +161,7 @@ fn main() {
     tauri::Builder::default()
         .manage(state)
         .setup(move |app| {
-            let url = WebviewUrl::External(link.parse().map_err(|_| "invalid launch link")?);
+            let url = WebviewUrl::External(link.clone());
             WebviewWindowBuilder::new(app, "main", url)
                 .title("re:psn")
                 .inner_size(1100.0, 780.0)
@@ -267,6 +280,26 @@ mod tests {
         let err = read_link(&dir.join("never.txt"), &mut child).unwrap_err();
         assert!(err.contains("stopped before it was ready"), "{err}");
         fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn check_link_accepts_only_the_apps_local_page() {
+        for ok in ["http://127.0.0.1:43241/#token=ab", "http://localhost:80/"] {
+            assert!(check_link(ok).is_ok(), "{ok}");
+        }
+        for bad in [
+            "https://127.0.0.1:43241/",
+            "http://example.org/",
+            "http://127.0.0.1.example.org/",
+            "http://user@127.0.0.1:1/",
+            "http://user:pw@localhost:1/",
+            "file:///etc/passwd",
+            "javascript:alert(1)",
+            "not a link",
+            "",
+        ] {
+            assert!(check_link(bad).is_err(), "{bad}");
+        }
     }
 
     #[test]
