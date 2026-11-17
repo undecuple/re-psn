@@ -23,6 +23,18 @@ the [features list](docs/features.md) gives every feature's status and evidence.
 - **The admin API** is experimental and read-only. It has not been run behind a reverse proxy, on Windows or with a container
   secret mount ([admin-api.md](docs/admin-api.md)).
 
+## Dependency advisories
+
+- **`glib` in the window program (Linux only).** GitHub's Dependabot reports [GHSA-wrw7-89jp-8q8g](https://github.com/advisories/GHSA-wrw7-89jp-8q8g)
+  (medium, unsoundness in the `Iterator` implementations of `glib::VariantStrIter`) for `glib` 0.18.5 in `app/shell/Cargo.lock`. The
+  advisory covers `glib` 0.15.0 up to but not including 0.20.0 and is fixed in 0.20.0; the window's Tauri 2 Linux dependencies
+  (`gtk` 0.18, `webkit2gtk` 2.0) require the 0.18 line, so the fix waits on Tauri and no update is available to us. The window's own
+  code (`app/shell/src`) has no reference to `glib` or `VariantStrIter` (checked by search and by reading the files); the crates it
+  depends on were searched for the one `glib` function that returns that type (`Variant::array_iter_str`) and none calls it, but they
+  have not been read in full. On Windows the dependency tree has no `glib` (`cargo tree --locked --target x86_64-pc-windows-msvc`),
+  so the Windows window is not affected. The server, the terminal app and the browser interface are Go and do not use it.
+  The advisory has not been dismissed on GitHub.
+
 ## Limits by design
 
 - The relay is off by default (`-relay`). Without it, two players who cannot reach each other directly cannot play; they need a
