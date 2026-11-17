@@ -29,6 +29,7 @@ type fakeFetch struct {
 	inflight, max int32
 	hold          time.Duration
 	fail          map[string]bool
+	boom          map[string]bool // these addresses make the fetcher panic
 }
 
 func (f *fakeFetch) Fetch(ctx context.Context, q tui.Query) (tui.Snapshot, error) {
@@ -40,7 +41,14 @@ func (f *fakeFetch) Fetch(ctx context.Context, q tui.Query) (tui.Snapshot, error
 		f.max = n
 	}
 	f.mu.Unlock()
-	time.Sleep(f.hold)
+	if f.boom[q.Server] {
+		panic("fetcher bug")
+	}
+	select {
+	case <-time.After(f.hold):
+	case <-ctx.Done():
+		return tui.Snapshot{}, ctx.Err()
+	}
 	if f.fail[q.Server] {
 		return tui.Snapshot{}, errors.New("down")
 	}
@@ -279,5 +287,60 @@ func TestServerCheckDoesNotFollowRedirects(t *testing.T) {
 	}
 	if hit.Load() != 0 {
 		t.Errorf("the redirect target was contacted %d times", hit.Load())
+	}
+}
+
+// A batch can outlast the usual write limit; Check all extends its own deadline so the answer still arrives.
+func TestServerCheckAllLongerThanTheWriteLimitStillAnswers(t *testing.T) {
+	old := uiWriteTimeout
+	uiWriteTimeout = 1 * time.Second
+	t.Cleanup(func() { uiWriteTimeout = old })
+	f := serveUI(t)
+	saveRole(t, f, "play", nil)
+	ff := &fakeFetch{hold: 700 * time.Millisecond}
+	f.server.fetch = ff
+	for i := 0; i < 8; i++ {
+		addServer(t, f, "s", "h"+strconv.Itoa(i)+":1", "", 200)
+	}
+	start := time.Now()
+	callUI(t, f, f.token, "/api/servers/check-all", map[string]string{}, 200)
+	if took := time.Since(start); took <= uiWriteTimeout {
+		t.Fatalf("the batch took %v; the test needs one longer than the write limit", took)
+	}
+	for _, e := range serverState(t, f).Entries {
+		if e.Check.Status != "reachable" {
+			t.Errorf("%s: %q", e.Server, e.Check.Status)
+		}
+	}
+}
+
+func TestServerProbePanicIsUnavailable(t *testing.T) {
+	f := serveUI(t)
+	saveRole(t, f, "play", nil)
+	f.server.fetch = &fakeFetch{boom: map[string]bool{"bad.example.org:1": true}}
+	addServer(t, f, "Good", "good.example.org:1", "", 200)
+	addServer(t, f, "Bad", "bad.example.org:1", "", 200)
+	callUI(t, f, f.token, "/api/servers/check-all", map[string]string{}, 200)
+	callUI(t, f, f.token, "/api/servers/check", map[string]string{"server": "bad.example.org:1"}, 200)
+	l := serverState(t, f)
+	if l.Entries[0].Check.Status != "reachable" || l.Entries[1].Check.Status != "unavailable" {
+		t.Errorf("wrong results after a panicking fetcher: %+v", l.Entries)
+	}
+}
+
+// A probe whose caller went away says nothing about the server, so it must not replace an earlier result.
+func TestCancelledProbeKeepsTheEarlierResult(t *testing.T) {
+	f := serveUI(t)
+	saveRole(t, f, "play", nil)
+	f.server.fetch = &fakeFetch{}
+	addServer(t, f, "Up", "up.example.org:1", "", 200)
+	callUI(t, f, f.token, "/api/servers/check", map[string]string{"server": "up.example.org:1"}, 200)
+	f.server.fetch = &fakeFetch{hold: time.Hour, fail: map[string]bool{"up.example.org:1": true}}
+	ctx, cancel := context.WithCancel(context.Background())
+	time.AfterFunc(50*time.Millisecond, cancel)
+	f.server.probeAndRecord(ctx, servers.Entry{Name: "Up", Server: "up.example.org:1"})
+	f.server.checkAll(ctx, []servers.Entry{{Name: "Up", Server: "up.example.org:1"}})
+	if c := serverState(t, f).Entries[0].Check; c.Status != "reachable" {
+		t.Errorf("a cancelled probe changed the result to %q", c.Status)
 	}
 }

@@ -16,11 +16,21 @@ func TestNormalizeGivesOneForm(t *testing.T) {
 		{Entry{"a", "[::1]:36100", "http://[::1]:8080/s"}, Entry{"a", "[::1]:36100", "http://[::1]:8080/s"}},
 		{Entry{"a", "h:1", "https://h:8443/s"}, Entry{"a", "h:1", "https://h:8443/s"}},
 		{Entry{"a", "not an address", "nonsense"}, Entry{"a", "not an address", "nonsense"}},
+		{Entry{"a", "h:080", "http://h:080/s"}, Entry{"a", "h:80", "http://h/s"}},
+		{Entry{"a", "h:+80", "https://h:0443/s"}, Entry{"a", "h:80", "https://h/s"}},
+		{Entry{"a", "h:0", "http://h:0/s"}, Entry{"a", "h:0", "http://h:0/s"}},
 	}
 	for _, c := range cases {
 		if got := Normalize(c.in); got != c.want {
 			t.Errorf("Normalize(%+v) = %+v, want %+v", c.in, got, c.want)
 		}
+	}
+}
+
+func TestSignedStatusPortIsRefused(t *testing.T) {
+	var l List
+	if err := l.Add(Entry{"a", "h:1", "https://h:+443/s"}); err == nil {
+		t.Error("a status URL port with a sign was accepted")
 	}
 }
 
@@ -68,6 +78,9 @@ func TestDuplicatesAreFoundAfterNormalizing(t *testing.T) {
 	// The same server with a different status URL is a different entry; a default port in the URL is not a difference.
 	if err := l.Add(Entry{"five", "host:1234", "https://host/s"}); err != nil {
 		t.Errorf("a different status URL was refused: %v", err)
+	}
+	if err := l.Add(Entry{"seven", "host:01234", "https://host/s"}); err == nil {
+		t.Error("a game port written with a leading zero was accepted as a new entry")
 	}
 	if err := l.Add(Entry{"six", "host:1234", "https://HOST:443/s"}); err == nil {
 		t.Error("a status URL that differs only by case and default port was accepted")

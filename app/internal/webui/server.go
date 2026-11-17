@@ -34,6 +34,9 @@ var assets embed.FS
 
 const maxInput = 8 << 20
 
+// uiWriteTimeout bounds writing any answer, except where a route that is slow by design extends its own (Check all).
+var uiWriteTimeout = 20 * time.Second
+
 type Options struct{ ConfigPath, ProfileDir, ServerBinary, Version string }
 type Settings struct {
 	Mode         string `json:"mode"`
@@ -176,7 +179,7 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener, ready func(string) 
 	}
 	s.authority = ln.Addr().String()
 	s.mu.Unlock()
-	h := &http.Server{Handler: http.HandlerFunc(s.handle), ReadHeaderTimeout: 3 * time.Second, ReadTimeout: 8 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 10 * time.Second, MaxHeaderBytes: 8192, ErrorLog: log.New(io.Discard, "", 0), BaseContext: func(net.Listener) context.Context { return s.ctx }}
+	h := &http.Server{Handler: http.HandlerFunc(s.handle), ReadHeaderTimeout: 3 * time.Second, ReadTimeout: 8 * time.Second, WriteTimeout: uiWriteTimeout, IdleTimeout: 10 * time.Second, MaxHeaderBytes: 8192, ErrorLog: log.New(io.Discard, "", 0), BaseContext: func(net.Listener) context.Context { return s.ctx }}
 	done := make(chan error, 1)
 	go func() { done <- h.Serve(&limitedListener{Listener: ln, slots: make(chan struct{}, 32)}) }()
 	if ready != nil {

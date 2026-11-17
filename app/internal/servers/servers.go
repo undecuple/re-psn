@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -61,12 +62,12 @@ func Key(e Entry) string { return e.Server + "\n" + e.StatusURL }
 func Normalize(e Entry) Entry {
 	e = Entry{Name: strings.TrimSpace(e.Name), Server: strings.TrimSpace(e.Server), StatusURL: strings.TrimSpace(e.StatusURL)}
 	if host, port, err := net.SplitHostPort(e.Server); err == nil {
-		e.Server = net.JoinHostPort(strings.TrimSuffix(strings.ToLower(host), "."), port)
+		e.Server = net.JoinHostPort(strings.TrimSuffix(strings.ToLower(host), "."), canonPort(port))
 	}
 	if u, err := url.Parse(e.StatusURL); err == nil && e.StatusURL != "" && u.Host != "" {
 		u.Scheme = strings.ToLower(u.Scheme)
 		host := strings.TrimSuffix(strings.ToLower(u.Hostname()), ".")
-		port := u.Port()
+		port := canonPort(u.Port())
 		if port == "80" && u.Scheme == "http" || port == "443" && u.Scheme == "https" {
 			port = ""
 		}
@@ -80,6 +81,14 @@ func Normalize(e Entry) Entry {
 		e.StatusURL = u.String()
 	}
 	return e
+}
+
+// canonPort writes a numeric port the one way, so "080" and "+80" are "80". Anything else is left for Validate to refuse.
+func canonPort(p string) string {
+	if n, err := strconv.Atoi(p); err == nil && n >= 1 && n <= 65535 {
+		return strconv.Itoa(n)
+	}
+	return p
 }
 
 // Validate reports whether e is acceptable as it is; Normalize it first.

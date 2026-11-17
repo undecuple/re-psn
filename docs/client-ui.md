@@ -50,6 +50,8 @@ directory. Entries on a loopback, private or link-local address (for example `19
 not, when it ran and how many public rooms it saw; those results are kept in memory only. A check never sends the Play
 status-reader token, and **Use** forgets that token file when the status URL changes, as saving settings does. A status URL
 that answers with a redirect counts as unavailable: it is not followed.
+A check that is cut short (you close the page) records nothing, so it never replaces an earlier result. Stopping the app waits
+for a running Check all to finish, which takes at most five seconds per server in the batch.
 
 The list is stored in `servers.json` beside `re-psn.ini` (private, mode 0600, replaced atomically). If that file cannot be
 read, the panel says so and leaves the file as it is. Names are shown as plain text.

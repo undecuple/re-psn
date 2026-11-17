@@ -128,36 +128,52 @@ func (st *serverStore) record(key string, c Check) {
 	}
 }
 
-// probe asks one saved server. It never sends the Play status token: that file belongs to the Play target only.
-func (s *Server) probe(ctx context.Context, e servers.Entry) Check {
-	ctx, cancel := context.WithTimeout(ctx, checkTimeout)
+// probe asks one saved server. It never sends the Play status token: that file belongs to the Play target only. record is
+// false when the caller went away first, so a cancelled probe never overwrites an earlier result. A panic in a fetcher is
+// an unavailable server, not a crashed app: probes run in goroutines that net/http does not guard.
+func (s *Server) probe(parent context.Context, e servers.Entry) (c Check, record bool) {
+	ctx, cancel := context.WithTimeout(parent, checkTimeout)
 	defer cancel()
+	defer func() {
+		if recover() != nil {
+			c, record = Check{Status: "unavailable", CheckedAt: time.Now().UnixMilli()}, parent.Err() == nil
+		}
+	}()
 	snap, err := s.fetch.Fetch(ctx, tui.Query{Server: e.Server, StatusURL: e.StatusURL})
-	c := Check{Status: "reachable", CheckedAt: time.Now().UnixMilli(), RoundTripMS: float64(snap.RTT) / float64(time.Millisecond)}
+	if parent.Err() != nil {
+		return Check{}, false
+	}
+	c = Check{Status: "reachable", CheckedAt: time.Now().UnixMilli(), RoundTripMS: float64(snap.RTT) / float64(time.Millisecond)}
 	if err != nil {
-		return Check{Status: "unavailable", CheckedAt: c.CheckedAt}
+		return Check{Status: "unavailable", CheckedAt: c.CheckedAt}, true
 	}
 	if snap.HTTP != nil {
 		c.Rooms = len(snap.HTTP.Rooms)
 	} else {
 		c.Rooms = len(snap.Rooms.Rooms)
 	}
-	return c
+	return c, true
+}
+
+func (s *Server) probeAndRecord(ctx context.Context, e servers.Entry) {
+	if c, ok := s.probe(ctx, e); ok {
+		s.servers.record(servers.Key(e), c)
+	}
 }
 
 // checkAll probes every entry, a few at a time. The caller holds the app action slot, so two runs never overlap.
-func (s *Server) checkAll(ctx context.Context) {
-	s.servers.mu.Lock()
-	entries := append([]servers.Entry(nil), s.servers.list.Entries...)
-	s.servers.mu.Unlock()
+func (s *Server) checkAll(ctx context.Context, entries []servers.Entry) {
 	slots := make(chan struct{}, checkParallel)
 	var wg sync.WaitGroup
 	for _, e := range entries {
+		if ctx.Err() != nil {
+			break
+		}
 		slots <- struct{}{}
 		wg.Add(1)
 		go func(e servers.Entry) {
 			defer func() { <-slots; wg.Done() }()
-			s.servers.record(servers.Key(e), s.probe(ctx, e))
+			s.probeAndRecord(ctx, e)
 		}(e)
 	}
 	wg.Wait()
@@ -200,13 +216,21 @@ func (s *Server) serverAction(w http.ResponseWriter, r *http.Request) error {
 		if !ok {
 			return errors.New("That server is not in the list")
 		}
-		s.servers.record(key, s.probe(r.Context(), e))
+		s.probeAndRecord(r.Context(), e)
 		return nil
 	case "/api/servers/check-all":
 		if err := decode(r, &struct{}{}); err != nil {
 			return err
 		}
-		s.checkAll(r.Context())
+		s.servers.mu.Lock()
+		entries := append([]servers.Entry(nil), s.servers.list.Entries...)
+		s.servers.mu.Unlock()
+		// A full batch outlasts the usual write limit: 64 silent servers take 16 rounds of 4 at 5 s each.
+		rounds := (len(entries) + checkParallel - 1) / checkParallel
+		if err := http.NewResponseController(w).SetWriteDeadline(time.Now().Add(time.Duration(rounds)*checkTimeout + uiWriteTimeout)); err != nil {
+			return errors.New("Check all cannot run here")
+		}
+		s.checkAll(r.Context(), entries)
 		return nil
 	case "/api/servers/use":
 		var q serverRef
