@@ -228,8 +228,13 @@ jobs:
           shellcheck -s sh scripts/test-shell-window.sh
           mkdir "$RUNNER_TEMP/shell-test"
           CGO_ENABLED=0 go build -C app -mod=readonly -o "$RUNNER_TEMP/shell-test/re-psn-app" ./cmd/re-psn-app
-          cp app/shell/target/debug/re-psn-shell "$RUNNER_TEMP/shell-test/"
-          xvfb-run -a sh scripts/test-shell-window.sh "$RUNNER_TEMP/shell-test"
+      - name: window behaviour (collect the build)
+        if: runner.os == 'Linux'
+        working-directory: app/shell
+        run: cp target/debug/re-psn-shell "$RUNNER_TEMP/shell-test/"
+      - name: window behaviour (run)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a sh scripts/test-shell-window.sh "$RUNNER_TEMP/shell-test"
 
   govulncheck:
     runs-on: ubuntu-latest
