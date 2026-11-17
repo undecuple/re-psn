@@ -15,6 +15,9 @@ All notable changes to this project are documented here. The format follows
 - **Docs and tooling:** the file list in the release notes (`.github/workflows/release.yml`) says that the `re-psn-app` archives also hold the matching `re-psn-host` server binary and that `install.sh --app` and `install.ps1 -App` install both; before, it described the app archive as one binary. Only the notes text changes: no asset, name or check.
 - **Docs and tooling:** the README and `docker/README.md` name v0.7.0 and its container image as the newest (its manifest lists amd64 and arm64 and is readable without a login). No row of the features list changes its `since` value: the website row stays at `main`, as the site is deployed from `main`, not released.
 
+### Fixed
+- **Server status page:** the page no longer reloads itself every 5 seconds. Its no-JavaScript refresh tag was removed by the script too late to stop the reload the browser had already scheduled, so even with JavaScript on the whole page reloaded and lost its state; the tag now sits inside `<noscript>`. Checked in Chromium 156 (4 page loads in 18 seconds before, 1 after; with JavaScript off the page still refreshes); not run in other browsers.
+
 ## [0.7.0] - 2026-11-15
 
 ### Added
