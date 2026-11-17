@@ -1296,12 +1296,16 @@
    "version": "Unreleased",
    "date": "",
    "sections": {
+    "Added": [
+     "**Desktop app:** a native window for the app, `re-psn-window` (a small Tauri program in `app/shell/`): it starts `re-psn-app`, shows its private launch link in a window of its own and stops the app when the window ..."
+    ],
     "Changed": [
      "**Docs and tooling:** the file list in the release notes (`.github/workflows/release.yml`) says that the `re-psn-app` archives also hold the matching `re-psn-host` server binary and that `install.sh --app` and ...",
      "**Docs and tooling:** the README and `docker/README.md` name v0.7.0 and its container image as the newest (its manifest lists amd64 and arm64 and is readable without a login)."
     ]
    },
    "counts": {
+    "Added": 1,
     "Changed": 2
    }
   },
