@@ -283,3 +283,20 @@ func TestPrivateFileLaunchOnlyAllowsInertDocument(t *testing.T) {
 		}
 	}
 }
+
+// The page explains its own terms in a glossary that is always in the document (no script needed to show it).
+func TestPageHasPlainWordsGlossary(t *testing.T) {
+	b, err := assets.ReadFile("assets/index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := string(b)
+	if !strings.Contains(page, `<details id="glossary" class="words">`) || strings.Contains(page, `id="glossary" class="words" hidden`) {
+		t.Fatal("the glossary is missing or hidden")
+	}
+	for _, term := range []string{"Play target", "Game server", "Status URL", "Reachable", "Saved servers", "Owned host", "Both", "Relay (on a host)", "Friend relay"} {
+		if !strings.Contains(page, "<dt>"+term) {
+			t.Errorf("no definition for %q", term)
+		}
+	}
+}

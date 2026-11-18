@@ -141,6 +141,21 @@
         </section>
       </div>
     </div>
+  <details id="glossary" class="words">
+    <summary>What do these words mean?</summary>
+    <dl>
+      <dt>Play target</dt><dd>The remote game server you connect to: its address and, optionally, its status URL. Saving it contacts nothing; you check it yourself.</dd>
+      <dt>Game server</dt><dd>The address (host:port) your game connects to. The game connects on its own; this app does not carry game traffic.</dd>
+      <dt>Status URL</dt><dd>The web address of a server's status page, the same page you can open in a browser. When it is set, the app reads rooms, leaderboards and counters from it, read-only, instead of asking over the game connection.</dd>
+      <dt>Reachable</dt><dd>Your last check completed and the app got the server's snapshot. It does not mean a game is running, or that the server is still up now. Unavailable means the check failed or timed out; Not checked means you have not asked.</dd>
+      <dt>Protocol filters, title communication ID</dt><dd>Optional. A title communication ID names one game (for example NPWR00001_00); with it set, the rooms and leaderboards shown are that game's only.</dd>
+      <dt>Saved servers</dt><dd>A list you keep on this computer. Nothing in it is contacted until you press Check. "Local network address" means the entry is on your own network, so checking it reaches inside it.</dd>
+      <dt>Owned host</dt><dd>A game server this app started on your computer (the Host page). Stop owned host or Stop app ends it; a server you started yourself is never touched.</dd>
+      <dt>Both</dt><dd>Keeps your Play target and your owned host separate. Use this host as Play target copies the host's address into the Play target when you press it.</dd>
+      <dt>Relay (on a host)</dt><dd>An optional mode where a game server passes game traffic between players who cannot reach each other directly. It is off unless you enable it.</dd>
+      <dt>Friend relay</dt><dd>A different thing: an HTTPS service that keeps friend lists for people who register with it. Optional; saving one contacts nothing, and each one has its own registrations.</dd>
+    </dl>
+  </details>
   </main>
   <footer class="app-footer"><span>re:psn <span id="footer-version"></span> · local client</span><span><span id="bridge-state" role="status">Opening private app session…</span> <span id="bridge-time" aria-hidden="true"></span></span></footer>
 </div>

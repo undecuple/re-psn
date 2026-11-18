@@ -37,6 +37,13 @@ credential never grants host control. See [native status configuration](../app/R
 **Refresh local view** reads the local controller/profile state. It does not automatically check the remote game
 server or refresh a friend relay. Those network actions have their own explicit controls.
 
+## What the words mean
+
+"What do these words mean?" sits at the bottom of the app and explains its own terms in plain words: Play target, game
+server, status URL, Reachable (the last check completed; not a live game session), saved servers, owned host, Both, the relay
+on a host (game traffic between players who cannot reach each other) and the friend relay (a separate friends service). It
+needs no extra step to open.
+
 ## Saved servers
 
 Below the Play target, **Saved servers** is a list you keep yourself. Add a name, a game `HOST:PORT` and optionally a status
