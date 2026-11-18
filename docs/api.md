@@ -15,6 +15,7 @@ contracts. Its identities do not authenticate sessions on the game protocol desc
 - [Leaderboards](#leaderboards)
 - [UDP](#udp)
 - [Relay](#relay)
+- [Real-time titles such as rollback](#real-time-titles-such-as-rollback)
 - [HTTP](#http)
 
 ## Framing
@@ -362,6 +363,52 @@ title's UDP port, with any `from_user` it likes. The C client's
 equal the server's UDP address (`psnr_server_addr`), then unwraps as
 `psnr_relay_unwrap` does. `psnr_relay_unwrap` does not check the source: prefer
 `psnr_relay_unwrap_from`.
+
+## Real-time titles such as rollback
+
+A title that runs a fixed-rate peer-to-peer session of its own, for example a rollback fighting game sending a small
+datagram 30 to 60 times a second, can use the rooms, the endpoints and the relay above without any change to the server.
+The server does not know what a rollback session is and enforces nothing about it. What follows is a convention for titles
+that want it; no title has used it yet, and the server's behaviour that it relies on is covered by `server/relay_rollback_test.go`.
+
+**One P2P socket.** The protocol has one UDP endpoint per player: the port sent in HELLO. A title that runs its session on
+its own UDP socket makes that socket the P2P socket: it sends that port in HELLO, sends the PROBE and the PUNCH packets from
+it (`psnr_probe_packet`, `psnr_punch_packet` in the C client), and reads each peer's `ip` and `p2p_port` from the member entries
+(ROOM_JOINED and MEMBER_JOINED). It drops anything `psnr_is_control` matches before its own code sees it, so no datagram of the
+session may begin with the four bytes `PSNR`. A second UDP socket gets no endpoint of its own; the server keeps one per player.
+
+**Marking and agreeing.** A room that holds a session is marked by the title, in fields the server stores and does not read:
+
+- a reserved bit of the room `flags`, and a record in the `external` blob, such as `rb=1;ver=3`, both set by the owner when
+  it creates the room. Searchers see both in ROOM_LIST, so a build that does not match never joins;
+- the same record in each member's `data`, which the owner and every other member read from the member entries, so each side
+  can refuse a peer whose record differs.
+
+A mismatch is refused by the title: there is no server-side check and no fallback. Only the owner can change the room's flags
+and blobs (SET_ROOM_DATA). The record is public to anyone who can search, so it carries no secret.
+
+**Roles.** The room's owner hosts. If the owner leaves, ownership passes (MEMBER_LEFT carries the new owner), and a session
+that cannot move its host simply ends. The room's `room_id` is the same for every member and can serve as the session id.
+Member ids count up in join order and are not reused within a room, so a player index can follow them.
+
+**Direct, hole-punched or relayed.** Peers send directly to the endpoints they were given; a few PUNCH packets from both sides
+open the routers first, and the 15 second PROBE keeps the mapping alive. A player behind a router that picks a new public port per
+destination cannot be punched. When two players cannot reach each other and the server runs `-relay` (HELLO_ACK flags bit 0,
+GET_CAPS bit 5), a title may send through it with `psnr_relay_wrap` and read with `psnr_relay_unwrap_from`. The client decides:
+the server never reroutes a datagram by itself, so a title that must not relay simply never wraps, and one that shows the path to
+the player knows which it is using.
+
+**What the relay carries.** Any payload that fits one UDP datagram: the server reads datagrams up to 65536 bytes and adds no
+size limit of its own, so 17 bytes less than that is the most one relayed datagram holds (the test sends 1, 1200, 1472, 9000
+and 60000 bytes whole). Datagrams are not queued, resent or reordered by the server. One source address gets `-max-udp-rate`
+packets a second in total, 1000 by default, shared by its probes and relayed datagrams, and players behind one router share it,
+so a session of 60 packets a second per player is far inside it. On loopback a relayed datagram of 32 to 100 bytes arrives about
+70 microseconds after it was sent (median of three runs, a shared machine); on a real network the delay is the path to the
+server plus the path from it, which is longer than the direct path and is not measured here. Relayed traffic costs the host's
+bandwidth, as the Relay section says.
+
+**Round trip.** `psnr_rtt_ms` is the round trip to the server, not to a peer, and `psnr_report_rtt` reports it to the server for the
+host's status page. It says nothing about the path between two players; a session measures that itself.
 
 ## HTTP
 
