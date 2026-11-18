@@ -65,6 +65,12 @@ func main() {
 	relayForce := toggle("relay-force", false, "send every stream through the relay, whether or not the players could connect directly (for testing the relay from one network; needs -relay; uses this server's bandwidth)")
 	lanPublic := flag.String("lan-public-addr", "", "IPv4 address to give players outside the LAN as the address of players who connected over a private, CGNAT or link-local address (the host must forward each such player's P2P port to them; off unless set)")
 	discover := toggle("discover", false, "answer LAN discovery broadcasts on the game UDP port, from private-network senders only (off by default)")
+	passKeyFile := flag.String("pass-key-file", envStr("pass-key-file", ""), "file of public keys (one \"<kid> <base64url key>\" per line, mode 0600) that sign-in passes are checked against; read again on SIGHUP")
+	passIssuer := flag.String("pass-issuer", envStr("pass-issuer", ""), "the issuer name a pass must carry (needs -pass-key-file)")
+	passAudience := flag.String("pass-audience", envStr("pass-audience", ""), "the audience a pass must carry, so a pass for another server is refused (needs -pass-key-file)")
+	requirePass := flag.String("require-pass", envStr("require-pass", ""), "what needs a pass: relay (the relay carries traffic only for players who signed in); needs -pass-key-file")
+	passRevoked := flag.String("pass-revoked-file", envStr("pass-revoked-file", ""), "file of accounts to refuse, one github:<number> or discord:<number> per line (mode 0600); read again on SIGHUP")
+	passPerSub := num("pass-max-conns-per-sub", 2, "connections one signed-in account may hold (0 for no limit)")
 	noPeer := flag.String("no-peer-titles", "", "comma-separated communication IDs of titles that use no peer traffic: for their players the server answers no UDP probe and does not relay or route (they still use rooms and scores; off unless set)")
 	name := flag.String("name", "", "server name shown in LAN discovery, at most 24 printable ASCII bytes (default: none)")
 	db := flag.String("db", "off", "score storage: off or memory (both keep scores in memory; no database backend is built yet)")
@@ -157,6 +163,49 @@ func main() {
 	}
 	s.trustedProxies, s.proxyProto = trusted, *proxyProto
 	s.udpAnySource = *udpAny
+	passRelay, err := parseRequirePass(*requirePass)
+	if err != nil {
+		fatal(err)
+	}
+	if *passPerSub < 0 {
+		fatal(errors.New("-pass-max-conns-per-sub must not be negative"))
+	}
+	if *passKeyFile == "" {
+		if passRelay || *passIssuer != "" || *passAudience != "" || *passRevoked != "" {
+			fatal(errors.New("-require-pass, -pass-issuer, -pass-audience and -pass-revoked-file need -pass-key-file"))
+		}
+	} else {
+		if *passIssuer == "" || *passAudience == "" {
+			fatal(errors.New("-pass-key-file needs -pass-issuer and -pass-audience"))
+		}
+		keys, err := loadPassKeys(*passKeyFile)
+		if err != nil {
+			fatal(err)
+		}
+		var revoked map[string]bool
+		if *passRevoked != "" {
+			if revoked, err = loadPassRevoked(*passRevoked); err != nil {
+				fatal(err)
+			}
+		}
+		s.pass.Store(&passConfig{keys: keys, revoked: revoked, issuer: *passIssuer, aud: *passAudience})
+		s.requireRelayPass, s.maxPerSub = passRelay, *passPerSub
+		logger.Info("sign-in passes", "keys", len(keys), "require_relay", passRelay, "max_conns_per_account", *passPerSub)
+		if passRelay && !*relay {
+			logger.Warn("-require-pass relay does nothing while -relay is off")
+		}
+		hupPass := make(chan os.Signal, 1)
+		signal.Notify(hupPass, syscall.SIGHUP)
+		go func() {
+			for range hupPass {
+				if err := s.reloadPass(*passKeyFile, *passRevoked); err != nil {
+					logger.Warn("pass settings reload failed; the previous ones stay in force", "err", err)
+				} else {
+					logger.Info("pass settings reloaded")
+				}
+			}
+		}()
+	}
 	noPeerSet := lookupSetting("no-peer-titles", *noPeer, onCmdLine["no-peer-titles"])
 	if s.noPeer, err = parseTitleList(noPeerSet.val); err != nil {
 		fatal(err)

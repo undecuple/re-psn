@@ -77,6 +77,7 @@ server carries it only with `-relay` (see [Relay](#relay)).
 | 0x02 | HEARTBEAT | optional `rtt_ms u16` | none |
 | 0x03 | PEER_AUTH | none | OK |
 | 0x04 | GET_CAPS | none | CAPS (after 0.5.0; a server from 0.5.0 or before answers ERROR 1) |
+| 0x05 | AUTH | `version u8` (1) `pass blob` (at most 2048 bytes) | OK, or ERROR 10; ERROR 1 from a server with no pass settings (and from one before this) |
 
 **HEARTBEAT `rtt_ms`:** a client may add the round trip it last measured to the server, in milliseconds (`u16`, big endian;
 `0xFFFF` means unknown). The server keeps the latest value, shows it on the status page and in `/api/stats` (`rtt_ms`, parallel to
@@ -130,6 +131,7 @@ client's `psnr_poll` sends a HEARTBEAT every 20 seconds.
 | 4 | probe | the server answers a UDP PROBE from this player's P2P socket; clear for a title in `-no-peer-titles` |
 | 5 | relay | the server relays streams and datagrams for this player: `-relay` is on and the title is not in `-no-peer-titles` |
 | 6 | discover | the server answers LAN discovery (`-discover`) |
+| 7 | pass for relay | `-require-pass relay` is on: the relay needs a pass (see [Sign-in passes](#sign-in-passes)); bit 5 stays clear until one with the `relay` scope is accepted |
 
 A clear bit means the server does not offer the feature to this player. Ignore bits you do not know: later versions may add them. GET_CAPS before HELLO gets ERROR 7 (no hello). A server that predates GET_CAPS answers it with ERROR 1 (bad request); treat that as "nothing reported". The relay bit repeats HELLO_ACK's bit 0.
 
@@ -146,6 +148,49 @@ A clear bit means the server does not offer the feature to this player. Ignore b
 | 7 | no HELLO yet |
 | 8 | name taken (HELLO): another player on this server has it |
 | 9 | no relay (STREAM_*): the server runs without `-relay` |
+| 10 | pass refused (AUTH), or a pass is needed (STREAM_*): the pass is malformed, expired, for another server, signed by an unknown key, revoked or not allowed here; nothing changed |
+
+## Sign-in passes
+
+Optional and off by default (`-pass-key-file`, see [running.md](running.md)). A host can require that a player holds a pass from a
+login service the host trusts before the relay carries anything for them. The server never contacts a provider and holds no
+provider secret: it checks an Ed25519 signature offline against public keys from a file. A pass shows that a GitHub or Discord
+account signed in. It says nothing about who the player is or what name they use; `online_id` is still unauthenticated.
+
+**AUTH (0x05)** is sent after HELLO: `version u8` (1; 2 is reserved for a pass bound to a client key and is refused today) and
+`pass blob`, at most 2048 bytes. The reply is OK or ERROR 10. A refused AUTH changes nothing, and a connection is closed after 3 refused AUTH requests in a row (a good one starts the count again); bytes after the pass also refuse it. A second AUTH on the same
+connection is a refresh: it must name the same account and replaces the first pass's scopes and expiry. A server with no pass
+settings answers ERROR 1, as a server from before AUTH does. A client must not treat ERROR 1, or capability bit 7, as proof of
+anything: both can be forged on a plain TCP connection. Whether to send a pass, and to which server, is the player's own
+setting.
+
+**The pass** is `v1.` + base64url(payload) + `.` + base64url(signature), with no padding. The signature is Ed25519 over the ASCII
+bytes `v1.` + base64url(payload) exactly as sent; nothing is canonicalised and there is no algorithm field. The payload is
+compact JSON with exactly these fields; an unknown or missing one refuses the pass, and so does a `cnf` field (a bearer-only
+server will not ignore a key binding):
+
+| Field | Rule |
+|---|---|
+| `v` | `"v1"` |
+| `kid` | names a key in the key file; a pass for a kid that is not listed is refused |
+| `iss` | equals `-pass-issuer` |
+| `aud` | equals `-pass-audience`, which must not be empty |
+| `sub` | `github:<number>` or `discord:<number>` (1 to 19 digits, no leading zero); no name or email |
+| `scope` | an array of `"connect"` and `"relay"`, no repeats; `connect` is accepted but not used yet |
+| `iat`, `exp` | whole seconds; `exp` after `iat` and at most 3600 s later; both compared with 60 s of skew |
+
+**What it opens.** With `-require-pass relay`, a stream or a relayed datagram between two players needs a pass with the `relay`
+scope at both ends that has not run out (see below); otherwise STREAM_CONNECT and STREAM_ACCEPT get ERROR 10 and the datagram is dropped and
+counted as `relay_no_pass`. The pass lapses 60 s after `exp` (the skew AUTH allows) without the connection closing, so a pass is good for up to 61 minutes. The pass is checked when a stream or datagram starts: a stream already open keeps running until it ends or idles out (`-relay-idle`), even if its account is revoked or its pass expires meanwhile. Rooms, scores and direct peer traffic need no
+pass. `-pass-max-conns-per-sub` limits how many connections one account can hold. `-pass-revoked-file` lists accounts to refuse; on
+SIGHUP the server reads it again and closes their live connections. A key taken out of the key file ends the passes it signed at the same SIGHUP: their holders lose the relay until they sign in again.
+
+**What a client can rely on.** Only GET_CAPS bit 5 says whether this player can use the relay. HELLO_ACK flag bit 0 and the relay hint in ROUTE still describe the server, not the pass, so a player without a pass who follows them gets ERROR 10. A refused connection count (`-pass-max-conns-per-sub`) also answers ERROR 10; an old connection that has gone quiet counts until the server notices it is gone.
+
+**Limits, plainly.** A pass is a bearer token sent over the game's plain TCP: anyone who can read the connection can use it until
+it expires, so it lives at most an hour. It proves an account signed in; it does not prove anything about the player and holds no
+secret worth stealing. The server logs a short keyed hash of the account (the key is random, made at each start and never stored, so the tag cannot be reversed by guessing account numbers and changes after a restart), never a pass, and the status page and `/api/stats` never show an
+account. The login service that signs passes is not part of this server.
 
 ## Rooms
 

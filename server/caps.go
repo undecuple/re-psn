@@ -1,5 +1,7 @@
 package main
 
+import "time"
+
 // GET_CAPS asks which features the server offers this player; CAPS answers. It exists so a title that needs only some
 // features can see, before it relies on one, whether the server has it. The reply is the request id, a bit set and the
 // server version:
@@ -20,6 +22,7 @@ const (
 	capProbe     = 1 << 4 // the UDP probe: the server answers a PROBE from this player's P2P socket
 	capRelay     = 1 << 5 // relay streams and relay datagrams for this player
 	capDiscover  = 1 << 6 // the server answers LAN discovery (-discover)
+	capPassRelay = 1 << 7 // the relay needs a pass (AUTH) for this player; capRelay is clear until one with scope relay is accepted
 )
 
 // capsFor is the bit set for c's title. The probe and the relay depend on -no-peer-titles and -relay; the rest are
@@ -29,7 +32,12 @@ func (s *Server) capsFor(c *client) uint32 {
 	if !s.noPeer[c.commID] {
 		bits |= capProbe
 		if s.relay {
-			bits |= capRelay
+			if s.requireRelayPass {
+				bits |= capPassRelay
+			}
+			if !s.requireRelayPass || c.passAllows(scopeRelay, time.Now()) {
+				bits |= capRelay
+			}
 		}
 	}
 	if s.discover {

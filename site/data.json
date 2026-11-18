@@ -4,7 +4,7 @@
  "repository": "https://github.com/undecuple/re-psn",
  "go": "1.22",
  "status_counts": {
-  "available": 43,
+  "available": 44,
   "unverified": 3,
   "partial": 9,
   "in-progress": 6,
@@ -854,6 +854,18 @@
    "status_class": "ok"
   },
   {
+   "id": "net-pass-relay",
+   "area": "Network",
+   "feature": "Sign-in passes for the relay",
+   "detail": "Optional: `-pass-key-file`, `-pass-issuer`, `-pass-audience` and `-require-pass relay` make the relay carry traffic only for players who hold a short-lived pass (Ed25519, checked offline) signed by a login service the host trusts. AUTH (0x05), ERROR 10, GET_CAPS bit 7, `relay_no_pass`. Off by default. The login service and the clients are separate work; connect gating is not built.",
+   "status": "available",
+   "since": "main",
+   "evidence": "server/pass.go, TestCheckPassRefusals, TestRelayUDPNeedsPassesAtBothEnds, TestStreamsNeedPassesAtBothEnds, TestReloadClosesRevokedAccountsAndKeepsOldSettingsOnError",
+   "note": "No client or login service exists yet, so nothing can mint a pass outside tests; a test-only throwaway key is all that has been run.",
+   "status_label": "available",
+   "status_class": "ok"
+  },
+  {
    "id": "net-no-peer-titles",
    "area": "Network",
    "feature": "Per-title peer traffic off",
@@ -1033,6 +1045,7 @@
    "status-server-state",
    "status-latency",
    "net-relay-force",
+   "net-pass-relay",
    "net-no-peer-titles",
    "net-caps",
    "net-peer-keys",
@@ -1297,6 +1310,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "**Server:** optional sign-in passes for the relay.",
      "**Docs:** `docs/public-server.md`: recommended settings for a server that the internet can reach."
     ],
     "Changed": [
@@ -1305,7 +1319,7 @@
     ]
    },
    "counts": {
-    "Added": 1,
+    "Added": 2,
     "Changed": 2
    }
   },
