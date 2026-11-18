@@ -204,6 +204,7 @@ DOCS = (
     ("docs/architecture.md", "Architecture", "The parts, the threadless client, why game traffic is peer to peer, the relay"),
     ("docs/api.md", "Protocol", "Framing, session, rooms, leaderboards, UDP, relay, HTTP"),
     ("docs/running.md", "Running a server", "Flags, variables, UDP source check, reverse proxy, logging, ports, firewall, storage"),
+    ("docs/public-server.md", "Public server settings", "Recommended settings and limits for a server the internet can reach"),
     ("docs/connecting.md", "Connecting players", "LAN, port forwarding, a public server, Tailscale or ZeroTier"),
     ("docs/features.md", "Features", "Every feature with its status and evidence"),
     ("ROADMAP.md", "Roadmap", "What is done, planned and out of scope"),
