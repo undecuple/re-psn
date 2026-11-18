@@ -1297,6 +1297,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "**Docs:** a \"Project Facts\" label on the README, set out like the label on a medicine box: what the server does, the warnings, directions, and other information.",
      "**Docs:** a section in `docs/api.md` for titles that run a real-time peer-to-peer session such as rollback netcode: one P2P socket, a room flag and an `external` record to agree on the mode, roles, direct, hole-punched ...",
      "**Website:** a Discord badge in the page footer, linking to the re-psn Discord invite and described as unofficial fan work.",
      "**Desktop app:** the Saved servers list can import a list from a file (the file Export list writes).",
@@ -1319,7 +1320,7 @@
     ]
    },
    "counts": {
-    "Added": 6,
+    "Added": 7,
     "Changed": 8,
     "Fixed": 1
    }

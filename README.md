@@ -17,6 +17,10 @@
 > **Bring your own game.** This repository has no game code, assets, keys, firmware or BIOS, and you need none from it. Play
 > only games you own. re-psn is not affiliated with or endorsed by Sony Interactive Entertainment.
 
+<p align="center">
+  <img src="docs/project-facts.svg" alt="Project Facts: what re-psn does, its limits and how to use it" width="420">
+</p>
+
 | | |
 |---|---|
 | **1** static server binary | the server uses only Go's standard library; the optional desktop app uses third-party modules ([app/README.md](app/README.md)) |

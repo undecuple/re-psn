@@ -102,7 +102,9 @@ tagged source.
    The same pull request sets `since` in `docs/features.tsv` from `main` to the new version for every row that the tag contains:
    list the candidates with `awk -F'\t' '$6=="main"{print $1}' docs/features.tsv`, check each against the tagged tree (`git grep` at
    the tag, and the version's CHANGELOG section), leave a row whose feature is not in the tag at `main`, then run
-   `python3 tools/features.py` and `python3 tools/site.py`. The bump script does not touch this column.
+   `python3 tools/features.py` and `python3 tools/site.py`. The bump script does not touch this column. The README's
+   "Project Facts" label states the version too: run `python3 tools/project_facts.py` after the bump and commit the new
+   `docs/project-facts.svg` with it (a unit test checks it, so CI fails when it is stale).
 
 > [!NOTE]
 > One bump is one commit, made by the maintainer. A fix found after the tag goes into the next pre-release, never into a
