@@ -12,6 +12,7 @@ behind a reverse proxy, logging, ports, firewall rules, and what state it keeps.
 - [UDP rate limits and counters](udp-guardrails.md)
 - [Behind a reverse proxy](#behind-a-reverse-proxy)
 - [Health checks and restarts](restarts.md)
+- [Settings for a server the internet can reach](public-server.md)
 - [Environment variables](#environment-variables)
 - [Logging](#logging)
 - [Slow clients and event delivery](#slow-clients-and-event-delivery)
