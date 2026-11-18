@@ -83,7 +83,9 @@ checked on the way. Pre-releases come often and on no schedule, whenever there i
    Then the notes, and a **draft** pre-release
    titled with the tag. The notes are `scripts/release-notes.sh` for `VERSION` (the CHANGELOG.md entries under that
    version's heading, which the bump filled) with the list of files, the checksums and the closing line
-   `Next release: when ready` added. The job fails if a release for the tag exists already.
+   `Next release: when ready` added. A section may start with one line `Summary: ...`, a one-line account of what changed
+   for people; the notes then open with it as `**Summary:** ...`, before the pre-release notice, because a chat post made
+   from the notes shows only their start. Write it before the bump (under `## [Unreleased]`); it is optional. The job fails if a release for the tag exists already.
 7. Check the draft: the notes, the assets (three server archives, three app archives, the AppImage, `install.sh`, `install.ps1`, `SHA256SUMS`: ten
    in all), and a download checked with `sha256sum -c SHA256SUMS`. A bad draft is deleted before it is published; then re-run the workflow for the same
    tag, or, if the tagged commit is wrong, bump to the next version.
