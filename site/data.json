@@ -1303,6 +1303,7 @@
      "**Desktop app:** a native window for the app, `re-psn-window` (a small Tauri program in `app/shell/`): it starts `re-psn-app`, shows its private launch link in a window of its own and stops the app when the window ..."
     ],
     "Changed": [
+     "**Desktop app:** a \"What do these words mean?\" section at the bottom of the app explains Play target, game server, status URL, Reachable, saved servers, owned host, Both, the relay on a host and the friend relay in ...",
      "**Server status page:** each number at the top now has a one-line caption saying what it counts (for example, \"connections total\" is every connection accepted since the server started, including closed ones), and a ...",
      "**Docs and tooling:** the README's server status screenshot is retaken (it showed v0.3.0), and five screenshots of the app (first run, Overview, Play, Host, Profile) are added to the README and the client guide.",
      "**Local browser interface:** the page now rewrites a piece of text only when it changes, so a refresh every 4 seconds no longer clears a text selection or makes screen readers announce the status line again (the clock ...",
@@ -1315,7 +1316,7 @@
    },
    "counts": {
     "Added": 4,
-    "Changed": 5,
+    "Changed": 6,
     "Fixed": 1
    }
   },
