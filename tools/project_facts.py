@@ -17,10 +17,13 @@ from xml.sax.saxutils import escape
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUT = "docs/project-facts.svg"
-W, X0, X1 = 420, 11, 409        # image width and the left and right edges of the boxes
+W, X0 = 520, 11                 # drawing width and the left edge of the boxes; the right edge is W - 11
+X1 = W - 11
+SCALE = 1.2                      # the file is shown at W * SCALE pixels: the same drawing, 20 percent larger, still sharp (it is vector)
 PAD = 5                          # text starts this far inside a box
 SIZE, LEAD = 11.5, 14.0          # body text size and line height
-WRAP = 66                        # characters per body line (about 350 of the 376 pixels inside a box, with the wider fallback fonts)
+WRAP = 76                        # characters per body line (about 390 of the 476 pixels inside a box in the usual fonts, 480 in the widest fallback)
+PURPOSE_X, PURPOSE_WRAP = 235, 36  # the Purpose column: its width in drawing units and its characters per line
 FONT = "Helvetica Neue, Helvetica, Arial, Liberation Sans, sans-serif"
 
 # Each box is (heading, items). An item is ("bullet", text), ("note", label, text) or ("plain", text).
@@ -83,9 +86,9 @@ def render(version):
     o.append(text(X0 + PAD, 86, head, 12, True))
     o.append(text(X1 - PAD, 86, purpose, 12, True, "end"))
     o.append(text(X0 + PAD, 102, name, 12))
-    what_lines = lines(what, 32)
+    what_lines = lines(what, PURPOSE_WRAP)
     for i, ln in enumerate(what_lines):
-        o.append(text(X1 - PAD - 190, 102 + i * 14, ln, 12))
+        o.append(text(X1 - PAD - PURPOSE_X, 102 + i * 14, ln, 12))
     y = 102 + (len(what_lines) - 1) * 14 + 12
     top = 46
     o.append(f'<rect x="{X0 + 1}" y="{top + 4 + 1}" width="{X1 - X0 - 2}" height="{y - top - 5:g}" fill="none" stroke="#000" stroke-width="2"/>')
@@ -129,9 +132,9 @@ def render(version):
         o.append(f'<rect x="{X0 + 1}" y="{box_top + 1:g}" width="{X1 - X0 - 2}" height="{y - box_top - 1:g}" fill="none" stroke="#000" stroke-width="2"/>')
         y += 6
     h = int(y - 4)
-    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {h}" width="{W}" height="{h}" role="img" '
+    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {h}" width="{W * SCALE:g}" height="{round(h * SCALE)}" role="img" '
            f'aria-label="Project Facts: a label in the style of a drug facts panel, listing what re-psn does, its limits and how to use it" '
-           f'font-family="{FONT}">' + "".join(o).replace("@H@", str(h)) + "</svg>\n")
+           f'font-family="{FONT}" shape-rendering="crispEdges" text-rendering="geometricPrecision">' + "".join(o).replace("@H@", str(h)) + "</svg>\n")
     return svg
 
 

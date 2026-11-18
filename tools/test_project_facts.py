@@ -46,6 +46,15 @@ class ProjectFactsTest(unittest.TestCase):
                     for line in pf.lines(text.format(version="10.20.30"), pf.WRAP):
                         self.assertLessEqual(len(line), pf.WRAP, line)
 
+    def test_shown_size_matches_the_drawing_and_the_readme(self):
+        root = ET.fromstring(pf.render("1.2.3"))
+        w, h = (float(x) for x in root.attrib["viewBox"].split()[2:])
+        self.assertEqual((w, float(root.attrib["width"])), (pf.W, pf.W * pf.SCALE))
+        self.assertEqual(int(root.attrib["height"]), round(h * pf.SCALE))
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn('src="docs/project-facts.svg"', readme)
+        self.assertIn('width="%d"' % round(pf.W * pf.SCALE), readme[readme.index("docs/project-facts.svg"):][:200])
+
     def test_words_the_site_also_refuses(self):
         # the same words tools/site.py keeps out of generated files
         self.assertIsNone(re.search(r"\b(AI|LLM|Claude|Anthropic|OpenAI|GPT)\b", pf.render("1.2.3")))

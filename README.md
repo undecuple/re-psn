@@ -18,7 +18,7 @@
 > only games you own. re-psn is not affiliated with or endorsed by Sony Interactive Entertainment.
 
 <p align="center">
-  <img src="docs/project-facts.svg" alt="Project Facts: what re-psn does, its limits and how to use it" width="420">
+  <img src="docs/project-facts.svg" alt="Project Facts: what re-psn does, its limits and how to use it" width="624">
 </p>
 
 | | |

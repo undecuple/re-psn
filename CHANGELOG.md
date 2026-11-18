@@ -7,6 +7,7 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- **Docs:** the "Project Facts" label on the README is wider and larger (shown at 624 pixels, not 420), with sharper edges and more text on each line, and the Purpose column no longer crowds the right edge.
 - **Docs and tooling:** the README and `docker/README.md` name v0.8.0 and its container image as the newest (its manifest lists amd64 and arm64 and is readable without a login), and the notes about `re-psn-window` say it is in the app archives from v0.8.0 on. No row of the features list changes its `since` value: the website row stays at `main`, as the site is deployed from `main`, not released.
 
 ## [0.8.0] - 2026-11-18
