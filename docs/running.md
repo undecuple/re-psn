@@ -82,6 +82,9 @@ With `-http 127.0.0.1:36101`, open `http://127.0.0.1:36101/`. The read-only stat
 dark palette and monospace framing as the project website and terminal app. Rooms and Leaderboards
 are tabs; Overview shows both tables together. Use the arrow keys while a tab is focused, or click one.
 Invite-only rooms remain counted without names.
+The numbers on the page and in `/api/stats` are built at most once a second and shared by every request, so a busy or hostile
+status address costs the game one snapshot a second however often it is asked; a change shows within a second. Building a
+snapshot takes the lock every game request takes, for about 0.2 ms at 1,000 players and 1.2 ms at 5,000.
 `/api/stats` keeps its existing JSON fields and token rules, and adds aggregate [`udp_drops` counters](udp-guardrails.md#drop-counters). It also reports the server state (version, relay, limits in force and TCP refusals); see [Server state](api.md#server-state).
 
 The header offers System, Light and Dark; System follows the browser and responds to changes while the page is open.

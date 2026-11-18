@@ -213,6 +213,7 @@ func main() {
 	var hs *http.Server
 	if *httpAddr != "" {
 		s.httpToken = statusToken
+		s.statsCache = &snapshotCache{ttl: statusSnapshotTTL}
 		logger.Info("status page", "addr", *httpAddr, "token", statusToken != "")
 		if reachable(*httpAddr) && statusToken == "" {
 			logger.Warn("the status page lists every online ID and has no token; set -http-token or bind -http to localhost")
