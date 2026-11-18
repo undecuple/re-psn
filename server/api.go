@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -105,6 +106,47 @@ func (s *Server) boardStats() []boardJSON {
 		return a.Title < b.Title || a.Title == b.Title && a.Board < b.Board
 	})
 	return out
+}
+
+// statusSnapshotTTL is how long the status page and /api/stats reuse one snapshot. Building a snapshot takes s.mu, the lock
+// every game request takes, for time that grows with the number of players, and the status address answers any number of
+// requests: with the snapshot shared, the cost to the game is one build a second however often the page is asked for.
+const statusSnapshotTTL = time.Second
+
+// snapshotCache serves one statsJSON to every caller within ttl of building it. Callers that arrive while it is being built
+// wait for that build rather than starting another, and wait on the cache's own lock, never on s.mu. The value is shared
+// and read-only: handlers only encode or render it.
+type snapshotCache struct {
+	ttl time.Duration
+	now func() time.Time // nil: time.Now
+
+	mu  sync.Mutex
+	at  time.Time
+	val statsJSON
+	ok  bool
+}
+
+func (c *snapshotCache) get(build func() statsJSON) statsJSON {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	now := time.Now
+	if c.now != nil {
+		now = c.now
+	}
+	if c.ok && now().Sub(c.at) < c.ttl {
+		return c.val
+	}
+	c.val, c.at, c.ok = build(), now(), true
+	return c.val
+}
+
+// statsView is the snapshot the status page and /api/stats show: up to statusSnapshotTTL old when the cache is on (main turns it
+// on with -http), always current when it is nil (tests and anything that embeds the server).
+func (s *Server) statsView() statsJSON {
+	if s.statsCache == nil {
+		return s.snapshot()
+	}
+	return s.statsCache.get(s.snapshot)
 }
 
 func (s *Server) snapshot() statsJSON {
@@ -250,7 +292,7 @@ func (s *Server) HTTP() http.Handler {
 	})
 	mux.HandleFunc("/api/stats", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(s.snapshot())
+		json.NewEncoder(w).Encode(s.statsView())
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -259,7 +301,7 @@ func (s *Server) HTTP() http.Handler {
 			http.NotFound(w, r)
 			return
 		}
-		if err := page.Execute(w, s.snapshot()); err != nil {
+		if err := page.Execute(w, s.statsView()); err != nil {
 			fmt.Fprintln(w, err)
 		}
 	})

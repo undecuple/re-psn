@@ -73,6 +73,8 @@ type Server struct {
 
 	scores store.Store // leaderboards (scores.go); memory unless -db says otherwise
 
+	statsCache *snapshotCache // the status page and /api/stats share one snapshot per second (api.go); nil: every request builds its own
+
 	maxPlayerRooms int                    // rooms one player may be in at once
 	maxConns       int                    // open connections in total, players and relay legs (0: no limit)
 	maxPerAddr     int                    // open connections per remote address
