@@ -1,5 +1,5 @@
 {
- "version": "0.7.0",
+ "version": "0.8.0",
  "stage": "pre-release",
  "repository": "https://github.com/undecuple/re-psn",
  "go": "1.22",
@@ -1295,44 +1295,17 @@
   "unreleased": {
    "version": "Unreleased",
    "date": "",
-   "sections": {
-    "Added": [
-     "**Docs:** a \"Project Facts\" label on the README, set out like the label on a medicine box: what the server does, the warnings, directions, and other information.",
-     "**Docs:** a section in `docs/api.md` for titles that run a real-time peer-to-peer session such as rollback netcode: one P2P socket, a room flag and an `external` record to agree on the mode, roles, direct, hole-punched ...",
-     "**Website:** a Discord badge in the page footer, linking to the re-psn Discord invite and described as unofficial fan work.",
-     "**Desktop app:** the Saved servers list can import a list from a file (the file Export list writes).",
-     "**Desktop app:** a Saved servers list on the Play screen: add, remove, check one or all (4 at a time, 5 seconds each, after a confirmation), use an entry as the Play target, and export the list.",
-     "**Desktop app:** `re-psn-app` opens the app in `re-psn-window` when that program is beside it, and `--browser` opens a browser tab instead; it passes its `ui` flags on to the window, and falls back to the browser when ...",
-     "**Desktop app:** a native window for the app, `re-psn-window` (a small Tauri program in `app/shell/`): it starts `re-psn-app`, shows its private launch link in a window of its own and stops the app when the window ..."
-    ],
-    "Changed": [
-     "**Server:** the status page and `/api/stats` now share one snapshot per second instead of building one for every request.",
-     "**Desktop app:** a \"What do these words mean?\" section at the bottom of the app explains Play target, game server, status URL, Reachable, saved servers, owned host, Both, the relay on a host and the friend relay in ...",
-     "**Docs and tooling:** `scripts/release-notes.sh` accepts an optional first line `Summary: ...` in a version's CHANGELOG section and prints it first as `**Summary:** ...`, before the pre-release notice, so the start of ...",
-     "**Server status page:** each number at the top now has a one-line caption saying what it counts (for example, \"connections total\" is every connection accepted since the server started, including closed ones), and a ...",
-     "**Docs and tooling:** the README's server status screenshot is retaken (it showed v0.3.0), and five screenshots of the app (first run, Overview, Play, Host, Profile) are added to the README and the client guide.",
-     "**Local browser interface:** the page now rewrites a piece of text only when it changes, so a refresh every 4 seconds no longer clears a text selection or makes screen readers announce the status line again (the clock ...",
-     "**Docs and tooling:** the file list in the release notes (`.github/workflows/release.yml`) says that the `re-psn-app` archives also hold the matching `re-psn-host` server binary and that `install.sh --app` and ...",
-     "**Docs and tooling:** the README and `docker/README.md` name v0.7.0 and its container image as the newest (its manifest lists amd64 and arm64 and is readable without a login)."
-    ],
-    "Fixed": [
-     "**Server status page:** the page no longer reloads itself every 5 seconds."
-    ]
-   },
+   "sections": {},
+   "counts": {}
+  },
+  "latest": {
+   "version": "0.8.0",
+   "date": "2026-11-18",
+   "sections": {},
    "counts": {
     "Added": 7,
     "Changed": 8,
     "Fixed": 1
-   }
-  },
-  "latest": {
-   "version": "0.7.0",
-   "date": "2026-11-15",
-   "sections": {},
-   "counts": {
-    "Added": 7,
-    "Changed": 7,
-    "Fixed": 3
    }
   }
  },
@@ -1344,16 +1317,16 @@
   "notice": "Unofficial; not affiliated with Sony. No game files, keys or firmware are in the repository or needed from it. Play only games you own."
  },
  "install": {
-  "release_tag": "v0.7.0",
-  "release_url": "https://github.com/undecuple/re-psn/releases/tag/v0.7.0",
+  "release_tag": "v0.8.0",
+  "release_url": "https://github.com/undecuple/re-psn/releases/tag/v0.8.0",
   "archives": "Archives for Linux (amd64, arm64) and Windows (amd64), and a Linux x86_64 AppImage, all unsigned, with a `SHA256SUMS` file. Check a download on Linux:",
   "verify_unix": [
    "sha256sum -c SHA256SUMS --ignore-missing"
   ],
   "verify_windows": "On Windows, compare the output of `Get-FileHash <archive>` with the line in `SHA256SUMS`.",
   "container": [
-   "docker pull ghcr.io/undecuple/re-psn:0.7.0",
-   "docker run --rm -p 36100:36100 -p 36100:36100/udp ghcr.io/undecuple/re-psn:0.7.0"
+   "docker pull ghcr.io/undecuple/re-psn:0.8.0",
+   "docker run --rm -p 36100:36100 -p 36100:36100/udp ghcr.io/undecuple/re-psn:0.8.0"
   ],
   "container_note": "Podman works the same way. See [docker/README.md](docker/README.md).",
   "source_note": "You need Go 1.22 or newer; a C compiler only for the C client and its tests.",

@@ -6,7 +6,7 @@
 
 **Run your own matchmaking and leaderboard server for statically recompiled PS3 games: one small binary, no accounts, no cloud.**
 
-[![CI](https://github.com/undecuple/re-psn/actions/workflows/ci.yml/badge.svg)](https://github.com/undecuple/re-psn/actions/workflows/ci.yml) <!-- version -->![version v0.7.0](https://img.shields.io/badge/pre--release-v0.7.0-997e95?labelColor=2b2733&style=flat-square)<!-- /version --> ![status: alpha](https://img.shields.io/badge/status-alpha-a86438?labelColor=45403d&style=flat-square)
+[![CI](https://github.com/undecuple/re-psn/actions/workflows/ci.yml/badge.svg)](https://github.com/undecuple/re-psn/actions/workflows/ci.yml) <!-- version -->![version v0.8.0](https://img.shields.io/badge/pre--release-v0.8.0-997e95?labelColor=2b2733&style=flat-square)<!-- /version --> ![status: alpha](https://img.shields.io/badge/status-alpha-a86438?labelColor=45403d&style=flat-square)
 ![licence: MIT](https://img.shields.io/badge/licence-MIT-a7d8b0?labelColor=2b2733&style=flat-square) [![Ask DeepWiki](https://img.shields.io/badge/DeepWiki-Ask-007ac0)](https://deepwiki.com/undecuple/re-psn)
 
 **[Download](https://github.com/undecuple/re-psn/releases)** · [Quick start](#quick-start-host-a-server) · [Features](docs/features.md) · [Install](#install) · [Configuration](#configuration) · [Documentation](#more) · [Website](https://undecuple.github.io/re-psn/) · [Report an issue](https://github.com/undecuple/re-psn/issues/new/choose)
