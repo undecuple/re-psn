@@ -110,10 +110,15 @@ func (s *Server) streamLeg(conn net.Conn, t byte, p []byte) (handedOff bool) {
 		s.mu.Lock()
 		st := s.streams[id]
 		ok := r.err == nil && st != nil && st.to.id == user && st.to.token == token
+		noPass := ok && s.requireRelayPass && !(st.to.passAllows(scopeRelay, time.Now()) && st.from.passAllows(scopeRelay, time.Now()))
+		ok = ok && !noPass
 		if ok {
 			delete(s.streams, id)
 		}
 		s.mu.Unlock()
+		if noPass {
+			return fail(errPass)
+		}
 		if !ok {
 			return fail(errNotFound)
 		}
@@ -129,9 +134,10 @@ func (s *Server) streamLeg(conn net.Conn, t byte, p []byte) (handedOff bool) {
 	s.mu.Lock()
 	from, to := s.clients[user], s.clients[toUser]
 	ok := r.err == nil && from != nil && from.token == token && to != nil && to.commID != "" && sharesRoom(from, to)
+	noPass := ok && s.requireRelayPass && !(from.passAllows(scopeRelay, time.Now()) && to.passAllows(scopeRelay, time.Now()))
 	off := ok && (s.noPeer[from.commID] || s.noPeer[to.commID])
 	var st *stream
-	if ok && !off {
+	if ok && !off && !noPass {
 		s.nextStream++
 		st = &stream{id: s.nextStream, from: from, to: to, accept: make(chan net.Conn, 1)}
 		s.streams[st.id] = st
@@ -144,6 +150,9 @@ func (s *Server) streamLeg(conn net.Conn, t byte, p []byte) (handedOff bool) {
 	s.mu.Unlock()
 	if off {
 		return fail(errNoRelay)
+	}
+	if noPass {
+		return fail(errPass)
 	}
 	if !ok {
 		return fail(errNotFound)
@@ -250,7 +259,8 @@ func (s *Server) relayUDP(pc net.PacketConn, pkt []byte, sender *net.UDPAddr) {
 	src, dst := s.clients[from], s.clients[toID]
 	valid := src != nil && src.token == token && dst != nil && sharesRoom(src, dst)
 	off := valid && (s.noPeer[src.commID] || s.noPeer[dst.commID]) // checked before the endpoint: a listed title never has one
-	ok := valid && !off && dst.udpPort != 0
+	noPass := valid && !off && s.requireRelayPass && !(src.passAllows(scopeRelay, time.Now()) && dst.passAllows(scopeRelay, time.Now()))
+	ok := valid && !off && !noPass && dst.udpPort != 0
 	mismatch := false
 	if ok && !s.udpAnySource {
 		ip := sender.IP.To4()
@@ -263,6 +273,10 @@ func (s *Server) relayUDP(pc net.PacketConn, pkt []byte, sender *net.UDPAddr) {
 	s.mu.Unlock()
 	if off {
 		s.udpDrops.relayDisabled.Add(1)
+		return
+	}
+	if noPass {
+		s.udpDrops.relayNoPass.Add(1)
 		return
 	}
 	if !ok {

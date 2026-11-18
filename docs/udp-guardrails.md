@@ -59,6 +59,7 @@ The rest of the status response still contains the usual room/player data and ne
 | `relay_disabled` | A well-formed RELAY arrived while `-relay` is off, or from or to a player of a title in `-no-peer-titles`. |
 | `unauthorized` | A missing client, bad token, unready target endpoint or missing shared room prevents acceptance. |
 | `source_mismatch` | An otherwise authorized packet's source differs from the player's TCP source and `-udp-any-source` is off. |
+| `relay_no_pass` | `-require-pass relay` is on and the sender or the target of a RELAY datagram has no accepted, unexpired pass with the `relay` scope. |
 | `discover_refused` | A LAN DISCOVER arrived from a source that is not private, carrier-grade NAT, link-local or loopback while `-discover` is on (never answered). |
 | `write_error` | Writing an otherwise accepted probe reply or relay forward fails or is short. |
 

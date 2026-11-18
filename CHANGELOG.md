@@ -7,6 +7,7 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Server:** optional sign-in passes for the relay. With `-pass-key-file`, `-pass-issuer`, `-pass-audience` and `-require-pass relay`, the relay carries streams and datagrams only between players who both hold a short-lived pass (Ed25519, checked offline, valid for at most an hour plus 60 s of clock skew) signed by a login service the host trusts. New request AUTH (0x05), ERROR 10, GET_CAPS bit 7, the `relay_no_pass` drop counter, `-pass-revoked-file` and `-pass-max-conns-per-sub`. Off by default: a server without these settings behaves as before. No login service or client exists yet, and players' names are still unauthenticated. See [Sign-in passes](docs/api.md#sign-in-passes).
 - **Docs:** `docs/public-server.md`: recommended settings for a server that the internet can reach. What you take on (no authentication, no flood protection, no TLS, no moderation tool), a table of each relevant setting with a value and a reason, the relay and its unlimited bandwidth, which ports to publish, running as an unprivileged service, what to watch in `/api/stats`, and what to tell players. It says no public instance exists.
 
 ### Changed

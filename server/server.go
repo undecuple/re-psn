@@ -40,12 +40,16 @@ const (
 )
 
 type Server struct {
-	log        *slog.Logger
-	relay      bool            // -relay: carry traffic for players who can't reach each other (relay.go)
-	relayForce bool            // -relay-force: with relay, send every stream through it (a test aid)
-	noPeer     map[string]bool // -no-peer-titles: communication IDs of titles that use no peer traffic (title_peer.go)
-	relayIdle  time.Duration   // -relay-idle: close a relay stream with no bytes either way for this long (0: never)
-	lanPublic  [4]byte         // -lan-public-addr: address announced for LAN members to viewers outside the LAN (zero: off)
+	log              *slog.Logger
+	relay            bool                       // -relay: carry traffic for players who can't reach each other (relay.go)
+	relayForce       bool                       // -relay-force: with relay, send every stream through it (a test aid)
+	pass             atomic.Pointer[passConfig] // sign-in pass settings; nil when no -pass-key-file is set (pass.go)
+	requireRelayPass bool                       // -require-pass relay: the relay carries traffic only for players with a relay pass
+	maxPerSub        int                        // -pass-max-conns-per-sub: connections one account may hold (0 for no limit)
+	subConns         map[string]int             // connections per account, under mu
+	noPeer           map[string]bool            // -no-peer-titles: communication IDs of titles that use no peer traffic (title_peer.go)
+	relayIdle        time.Duration              // -relay-idle: close a relay stream with no bytes either way for this long (0: never)
+	lanPublic        [4]byte                    // -lan-public-addr: address announced for LAN members to viewers outside the LAN (zero: off)
 
 	httpToken string // -http-token: required by the status page when set (api.go)
 
@@ -121,6 +125,11 @@ type client struct {
 	udpPort    uint16
 	localIP    [4]byte   // the client's own address, from its UDP probe
 	peerAuth   bool      // asked for PEER_KEY pushes (peerkey.go)
+	sub        string    // the account of an accepted pass, counted in subConns (pass.go)
+	passScopes uint8     // scopes of the accepted pass
+	passExp    int64     // its expiry, Unix seconds
+	passKid    string    // the key that signed it
+	authFails  int       // refused AUTH requests on this connection; the connection is closed after maxAuthFails
 	rttMs      uint16    // the player's own last round trip in milliseconds, from an optional HEARTBEAT body (display only)
 	rttAt      time.Time // when it was reported; the zero time means none or unknown
 	rooms      map[uint64]*room
@@ -141,6 +150,7 @@ func NewServer(maxRooms int, verbose bool) *Server {
 		byCode:   map[string]*room{},
 		scores:   store.NewMemory(),
 		streams:  map[uint32]*stream{},
+		subConns: map[string]int{},
 		maxRooms: maxRooms,
 		started:  time.Now(),
 
@@ -286,6 +296,7 @@ func (s *Server) run(c *client) {
 			out = append(out, s.leave(r, c)...)
 		}
 		delete(s.clients, c.id)
+		s.dropSub(c)
 		s.flush(out)
 		s.mu.Unlock()
 		c.waitOutput()
@@ -350,6 +361,11 @@ func (s *Server) handle(c *client, t byte, p []byte) {
 		who := scorer{c.commID, c.onlineID}
 		s.mu.Unlock()
 		c.send(s.scoreRequest(c, who, t, req, r))
+		return
+	}
+
+	if t == msgAuth {
+		s.handleAuth(c, req, r)
 		return
 	}
 
@@ -432,6 +448,7 @@ func (s *Server) hello(c *client, req uint32, r *reader) (byte, []byte) {
 		}
 		s.log.Info("reconnected", "client", c.id, "replaces", o.id, "online_id", onlineID)
 		o.commID = "" // no longer counts; its run loop cleans up once Close lands
+		s.dropSub(o)  // and its account no longer counts against the limit
 		o.stopOutput()
 	}
 	c.commID, c.onlineID, c.p2pPort = commID, onlineID, port

@@ -79,6 +79,7 @@ type udpDropCounters struct {
 	relayDisabled   atomic.Uint64
 	writeError      atomic.Uint64
 	discoverRefused atomic.Uint64
+	relayNoPass     atomic.Uint64
 }
 
 type udpDropStats struct {
@@ -90,9 +91,10 @@ type udpDropStats struct {
 	RelayDisabled   uint64 `json:"relay_disabled"`
 	WriteError      uint64 `json:"write_error"`
 	DiscoverRefused uint64 `json:"discover_refused"`
+	RelayNoPass     uint64 `json:"relay_no_pass"`
 }
 
 func (c *udpDropCounters) snapshot() udpDropStats {
 	return udpDropStats{c.rateLimit.Load(), c.sourceCapacity.Load(), c.malformed.Load(),
-		c.unauthorized.Load(), c.sourceMismatch.Load(), c.relayDisabled.Load(), c.writeError.Load(), c.discoverRefused.Load()}
+		c.unauthorized.Load(), c.sourceMismatch.Load(), c.relayDisabled.Load(), c.writeError.Load(), c.discoverRefused.Load(), c.relayNoPass.Load()}
 }
