@@ -19,7 +19,8 @@ failures leave the interface usable.
 
 ## Contributor checks
 
-`tools/site.py` generates `site/index.html` and `site/data.json`. Edit their repository sources, then regenerate;
+`tools/site.py` generates `site/index.html` and `site/data.json`, and the footer's Discord badge, `site/discord-badge.svg`
+(drawn from the dark palette; the invite address is `DISCORD_URL` in the script). Edit their repository sources, then regenerate;
 `site/style.css` and `site/terminal.js` are maintained directly. The deployed page uses one script with no dependencies
 and loads its data from the same origin.
 

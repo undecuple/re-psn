@@ -210,6 +210,9 @@ table.set th:nth-child(3) { width: 18ch; }
 .cols ul { padding-left: 2ch; }
 
 footer { margin: 2em 0 0; color: var(--muted); border-top: 1px dotted var(--faint); }
+footer .discord { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5em 0.9em; margin: 0.75em 0; }
+footer .discord a { display: inline-block; line-height: 0; }
+footer .discord img { display: block; max-width: 100%; height: auto; image-rendering: pixelated; }
 
 /* Narrow screens: a table row becomes a block, each cell labelled, so nothing scrolls sideways. */
 @media (max-width: 48rem) {
