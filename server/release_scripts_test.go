@@ -174,6 +174,31 @@ func TestReleaseNotes(t *testing.T) {
 		}
 	}
 
+	// An optional first line "Summary: ..." leads the notes, before the notice, and is not repeated in the body.
+	sum := newTree(t, map[string]string{"VERSION": "0.3.1\n", "CHANGELOG.md": "## [Unreleased]\r\n\r\nSummary: Saved servers and plain words.\r\n\r\n### Added\r\n- New thing.\r\n\r\n## [0.3.1] - 2026-01-01\r\n\r\n- Old fix. Summary: not a summary.\r\n\r\n## [0.3.0] - 2026-01-01\r\n\r\n- First.\r\nSummary: later lines stay as they are.\r\n"})
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--unreleased"}, "**Summary:** Saved servers and plain words.\n\n" + notice + "### Added\n- New thing.\n\n" + closing},
+		{[]string{"0.3.1"}, notice + "- Old fix. Summary: not a summary.\n\n" + closing},
+		{[]string{"0.3.0"}, notice + "- First.\nSummary: later lines stay as they are.\n\n" + closing},
+	} {
+		if out, errout, err := run(t, sum, "sh", append([]string{"scripts/release-notes.sh"}, c.args...)...); err != nil || out != c.want {
+			t.Errorf("summary %v:\n got %q (%v %s)\nwant %q", c.args, out, err, errout, c.want)
+		}
+	}
+	for name, changelog := range map[string]string{
+		"empty summary":      "## [Unreleased]\n\nSummary: \n\n- A.\n",
+		"summary only":       "## [Unreleased]\n\nSummary: Only this.\n",
+		"blank-only summary": "## [Unreleased]\n\nSummary:   \t\n\n- A.\n",
+	} {
+		bad := newTree(t, map[string]string{"VERSION": "0.3.1\n", "CHANGELOG.md": changelog})
+		if out, _, err := run(t, bad, "sh", "scripts/release-notes.sh", "--unreleased"); err == nil {
+			t.Errorf("%s: want an error, got %q", name, out)
+		}
+	}
+
 	// No notice from 1.0.0 on.
 	one := newTree(t, map[string]string{"VERSION": "1.0.0\n", "CHANGELOG.md": "## [Unreleased]\n\n## [1.0.0] - 2027-01-01\n\n- Done.\n"})
 	if out, errout, err := run(t, one, "sh", "scripts/release-notes.sh", "1.0.0"); err != nil || out != "- Done.\n\n"+closing {

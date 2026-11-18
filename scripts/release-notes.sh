@@ -1,8 +1,9 @@
 #!/bin/sh
-# Print the release notes for one version from CHANGELOG.md: a pre-release notice while the version is below 1.0.0, the
+# Print the release notes for one version from CHANGELOG.md: an optional one-line Summary (see below), a pre-release notice while the version is below 1.0.0, the
 # entries under that version's heading, the text of --extra FILE if given (for example the list of files), and the fixed
 # closing line "Next release: when ready". Output has LF line ends. Fails when the heading is missing or has no entries.
 # Writes nothing. release.yml builds the release notes with it, for the version in VERSION.
+# A section may start with one line "Summary: TEXT"; it is printed first, as "**Summary:** TEXT", and left out of the entries.
 # usage: scripts/release-notes.sh [--extra FILE] X.Y.Z
 #        scripts/release-notes.sh [--extra FILE] --unreleased   (the Unreleased entries; the notice follows VERSION)
 set -eu
@@ -45,6 +46,19 @@ body="$(tr -d '\r' < "$root/CHANGELOG.md" | awk -v want="$want" '
   exit 1
 }
 
+# An optional first line "Summary: TEXT" is the one-line account of what changed. It leads the notes, before the notice,
+# because a chat post made from the notes shows only their start. It is not repeated in the body.
+summary=''
+case "$body" in
+  "Summary: "*)
+    first="$(printf '%s\n' "$body" | sed -n 1p)"
+    summary="${first#Summary: }"
+    body="$(printf '%s\n' "$body" | sed 1d | sed '/./,$!d')"
+    [ -n "$(printf '%s' "$summary" | tr -d ' \t')" ] || { echo "release-notes: the Summary line of '$want' is empty" >&2; exit 1; }
+    [ -n "$body" ] || { echo "release-notes: '$want' has a Summary but no entries" >&2; exit 1; }
+    ;;
+esac
+[ -z "$summary" ] || printf '**Summary:** %s\n\n' "$summary"
 case "$version" in
   0.*) printf '%s\n\n' "Pre-release: this is a 0.x version and may change without notice." ;;
 esac
