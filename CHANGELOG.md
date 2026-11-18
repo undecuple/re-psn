@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- **Docs and tooling:** the README and `docker/README.md` name v0.8.0 and its container image as the newest (its manifest lists amd64 and arm64 and is readable without a login), and the notes about `re-psn-window` say it is in the app archives from v0.8.0 on. No row of the features list changes its `since` value: the website row stays at `main`, as the site is deployed from `main`, not released.
+
 ## [0.8.0] - 2026-11-18
 
 Summary: The app keeps a list of saved servers, can open in a window of its own and explains its words in plain language; the status page is lighter on busy servers; new notes for games that need fast peer-to-peer play.
