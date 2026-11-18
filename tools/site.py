@@ -33,6 +33,7 @@ OUT_HTML = "site/index.html"
 OUT_JSON = "site/data.json"
 OUT_ACTION = "site/action.html"
 OUT_DISCUSS = "site/discuss.html"
+OUT_BADGE = "site/discord-badge.svg"
 CSS = "site/style.css"
 JS = "site/terminal.js"
 ICON = "site/favicon.svg"
@@ -52,6 +53,8 @@ GISCUS = {
     "mapping": "specific", "term": "re-psn", "strict": "0", "reactions-enabled": "0", "emit-metadata": "0",
     "input-position": "top", "theme": "dark", "lang": "en", "loading": "lazy",
 }
+# The Discord server's invite (the same one the README gives) and the badge that links to it on the home page.
+DISCORD_URL = "https://discord.gg/W8fMT78Q7k"
 UNOFFICIAL = "Unofficial; not affiliated with Sony."
 AI_LINE = "Developed with AI agent assistance."
 
@@ -72,6 +75,60 @@ GLYPHS = {
     "n": ("10110", "11001", "10001", "10001", "10001", "00000", "00000"),
 }
 BANNER_TEXT = "re:psn"
+
+# The Discord badge, site/discord-badge.svg: "DISCORD | JOIN" in a pixel font of its own, 5 rows high and mostly 3 wide (the banner's has no capitals), in
+# the site's own palette (the dark tokens of docs/art/palette.json), so it matches the page and needs no font, script or address.
+# It is a file, not inline markup, because the page's content policy allows images from the site itself and nothing else.
+BADGE_GLYPHS = {
+    "D": ("110", "101", "101", "101", "110"),
+    "I": ("111", "010", "010", "010", "111"),
+    "S": ("111", "100", "111", "001", "111"),
+    "C": ("111", "100", "100", "100", "111"),
+    "O": ("111", "101", "101", "101", "111"),
+    "R": ("110", "101", "110", "101", "101"),
+    "J": ("001", "001", "001", "101", "111"),
+    "N": ("1001", "1101", "1011", "1001", "1001"),  # four wide: a three wide N reads as an H
+}
+BADGE_TOKENS = ("bg0", "bg1", "fg1", "grey1", "green")
+BADGE_LABEL, BADGE_ACTION = "DISCORD", "JOIN"
+
+
+def badge_svg(colours):
+    """colours maps the BADGE_TOKENS to '#rrggbb'. Border grey1, label on bg1 in fg1, action on green in bg0."""
+    cell, pad_x, pad_y, border = 3, 7, 4, 1
+
+    def word(text, x, y):
+        out = []
+        for ch in text:
+            for r, row in enumerate(BADGE_GLYPHS[ch]):
+                for c, bit in enumerate(row):
+                    if bit == "1":
+                        out.append(f"M{x + c * cell} {y + r * cell}h{cell}v{cell}h-{cell}z")
+            x += (len(BADGE_GLYPHS[ch][0]) + 1) * cell
+        return "".join(out)
+
+    def width(text):
+        return (sum(len(BADGE_GLYPHS[ch][0]) for ch in text) + len(text) - 1) * cell
+
+    left, right = width(BADGE_LABEL) + 2 * pad_x, width(BADGE_ACTION) + 2 * pad_x
+    w, h = border + left + right + border, border + 5 * cell + 2 * pad_y + border
+    ty = border + pad_y
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}" shape-rendering="crispEdges" '
+            f'role="img" aria-label="Discord: join"><title>Discord: join</title>'
+            f'<rect width="{w}" height="{h}" fill="{colours["grey1"]}"/>'
+            f'<rect x="{border}" y="{border}" width="{left}" height="{h - 2 * border}" fill="{colours["bg1"]}"/>'
+            f'<rect x="{border + left}" y="{border}" width="{right}" height="{h - 2 * border}" fill="{colours["green"]}"/>'
+            f'<path fill="{colours["fg1"]}" d="{word(BADGE_LABEL, border + pad_x, ty)}"/>'
+            f'<path fill="{colours["bg0"]}" d="{word(BADGE_ACTION, border + left + pad_x, ty)}"/></svg>\n'), (w, h)
+
+
+def render_badge(root):
+    """The badge file's text, with the colours read from the palette the stylesheet is checked against."""
+    try:
+        dark = json.loads(read(root, PALETTE))["modes"]["dark"]
+        return badge_svg({t: dark[t] for t in BADGE_TOKENS})[0]
+    except (ValueError, KeyError) as e:
+        raise SourceError(f"{PALETTE}: the dark mode needs {', '.join(BADGE_TOKENS)} for the Discord badge ({e})") from e
 
 
 def _frame(w, h):
@@ -565,6 +622,9 @@ def render_page(data):
     w('</section>\n')
 
     w('</main>\n<footer>\n')
+    bw, bh = badge_svg({t: "#000000" for t in BADGE_TOKENS})[1]
+    w(f'<p class="discord"><a href="{esc(DISCORD_URL)}"><img src="discord-badge.svg" width="{bw * 2}" height="{bh * 2}" '
+      f'alt="Join the re-psn Discord"></a> <span>The re-psn Discord server, an unofficial fan community with a forum for players and hosts.</span></p>\n')
     w(f'<p>{esc(UNOFFICIAL)} {esc(AI_LINE)}</p>\n</footer>\n')
     w('<a class="totop" href="#top"><span aria-hidden="true">&uarr;</span> Top</a>\n</body>\n</html>\n')
     return "".join(o)
@@ -683,26 +743,28 @@ def check_css(root, problems):
         problems.append(f"{CSS}: must not load anything from another site")
 
 
-def check_icon(root, problems):
-    """site/favicon.svg exists, is XML without script, foreignObject or an outside reference, and uses palette colours only."""
+def check_icon(root, problems, rel=None, text=None):
+    """site/favicon.svg (or another site SVG, rel) exists, is XML without script, foreignObject or an outside reference, and uses palette
+    colours only. text is the file's content when the caller has it (a generated file need not be on disk yet)."""
     import xml.etree.ElementTree as ET
+    path = rel or ICON
     try:
-        text = read(root, ICON)
+        text = read(root, path) if text is None else text
         tree = ET.fromstring(text)
         allowed = {v.lower() for mode in json.loads(read(root, PALETTE))["modes"].values() for v in mode.values()}
     except (SourceError, ValueError, KeyError, ET.ParseError) as e:
-        problems.append(f"{ICON}: {e}")
+        problems.append(f"{path}: {e}")
         return
     for node in tree.iter():
         name = node.tag.split("}")[-1].lower()
         if name in ("script", "foreignobject", "image", "use", "style"):
-            problems.append(f"{ICON}: <{name}> is not allowed")
+            problems.append(f"{path}: <{name}> is not allowed")
         for k, v in node.attrib.items():
             k = k.split("}")[-1].lower()
             if k == "href" or k.startswith("on") or "url(" in v or "http" in v.lower() and k != "xmlns":
-                problems.append(f"{ICON}: attribute {k} must not reference anything")
+                problems.append(f"{path}: attribute {k} must not reference anything")
             if k in ("fill", "stroke") and v.lower() not in allowed and v.lower() != "none":
-                problems.append(f"{ICON}: colour {v} is not in {PALETTE}")
+                problems.append(f"{path}: colour {v} is not in {PALETTE}")
 
 
 def main(argv=None):
@@ -713,11 +775,12 @@ def main(argv=None):
     root = pathlib.Path(a.root)
     try:
         data = build_data(root)
+        badge = render_badge(root)
     except SourceError as e:
         print(f"site: problems:\n  - {e}", file=sys.stderr)
         return 1
     outputs = {OUT_HTML: render_page(data), OUT_JSON: render_json(data), OUT_ACTION: render_action_page(data),
-               OUT_DISCUSS: render_discuss_page(data)}
+               OUT_DISCUSS: render_discuss_page(data), OUT_BADGE: badge}
     try:
         guard(outputs)
     except SourceError as e:
@@ -726,6 +789,7 @@ def main(argv=None):
     problems = []
     check_css(root, problems)
     check_icon(root, problems)
+    check_icon(root, problems, OUT_BADGE, badge)
     for js in (JS, "site/discuss.js", "site/nav.js"):
         if not (root / js).exists():
             problems.append(f"{js} is missing (a page loads it)")
@@ -746,7 +810,7 @@ def main(argv=None):
             (root / rel).parent.mkdir(parents=True, exist_ok=True)
             with open(root / rel, "w", encoding="utf-8", newline="\n") as f:
                 f.write(text)
-    print(f"site: {'OK' if a.check else 'wrote ' + OUT_HTML + ', ' + OUT_ACTION + ', ' + OUT_DISCUSS + ' and ' + OUT_JSON}: "
+    print(f"site: {'OK' if a.check else 'wrote ' + OUT_HTML + ', ' + OUT_ACTION + ', ' + OUT_DISCUSS + ', ' + OUT_BADGE + ' and ' + OUT_JSON}: "
           f"{len(data['features'])} features, {len(data['settings'])} settings, version {data['version']}")
     return 0
 

@@ -1297,6 +1297,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "**Website:** a Discord badge in the page footer, linking to the re-psn Discord invite and described as unofficial fan work.",
      "**Desktop app:** the Saved servers list can import a list from a file (the file Export list writes).",
      "**Desktop app:** a Saved servers list on the Play screen: add, remove, check one or all (4 at a time, 5 seconds each, after a confirmation), use an entry as the Play target, and export the list.",
      "**Desktop app:** `re-psn-app` opens the app in `re-psn-window` when that program is beside it, and `--browser` opens a browser tab instead; it passes its `ui` flags on to the window, and falls back to the browser when ...",
@@ -1317,7 +1318,7 @@
     ]
    },
    "counts": {
-    "Added": 4,
+    "Added": 5,
     "Changed": 8,
     "Fixed": 1
    }

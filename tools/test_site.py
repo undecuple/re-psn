@@ -52,12 +52,12 @@ CHANGELOG = """# Changelog
 - First.
 """
 CSS = """/* palette:dark */
-:root { --bg0: #000000; --fg0: #ffffff; }
+:root { --bg0: #000000; --bg1: #111111; --fg0: #ffffff; --fg1: #eeeeee; --grey1: #777777; --green: #00ff00; }
 /* /palette */
 """
 ICON = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"><title>t</title>'
         '<rect width="8" height="8" fill="#000000"/><rect width="2" height="2" fill="#ffffff"/></svg>')
-PALETTE = {"modes": {"dark": {"bg0": "#000000", "fg0": "#ffffff"}}}
+PALETTE = {"modes": {"dark": {"bg0": "#000000", "bg1": "#111111", "fg0": "#ffffff", "fg1": "#eeeeee", "grey1": "#777777", "green": "#00ff00"}}}
 
 
 class Fixture:
@@ -140,7 +140,7 @@ class SiteTest(unittest.TestCase):
         scripts = re.findall(r"<script\b[^>]*>", page)
         self.assertEqual(scripts, ['<script src="terminal.js" defer>'])
         self.assertNotIn("</script>", page.replace('<script src="terminal.js" defer></script>', ""))
-        self.assertIsNone(re.search(r"\sstyle=|\son[a-z]+=|<style|<iframe|<img|<object|<embed|<form", page))
+        self.assertIsNone(re.search(r"\sstyle=|\son[a-z]+=|<style|<iframe|<img|<object|<embed|<form", re.sub(r'<img src="discord-badge.svg"[^>]*>', "", page)))  # the badge is the one image, from the site itself
         for tagtext in re.findall(r"<(?:link|script)\b[^>]*>", page):
             self.assertIsNone(re.search(r'(?:src|href)="(?:[a-z]+:)?//|(?:src|href)="https?:', tagtext), tagtext)
         self.assertIn('<link rel="icon" href="favicon.svg" type="image/svg+xml">', page)
@@ -217,7 +217,7 @@ class SiteTest(unittest.TestCase):
         self.assertFalse((self.f.root / "site/index.html").exists())
 
     def test_css_token_mismatch(self):
-        (self.f.root / "site/style.css").write_text(CSS.replace("#ffffff; }", "#fffffe; }"))
+        (self.f.root / "site/style.css").write_text(CSS.replace("--fg0: #ffffff;", "--fg0: #fffffe;"))
         code, _, err = self.f.run("--check")
         self.assertEqual(code, 1)
         self.assertIn("--fg0 in the dark block", err)
@@ -290,6 +290,73 @@ def _css_roles(css, mode):
     blocks = re.findall(r"/\* roles:%s \*/(.*?)/\* /roles \*/" % mode, css, re.S)
     maps = [dict(re.findall(r"--([a-z0-9-]+):\s*var\(--([a-z0-9]+)\)", b)) for b in blocks]
     return blocks, maps
+
+
+class DiscordBadgeTest(unittest.TestCase):
+    """site/discord-badge.svg: generated in the palette's colours, safe, linked from the home page, and legible."""
+
+    def setUp(self):
+        self.f = Fixture()
+        self.addCleanup(self.f.tmp.cleanup)
+
+    def test_badge_is_written_in_the_palette_colours_and_checked(self):
+        self.assertEqual(self.f.run()[0], 0)
+        svg = self.f.read("site/discord-badge.svg").decode()
+        self.assertEqual({m.lower() for m in re.findall(r'fill="(#[0-9a-fA-F]{6})"', svg)}, {"#777777", "#111111", "#00ff00", "#eeeeee", "#000000"})
+        self.assertEqual(sitegen.badge_svg({t: PALETTE["modes"]["dark"][t] for t in sitegen.BADGE_TOKENS})[0], svg)
+        self.assertEqual(self.f.run("--check")[0], 0)
+        (self.f.root / "site/discord-badge.svg").write_text(svg.replace("#777777", "#778888"))
+        code, _, err = self.f.run("--check")
+        self.assertEqual(code, 1)
+        self.assertIn("site/discord-badge.svg is not what the sources generate", err)
+        (self.f.root / "site/discord-badge.svg").unlink()
+        self.assertIn("site/discord-badge.svg is missing", self.f.run("--check")[2])
+
+    def test_unsafe_badge_text_is_refused(self):
+        for bad, word in ((sitegen.badge_svg({t: "#000000" for t in sitegen.BADGE_TOKENS})[0].replace("</svg>", "<script>x</script></svg>"), "<script>"),
+                          ('<svg xmlns="http://www.w3.org/2000/svg"><image href="https://x.example/a.png"/></svg>', "not allowed"),
+                          ('<svg xmlns="http://www.w3.org/2000/svg"><rect fill="#123456"/></svg>', "not in docs/art/palette.json")):
+            problems = []
+            sitegen.check_icon(self.f.root, problems, sitegen.OUT_BADGE, bad)
+            self.assertTrue(any(word in p for p in problems), (word, problems))
+
+    def test_a_palette_without_the_tokens_is_a_clear_error(self):
+        (self.f.root / "docs/art/palette.json").write_text(json.dumps({"modes": {"dark": {"bg0": "#000000", "fg0": "#ffffff"}}}))
+        code, _, err = self.f.run()
+        self.assertEqual(code, 1)
+        self.assertIn("needs bg0, bg1, fg1, grey1, green for the Discord badge", err)
+
+    def test_home_page_links_the_badge_and_loads_nothing_outside(self):
+        self.f.run()
+        page = self.f.read("site/index.html").decode()
+        m = re.search(r'<p class="discord"><a href="([^"]+)"><img src="([^"]+)" width="(\d+)" height="(\d+)" alt="([^"]+)"></a> <span>([^<]+)</span></p>', page)
+        self.assertIsNotNone(m, "the footer has no badge link")
+        href, src, w, h, alt, text = m.groups()
+        self.assertEqual((href, src), (sitegen.DISCORD_URL, "discord-badge.svg"))
+        self.assertTrue(alt.startswith("Join the re-psn Discord"))
+        self.assertIn("unofficial", text)
+        bw, bh = sitegen.badge_svg({t: "#000000" for t in sitegen.BADGE_TOKENS})[1]
+        self.assertEqual((int(w), int(h)), (2 * bw, 2 * bh))
+        self.assertIn(html.escape("img-src 'self' data:"), page)  # the policy still allows no image from another site
+        self.assertEqual([u for u in re.findall(r'<img[^>]+src="([^"]+)"', page) if "//" in u], [])
+
+    def test_other_pages_do_not_carry_the_badge(self):
+        self.f.run()
+        for rel in ("site/action.html", "site/discuss.html"):
+            self.assertNotIn("discord-badge", self.f.read(rel).decode(), rel)
+
+    def test_real_badge_is_current_safe_and_legible(self):
+        problems = []
+        text = sitegen.render_badge(ROOT)
+        self.assertEqual((ROOT / sitegen.OUT_BADGE).read_text(encoding="utf-8"), text)
+        sitegen.check_icon(ROOT, problems, sitegen.OUT_BADGE, text)
+        self.assertEqual(problems, [])
+        dark = json.loads((ROOT / "docs/art/palette.json").read_text(encoding="utf-8"))["modes"]["dark"]
+        self.assertGreaterEqual(contrast(dark["fg1"], dark["bg1"]), 4.5)   # DISCORD
+        self.assertGreaterEqual(contrast(dark["bg0"], dark["green"]), 4.5)  # JOIN
+        self.assertGreaterEqual(contrast(dark["grey1"], dark["bg0"]), 3.0)  # the frame against the page
+        self.assertEqual(sitegen.DISCORD_URL, "https://discord.gg/W8fMT78Q7k")
+        self.assertIn(sitegen.DISCORD_URL, (ROOT / "README.md").read_text(encoding="utf-8"))  # the README gives the same invite
 
 
 class ContrastTest(unittest.TestCase):
