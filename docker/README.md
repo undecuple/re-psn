@@ -24,6 +24,7 @@ to set it up. The current image is `ghcr.io/undecuple/re-psn:0.8.0` (0.7.0, 0.6.
 | `Dockerfile` | A two-stage build: Go 1.26 on Alpine 3.24 in the first stage, Alpine 3.24 with one static binary in the second. Both bases are pinned by digest, and the server runs as user 10001. |
 | `docker-compose.yml` | The same, with the ports and a restart policy. |
 | `docker-compose.host.yml` | Opt-in, Linux only: the same server on the host's network, with no published ports. |
+| `docker-compose.public.yml` | For a host who exposes their own server to the internet: hardened, with the recommended settings. [Why each setting](../docs/public-compose.md). |
 | `docker-compose.test.yml` | Opt-in, Linux only: the host-network server with a hardened container, for a shared test host. |
 | `Dockerfile.dockerignore` | Keeps everything but `go.mod` and `server/` out of the build context. |
 

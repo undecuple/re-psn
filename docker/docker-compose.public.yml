@@ -1,0 +1,84 @@
+# For a host who exposes their OWN re-psn server to the internet. Unofficial fan work, not affiliated
+# with Sony. re-psn has no public instance and no accounts; this file is for your server, not a join address.
+#
+# Why each setting: docs/public-compose.md. Read SECURITY.md first.
+#
+#   0. Needs Docker Compose 2.24 or newer (the env_file form below).
+#   1. Create docker/re-psn.public.env with one line (mode 0600, never commit it):
+#        RE_PSN_HTTP_TOKEN=<a long random string, for example from: openssl rand -hex 32>
+#   2. docker compose -f docker/docker-compose.public.yml up -d --build
+#   3. Allow 36100/tcp and 36100/udp, and nothing else for re-psn. Docker's published ports
+#      bypass ufw and firewalld rules, so check from outside which ports answer.
+#
+# Published UDP must reach the container with each player's own source address. If every player
+# looks like the gateway, use docker-compose.host.yml and copy the settings over, but set
+# RE_PSN_HTTP to 127.0.0.1:36101 there (see docs/public-compose.md).
+services:
+  re-psn:
+    build:
+      context: ..                  # the repository root
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped        # come back after a crash or a reboot
+    user: "10001:10001"            # not root
+    cap_drop: [ALL]                # port 36100 needs no capability
+    security_opt:
+      - no-new-privileges:true
+    read_only: true                # logs go to stdout, so no volume is needed
+    tmpfs:
+      - /tmp:size=16m,mode=1777    # the pid file
+    mem_limit: 256m                # one runaway process cannot take the host
+    memswap_limit: 256m            # no swap on top (Docker only; podman-compose ignores it)
+    cpus: 1.0
+    pids_limit: 128
+    ulimits:
+      nofile: { soft: 16384, hard: 16384 }  # above twice -max-conns (4096)
+    env_file:
+      - path: ./re-psn.public.env  # holds RE_PSN_HTTP_TOKEN, so no secret is in this file
+        required: true
+    environment:
+      RE_PSN_ADDR: ":36100"
+      RE_PSN_HTTP: "0.0.0.0:36101"   # inside the container only; published to localhost below
+      RE_PSN_LOG_FORMAT: "json"
+      RE_PSN_LOG_LEVEL: "info"
+      RE_PSN_RELAY: "false"          # no flag caps relay bandwidth
+      RE_PSN_DISCOVER: "false"       # LAN only
+      RE_PSN_MEDIUS: "false"         # nothing implemented
+      # Limits: the defaults, written out so a change is visible.
+      RE_PSN_MAX_CONNS: "4096"
+      RE_PSN_MAX_CONNS_PER_ADDR: "32"
+      RE_PSN_MAX_REQ_RATE: "200"
+      RE_PSN_MAX_UDP_RATE: "1000"
+      RE_PSN_MAX_ROOMS: "1000"
+      RE_PSN_MAX_PLAYER_ROOMS: "8"
+      # RE_PSN_NO_PEER_TITLES: ""    # titles that need no peer traffic (docs/side-service.md)
+      #
+      # --- OPTIONAL: sign-in passes. Only if you run your own login service that signs passes. ---
+      # Off by default. With these on, a client that cannot send AUTH is refused. Also uncomment
+      # `volumes:` below and one mount for each file you set. The key file holds public keys, one "<kid> <base64url key>"
+      # per line; make it owned by 10001 with mode 0400 (docs/api.md#sign-in-passes).
+      # RE_PSN_PASS_KEY_FILE: "/run/re-psn/pass-keys"
+      # RE_PSN_PASS_ISSUER: "<exactly the iss your service signs>"
+      # RE_PSN_PASS_AUDIENCE: "<exactly the aud your service signs>"
+      # RE_PSN_REQUIRE_PASS: "connect"   # or "relay", or "connect,relay"
+      # RE_PSN_PASS_MAX_CONNS_PER_SUB: "2"
+      # RE_PSN_PASS_MAX_UNAUTH_CONNS: "64"
+      # RE_PSN_PASS_MAX_UNAUTH_PER_ADDR: "4"
+      # RE_PSN_PASS_REVOKED_FILE: "/run/re-psn/pass-revoked"  # optional; same owner and mode
+    # volumes:
+    #   - ./pass-keys:/run/re-psn/pass-keys:ro
+    #   - ./pass-revoked:/run/re-psn/pass-revoked:ro
+    ports:
+      - "36100:36100"                # game clients
+      - "36100:36100/udp"            # address probes
+      - "127.0.0.1:36101:36101"      # status page: this machine only
+    healthcheck:                     # busybox wget is in the image; /healthz needs the token
+      test: ["CMD-SHELL", "wget -q -O /dev/null --header \"Authorization: Bearer $$RE_PSN_HTTP_TOKEN\" http://127.0.0.1:36101/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"              # rotation: the server does not rotate
+        max-file: "5"                # Docker only; podman-compose ignores it

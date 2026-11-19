@@ -17,6 +17,7 @@ instance and there are no accounts: you run your own server. The [project README
 - [Running in a container](../docker/README.md): build the image and run it with Docker or Podman.
 - [Deployment examples](../deploy/README.md): a settings file, a systemd unit, and Traefik, nginx, HAProxy and Caddy configs.
 - [Running a server that the internet can reach](public-server.md): recommended settings for a server open to the internet.
+- [Docker Compose for a public server](public-compose.md): the compose file for a server open to the internet, and why each setting is there.
 - [Health checks and restarts](restarts.md): the health endpoint and shutdown behavior.
 - [UDP rate limits and drop counters](udp-guardrails.md): the packet allowance per UDP source and its counters.
 - [fail2ban for the status page](fail2ban.md): an optional example that blocks sources of refused status-page tokens.
