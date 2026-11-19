@@ -21,7 +21,7 @@
 <nav class="nfo" aria-label="About this page">
 <span class="k">project</span><span>re:psn by undecuple</span>
 <span class="k">version</span><span>0.8.0 (pre-release)</span>
-<span class="k">features</span><span>82, 44 available</span>
+<span class="k">features</span><span>83, 45 available</span>
 <span class="k">repository</span><span><a href="https://github.com/undecuple/re-psn">github.com/undecuple/re-psn</a></span>
 </nav>
 <nav class="quick" aria-label="Sections">
@@ -46,7 +46,7 @@
 <h2>Overview</h2>
 <p>re-psn answers the matchmaking and leaderboard calls of a statically recompiled PS3 game, for a group running its own server: a LAN, a VPN, or friends connecting to one person&#x27;s machine. The server keeps rooms and leaderboards and tells each player where the others are. Game traffic goes directly between players, and through the server only when two players cannot reach each other and the host has turned the relay on.</p>
 <p>It began as a fork of <a href="https://github.com/sp00nznet/psnr">psnr</a> by sp00nz: a Go server and a one-file C client, with no accounts and no public instance.</p>
-<p class="status-line">Version 0.8.0 (pre-release). 82 features: 44 available, 3 not yet verified, 9 partial, 6 in progress, 11 planned, 8 later, 1 declined.</p>
+<p class="status-line">Version 0.8.0 (pre-release). 83 features: 45 available, 3 not yet verified, 9 partial, 6 in progress, 11 planned, 8 later, 1 declined.</p>
 <p class="notice">Unofficial; not affiliated with Sony. No game files, keys or firmware are in the repository or needed from it. Play only games you own.</p>
 </section>
 <section id="features">
@@ -169,7 +169,8 @@
 <tr id="f-net-checks"><td data-label="Feature"><strong>Connection checks</strong> <code>net-checks</code><br>A check for players and hosts that says where a connection fails (server reachable, HELLO accepted, UDP probe answered, NAT behaviour, peer reachable, relay available) and shows round trip, loss and whether each peer is up.<br><span class="note">Not designed yet.</span></td><td data-label="Status"><span class="tag plan">planned</span></td><td data-label="Since">not released</td></tr>
 <tr id="f-net-upnp"><td data-label="Feature"><strong>UPnP</strong> <code>net-upnp</code><br>Open a player&#x27;s P2P port on their router automatically.<br><span class="note">Not started.</span></td><td data-label="Status"><span class="tag dim">later</span></td><td data-label="Since">not released</td></tr>
 <tr id="f-net-relay-force"><td data-label="Feature"><strong>Force the relay (testing)</strong> <code>net-relay-force</code><br><code>-relay-force</code> (<code>RE_PSN_RELAY_FORCE</code>, off by default, needs <code>-relay</code>) sends every stream through the relay, even between players who could connect directly, so the relay can be tested from one network. Datagrams are not forced.<br><span class="note">Not in v0.4.0. For testing only: it uses the host&#x27;s bandwidth.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">0.5.0</td></tr>
-<tr id="f-net-pass-relay"><td data-label="Feature"><strong>Sign-in passes for the relay</strong> <code>net-pass-relay</code><br>Optional: <code>-pass-key-file</code>, <code>-pass-issuer</code>, <code>-pass-audience</code> and <code>-require-pass relay</code> make the relay carry traffic only for players who hold a short-lived pass (Ed25519, checked offline) signed by a login service the host trusts. AUTH (0x05), ERROR 10, GET_CAPS bit 7, <code>relay_no_pass</code>. Off by default. The login service and the clients are separate work; connect gating is not built.<br><span class="note">No client or login service exists yet, so nothing can mint a pass outside tests; a test-only throwaway key is all that has been run.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
+<tr id="f-net-pass-relay"><td data-label="Feature"><strong>Sign-in passes for the relay</strong> <code>net-pass-relay</code><br>Optional: <code>-pass-key-file</code>, <code>-pass-issuer</code>, <code>-pass-audience</code> and <code>-require-pass relay</code> make the relay carry traffic only for players who hold a short-lived pass (Ed25519, checked offline) signed by a login service the host trusts. AUTH (0x05), ERROR 10, GET_CAPS bit 7, <code>relay_no_pass</code>. Off by default. The login service and the clients are separate work; see the connect row for connect gating.<br><span class="note">No client or login service exists yet, so nothing can mint a pass outside tests; a test-only throwaway key is all that has been run.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
+<tr id="f-net-pass-connect"><td data-label="Feature"><strong>Sign-in passes to connect</strong> <code>net-pass-connect</code><br>Optional: <code>-require-pass connect</code> makes a connection a player only after AUTH accepts a pass with the <code>connect</code> scope. Until then HELLO reserves no name and makes no token; every request but AUTH, HEARTBEAT and GET_CAPS gets ERROR 10; the connection is closed 30 s after accept if it has not signed in, and 60 s after its pass expires unless refreshed. Caps: <code>-pass-max-unauth-conns</code>, <code>-pass-max-unauth-per-addr</code>. Off by default. An already-open relay stream outlives expiry and revocation; passes bound to a client key, the login service and client AUTH are not built.<br><span class="note">No client or login service exists yet, so nothing can mint a pass outside tests; a test-only throwaway key is all that has been run. Names are still not authenticated.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">main</td></tr>
 <tr id="f-net-no-peer-titles"><td data-label="Feature"><strong>Per-title peer traffic off</strong> <code>net-no-peer-titles</code><br><code>-no-peer-titles</code> lists communication IDs of titles that use no peer traffic: their players get no UDP probe reply, no relay for datagrams or streams, no relay route and no relay flag in HELLO_ACK, and still use rooms and scores. Other titles on the server are unaffected.<br><span class="note">Not in v0.5.0. A list of IDs, not a per-title profile file. Hole punching itself is client-side: it stops because the server never learns the endpoint. Tested on loopback with a client written for the tests, not with a real title.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">0.6.0</td></tr>
 <tr id="f-net-caps"><td data-label="Feature"><strong>Capability report</strong> <code>net-caps</code><br><code>GET_CAPS</code> (0x04) after HELLO returns <code>CAPS</code> (0x94): a bit set of what this server offers this player (rooms, scores, room codes, peer keys, the UDP probe, the relay, LAN discovery) and the server version. The probe and relay bits are per title, so a title in <code>-no-peer-titles</code> sees them clear. The C client has the constants and <code>psnr_caps_parse</code>.<br><span class="note">Not in v0.5.0. A server before this answers the request with ERROR 1. Tested on loopback with a test client and the C client; no real title asks for it yet.</span></td><td data-label="Status"><span class="tag ok">available</span></td><td data-label="Since">0.6.0</td></tr>
 <tr id="f-net-peer-keys"><td data-label="Feature"><strong>Peer keys (server side)</strong> <code>net-peer-keys</code><br>A client may ask with <code>PEER_AUTH</code>; each pair of members who both asked then gets one new random 16-byte key in a <code>PEER_KEY</code> push, for tagging their direct packets. Opt-in; clients that do not ask are unaffected.<br><span class="note">Not in v0.4.0. No client uses the keys yet, and nothing is tagged on the wire. The keys travel over plain TCP, so this gives no confidentiality and no protection from someone who can read a player&#x27;s network traffic.</span></td><td data-label="Status"><span class="tag warn">partial</span></td><td data-label="Since">0.5.0</td></tr>
@@ -253,7 +254,7 @@
 <h2>Roadmap</h2>
 <p>The same list grouped by status. No dates are promised; <a href="https://github.com/undecuple/re-psn/blob/main/ROADMAP.md">ROADMAP.md</a> has the order and the scope.</p>
 <div class="cols">
-<div><h3>Done <span class="count">(56)</span></h3>
+<div><h3>Done <span class="count">(57)</span></h3>
 <ul>
 <li><a href="#f-rooms-basic">Rooms and search</a></li>
 <li><a href="#f-rooms-data">Room and member data</a></li>
@@ -301,6 +302,7 @@
 <li><a href="#f-status-latency">Player-reported latency</a></li>
 <li><a href="#f-net-relay-force">Force the relay (testing)</a></li>
 <li><a href="#f-net-pass-relay">Sign-in passes for the relay</a></li>
+<li><a href="#f-net-pass-connect">Sign-in passes to connect</a></li>
 <li><a href="#f-net-no-peer-titles">Per-title peer traffic off</a></li>
 <li><a href="#f-net-caps">Capability report</a></li>
 <li><a href="#f-net-peer-keys">Peer keys (server side)</a> <span class="tag warn">partial</span></li>
@@ -358,10 +360,12 @@
 <h4>Added</h4>
 <ul>
 <li>**Server:** optional sign-in passes for the relay.</li>
+<li>**Server:** optional <code>-require-pass connect</code>, with <code>-pass-max-unauth-conns</code> (default 64) and <code>-pass-max-unauth-per-addr</code> (default 4).</li>
 <li>**Docs:** <code>docs/public-server.md</code>: recommended settings for a server that the internet can reach.</li>
 </ul>
 <h4>Changed</h4>
 <ul>
+<li>**Docs:** the README settings table (now 43 flags) and the website&#x27;s settings list include the two sign-in limit flags for connect mode.</li>
 <li>**Docs:** the README settings table and the website&#x27;s settings list now include the six sign-in pass flags (<code>-pass-key-file</code>, <code>-pass-issuer</code>, <code>-pass-audience</code>, <code>-require-pass</code>, <code>-pass-revoked-file</code>, ...</li>
 <li>**Docs:** the &quot;Project Facts&quot; label on the README is wider and larger (shown at 624 pixels, not 420), with sharper edges and more text on each line, and the Purpose column no longer crowds the right edge.</li>
 <li>**Docs and tooling:** the README and <code>docker/README.md</code> name v0.8.0 and its container image as the newest (its manifest lists amd64 and arm64 and is readable without a login), and the notes about <code>re-psn-window</code> say it ...</li>
@@ -372,7 +376,7 @@
 </section>
 <section id="settings">
 <h2>Settings</h2>
-<p>Each of the 41 flags can also be set as a <code>RE_PSN_&lt;FLAG&gt;</code> variable. A flag on the command line wins, then the variable; a value that does not parse stops the server at start. It runs with no settings at all. <a href="https://github.com/undecuple/re-psn/blob/main/docs/running.md">docs/running.md</a> has the full text.</p>
+<p>Each of the 43 flags can also be set as a <code>RE_PSN_&lt;FLAG&gt;</code> variable. A flag on the command line wins, then the variable; a value that does not parse stops the server at start. It runs with no settings at all. <a href="https://github.com/undecuple/re-psn/blob/main/docs/running.md">docs/running.md</a> has the full text.</p>
 <table class="stack set">
 <thead><tr><th>Flag</th><th>Variable</th><th>Default</th><th>What it does</th></tr></thead>
 <tbody>
@@ -405,9 +409,11 @@
 <tr><td data-label="Flag"><code>-pass-key-file</code></td><td data-label="Variable"><code>RE_PSN_PASS_KEY_FILE</code></td><td data-label="Default"><code>none</code></td><td data-label="What it does">File of public keys that sign-in passes are checked against (one &lt;kid&gt; &lt;base64url key&gt; per line, mode 0600, read again on SIGHUP); needs -pass-issuer and -pass-audience. See <a href="https://github.com/undecuple/re-psn/blob/main/docs/api.md#sign-in-passes">Sign-in passes</a></td></tr>
 <tr><td data-label="Flag"><code>-pass-issuer</code></td><td data-label="Variable"><code>RE_PSN_PASS_ISSUER</code></td><td data-label="Default"><code>none</code></td><td data-label="What it does">The issuer a pass must carry exactly (needs -pass-key-file)</td></tr>
 <tr><td data-label="Flag"><code>-pass-audience</code></td><td data-label="Variable"><code>RE_PSN_PASS_AUDIENCE</code></td><td data-label="Default"><code>none</code></td><td data-label="What it does">The audience a pass must carry exactly, so a pass made for another server is refused (needs -pass-key-file)</td></tr>
-<tr><td data-label="Flag"><code>-require-pass</code></td><td data-label="Variable"><code>RE_PSN_REQUIRE_PASS</code></td><td data-label="Default"><code>none</code></td><td data-label="What it does">What needs a pass: relay is the only value so far. The relay then carries traffic only between players who both hold an unexpired pass with the relay scope</td></tr>
+<tr><td data-label="Flag"><code>-require-pass</code></td><td data-label="Variable"><code>RE_PSN_REQUIRE_PASS</code></td><td data-label="Default"><code>none</code></td><td data-label="What it does">What needs a pass, comma-separated: relay (the relay carries traffic only between players who both hold an unexpired pass with the relay scope) and connect (after HELLO nothing but AUTH, HEARTBEAT and the pass bit of GET_CAPS works until a pass with the connect scope is accepted; a client that never sends AUTH gets ERROR 10 and is closed after 30 s)</td></tr>
 <tr><td data-label="Flag"><code>-pass-revoked-file</code></td><td data-label="Variable"><code>RE_PSN_PASS_REVOKED_FILE</code></td><td data-label="Default"><code>none</code></td><td data-label="What it does">File of accounts to refuse, one github:&lt;number&gt; or discord:&lt;number&gt; per line; read again on SIGHUP</td></tr>
 <tr><td data-label="Flag"><code>-pass-max-conns-per-sub</code></td><td data-label="Variable"><code>RE_PSN_PASS_MAX_CONNS_PER_SUB</code></td><td data-label="Default"><code>2</code></td><td data-label="What it does">Connections one signed-in account may hold (0: no limit)</td></tr>
+<tr><td data-label="Flag"><code>-pass-max-unauth-conns</code></td><td data-label="Variable"><code>RE_PSN_PASS_MAX_UNAUTH_CONNS</code></td><td data-label="Default"><code>64</code></td><td data-label="What it does">With -require-pass connect: connections that have not signed in yet, in total (0: no limit); a further one is closed at once</td></tr>
+<tr><td data-label="Flag"><code>-pass-max-unauth-per-addr</code></td><td data-label="Variable"><code>RE_PSN_PASS_MAX_UNAUTH_PER_ADDR</code></td><td data-label="Default"><code>4</code></td><td data-label="What it does">With -require-pass connect: connections that have not signed in yet from one remote address (an IPv6 address counts as its /64; 0: no limit)</td></tr>
 <tr><td data-label="Flag"><code>-discover</code></td><td data-label="Variable"><code>RE_PSN_DISCOVER</code></td><td data-label="Default"><code>off</code></td><td data-label="What it does">Answer LAN discovery broadcasts on the game UDP port, from private-network senders only (<a href="https://github.com/undecuple/re-psn/blob/main/docs/connecting.md#finding-a-server-on-the-lan">connecting.md</a>)</td></tr>
 <tr><td data-label="Flag"><code>-name</code></td><td data-label="Variable"><code>RE_PSN_NAME</code></td><td data-label="Default"><code>none</code></td><td data-label="What it does">Server name shown in LAN discovery: at most 24 printable ASCII bytes; shown only with -discover</td></tr>
 <tr><td data-label="Flag"><code>-lan-public-addr</code></td><td data-label="Variable"><code>RE_PSN_LAN_PUBLIC_ADDR</code></td><td data-label="Default"><code>none</code></td><td data-label="What it does">IPv4 address given to players outside the LAN as the address of players who connected over a private, carrier-grade NAT or link-local address; the host must forward each such player&#x27;s P2P port</td></tr>

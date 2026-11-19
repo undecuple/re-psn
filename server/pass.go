@@ -7,8 +7,16 @@ package main
 // a provider account signed in, never who the player is or what name they use.
 //
 //	AUTH      req u32 | version u8 (1) | pass blob (at most 2048 bytes)       (after HELLO; type 0x05)
-//	OK        req u32                                                          the pass is accepted
+//	OK        req u32 [| token u32]                                           the pass is accepted; the token only with -require-pass connect
 //	ERROR 10  req u32 | code u32                                              the pass is refused; nothing changed
+//
+// With -require-pass connect the connection is not a player until AUTH is accepted. HELLO only parks its fields on the
+// connection: it reserves no name, makes no token (HELLO_ACK carries 0) and leaves the connection out of every list, room and
+// UDP lookup. Until then only AUTH, HEARTBEAT and GET_CAPS (pass bits only) are answered; anything else gets ERROR 10. AUTH
+// success registers the player, as HELLO does without the setting, and replies OK with the real UDP token. The connection
+// must sign in within a fixed time of accept, no HEARTBEAT extends it, and it is closed passSkew seconds after the pass
+// expires unless a refresh AUTH arrived. An already-open relay stream outlives that close and a revocation; only new
+// streams and datagrams are checked.
 //
 // A pass is "v1." + base64url(payload) + "." + base64url(signature) with no padding. The signature is Ed25519 over the
 // ASCII bytes "v1." + base64url(payload) as sent, so nothing is canonicalised. The payload is compact JSON with exactly the
@@ -47,12 +55,17 @@ const (
 
 	passVersion = 1 // AUTH body version: 1 is a bearer pass; 2 is reserved for a pass bound to a client key
 
-	maxPassLen   = 2048
-	maxPassLife  = 3600 // seconds
-	passSkew     = 60   // seconds of clock difference tolerated on iat and exp
-	maxPassKeys  = 16
-	maxKeyFile   = 8 << 10
-	maxRevokeLen = 1 << 20
+	maxPassLen = 2048
+	// maxUnauthFrame is the largest payload read before a connection has signed in under -require-pass connect: the request
+	// id, the version, the blob length and a pass of maxPassLen. Checked on the frame header, before the body is read.
+	maxUnauthFrame = 4 + 1 + 2 + maxPassLen
+	// defaultAuthTimeout is how long after accept a connection has to sign in under -require-pass connect.
+	defaultAuthTimeout = 30 * time.Second
+	maxPassLife        = 3600 // seconds
+	passSkew           = 60   // seconds of clock difference tolerated on iat and exp
+	maxPassKeys        = 16
+	maxKeyFile         = 8 << 10
+	maxRevokeLen       = 1 << 20
 
 	scopeConnect = 1 << 0
 	scopeRelay   = 1 << 1
@@ -311,20 +324,20 @@ func loadPassRevoked(path string) (map[string]bool, error) {
 	return out, nil
 }
 
-// parseRequirePass reads -require-pass: a comma list of scopes. Only "relay" is available in this release.
-func parseRequirePass(list string) (relay bool, err error) {
+// parseRequirePass reads -require-pass: a comma list of scopes, "connect" and "relay".
+func parseRequirePass(list string) (connect, relay bool, err error) {
 	for _, f := range strings.Split(list, ",") {
 		switch strings.TrimSpace(f) {
 		case "":
 		case "relay":
 			relay = true
 		case "connect":
-			return false, errors.New("-require-pass connect is not available yet; only relay is")
+			connect = true
 		default:
-			return false, fmt.Errorf("-require-pass: unknown scope %q (relay)", strings.TrimSpace(f))
+			return false, false, fmt.Errorf("-require-pass: unknown scope %q (relay, connect)", strings.TrimSpace(f))
 		}
 	}
-	return relay, nil
+	return connect, relay, nil
 }
 
 // passAllows reports whether c holds a pass with scope that has not run out at now. The caller holds s.mu.
@@ -337,7 +350,8 @@ const maxAuthFails = 3
 
 // handleAuth handles AUTH. The pass is parsed and verified before s.mu is taken, so a stream of bad passes costs the game's
 // other requests nothing; s.mu is held only to record the result. A second AUTH on a connection is a refresh: it must name
-// the same account and replaces the scopes and expiry of the first.
+// the same account and replaces the scopes and expiry of the first. Under -require-pass connect the first AUTH is also the
+// registration of the player (name check, takeover, token), and every pass must carry scope connect.
 func (s *Server) handleAuth(c *client, req uint32, r *reader) {
 	p := s.pass.Load()
 	if p == nil {
@@ -359,16 +373,27 @@ func (s *Server) handleAuth(c *client, req uint32, r *reader) {
 	if c.outputClosed() {
 		return
 	}
-	deny := func(why string) {
-		s.log.Warn("pass refused", "client", c.id, "reason", why)
-		c.send(msgError, errReply(req, errPass))
+	if s.requireConnectPass && c.sub == "" && !c.helloSeen { // taken over since handle looked: no longer a player to sign in
+		c.send(msgError, errReply(req, errNoHello))
+		return
+	}
+	refuse := func(code uint32) {
+		c.send(msgError, errReply(req, code))
 		if c.authFails++; c.authFails >= maxAuthFails {
 			s.log.Warn("connection closed", "client", c.id, "reason", "too many refused passes")
 			go c.conn.Close()
 		}
 	}
+	deny := func(why string) {
+		s.log.Warn("pass refused", "client", c.id, "reason", why)
+		refuse(errPass)
+	}
 	if !ok {
 		deny(why)
+		return
+	}
+	if s.requireConnectPass && cl.scopes&scopeConnect == 0 { // also on a refresh, so it cannot drop the connect scope
+		deny("scope")
 		return
 	}
 	if np := s.pass.Load(); np != p && (np.revoked[cl.sub] || np.keys[cl.kid] == nil) { // a reload since the check
@@ -380,17 +405,50 @@ func (s *Server) handleAuth(c *client, req uint32, r *reader) {
 		return
 	}
 	if c.sub == "" {
-		if s.maxPerSub > 0 && s.subConns[cl.sub] >= s.maxPerSub {
+		var victims []*client
+		if s.requireConnectPass {
+			var taken bool
+			if victims, taken = s.nameConflict(c, c.pendOnline); taken {
+				s.log.Warn("hello refused", "client", c.id, "reason", "name taken", "online_id", c.pendOnline, "addr", c.addr.String())
+				refuse(errNameTaken)
+				return
+			}
+		}
+		n := s.subConns[cl.sub]
+		for _, v := range victims {
+			if v.sub == cl.sub { // the connection this one replaces gives its slot up
+				n--
+			}
+		}
+		if s.maxPerSub > 0 && n >= s.maxPerSub {
 			deny("too many connections for one account")
 			return
+		}
+		if s.requireConnectPass { // every check has passed: register
+			s.takeOver(victims, c)
+			c.commID, c.onlineID, c.p2pPort = c.pendComm, c.pendOnline, c.pendPort
+			c.pendComm, c.pendOnline, c.pendPort, c.helloSeen = "", "", 0, false
+			s.newToken(c)
+			s.clients[c.id] = c
+			c.authed = true
+			s.releaseUnauth(c)
+			s.log.Info("hello", "client", c.id, "comm_id", c.commID, "online_id", c.onlineID, "addr", c.addr.String(), "p2p_port", c.p2pPort)
 		}
 		s.subConns[cl.sub]++
 		c.sub = cl.sub
 	}
 	c.passScopes, c.passExp, c.passKid = cl.scopes, cl.exp, cl.kid
+	if s.requireConnectPass {
+		c.gateUntil = time.Unix(cl.exp+passSkew, 0) // the run loop reads this on this same goroutine
+	}
 	c.authFails = 0
 	s.log.Info("pass accepted", "client", c.id, "sub", subTag(cl.sub), "scopes", cl.scopes)
-	c.send(msgOK, okReply(req))
+	w := &writer{}
+	w.u32(req)
+	if s.requireConnectPass {
+		w.u32(c.token)
+	}
+	c.send(msgOK, w.b)
 }
 
 // dropSub forgets c's subject when it disconnects. The caller holds s.mu.
@@ -423,18 +481,27 @@ func (s *Server) reloadPass(keyFile, revokedFile string) error {
 	}
 	s.pass.Store(&passConfig{keys: keys, revoked: revoked, issuer: old.issuer, aud: old.aud})
 	var closing []*client
+	removed := map[*client]bool{} // closing because the key went, not because the account was revoked
 	s.mu.Lock()
 	for _, c := range s.clients {
 		if c.sub != "" && revoked[c.sub] {
 			c.passScopes = 0 // no relay in the moment before its run loop notices the close
 			closing = append(closing, c)
 		} else if c.sub != "" && keys[c.passKid] == nil {
-			c.passScopes = 0 // its key was taken out of the file: the pass no longer counts, a new one is needed
+			c.passScopes = 0          // its key was taken out of the file: the pass no longer counts, a new one is needed
+			if s.requireConnectPass { // and with connect required it was the way in: the connection goes too
+				closing = append(closing, c)
+				removed[c] = true
+			}
 		}
 	}
 	s.mu.Unlock()
 	for _, c := range closing {
-		s.log.Warn("connection closed", "client", c.id, "reason", "pass revoked")
+		reason := "pass revoked"
+		if removed[c] {
+			reason = "pass key removed"
+		}
+		s.log.Warn("connection closed", "client", c.id, "reason", reason)
 		c.conn.Close()
 	}
 	return nil

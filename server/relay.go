@@ -132,7 +132,7 @@ func (s *Server) streamLeg(conn net.Conn, t byte, p []byte) (handedOff bool) {
 
 	toUser, vport := r.u32(), r.u16()
 	s.mu.Lock()
-	from, to := s.clients[user], s.clients[toUser]
+	from, to := s.clients[user], s.clients[toUser] // not listed before AUTH under -require-pass connect: a stream from a connection not signed in is not found
 	ok := r.err == nil && from != nil && from.token == token && to != nil && to.commID != "" && sharesRoom(from, to)
 	noPass := ok && s.requireRelayPass && !(from.passAllows(scopeRelay, time.Now()) && to.passAllows(scopeRelay, time.Now()))
 	off := ok && (s.noPeer[from.commID] || s.noPeer[to.commID])
@@ -256,7 +256,7 @@ func (s *Server) relayUDP(pc net.PacketConn, pkt []byte, sender *net.UDPAddr) {
 	}
 	from, token, toID := binary.BigEndian.Uint32(pkt[5:]), binary.BigEndian.Uint32(pkt[9:]), binary.BigEndian.Uint32(pkt[13:])
 	s.mu.Lock()
-	src, dst := s.clients[from], s.clients[toID]
+	src, dst := s.clients[from], s.clients[toID] // as above: a connection not signed in is not listed, so its datagrams are dropped as unauthorized
 	valid := src != nil && src.token == token && dst != nil && sharesRoom(src, dst)
 	off := valid && (s.noPeer[src.commID] || s.noPeer[dst.commID]) // checked before the endpoint: a listed title never has one
 	noPass := valid && !off && s.requireRelayPass && !(src.passAllows(scopeRelay, time.Now()) && dst.passAllows(scopeRelay, time.Now()))

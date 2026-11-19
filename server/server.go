@@ -7,6 +7,7 @@ package main
 import (
 	crand "crypto/rand"
 	"encoding/binary"
+	"errors"
 	"io"
 	"log/slog"
 	"net"
@@ -29,6 +30,12 @@ const writeTimeout = 10 * time.Second
 // defaultMaxConns is the default for -max-conns: a bound on file descriptors, high enough that a normal server never meets it.
 const defaultMaxConns = 4096
 
+// Defaults for -pass-max-unauth-conns and -pass-max-unauth-per-addr; read only under -require-pass connect.
+const (
+	defaultMaxUnauth        = 64
+	defaultMaxUnauthPerAddr = 4
+)
+
 // defaultRelayIdle is the default for -relay-idle, in seconds.
 const defaultRelayIdle = 10 * time.Minute
 
@@ -40,16 +47,20 @@ const (
 )
 
 type Server struct {
-	log              *slog.Logger
-	relay            bool                       // -relay: carry traffic for players who can't reach each other (relay.go)
-	relayForce       bool                       // -relay-force: with relay, send every stream through it (a test aid)
-	pass             atomic.Pointer[passConfig] // sign-in pass settings; nil when no -pass-key-file is set (pass.go)
-	requireRelayPass bool                       // -require-pass relay: the relay carries traffic only for players with a relay pass
-	maxPerSub        int                        // -pass-max-conns-per-sub: connections one account may hold (0 for no limit)
-	subConns         map[string]int             // connections per account, under mu
-	noPeer           map[string]bool            // -no-peer-titles: communication IDs of titles that use no peer traffic (title_peer.go)
-	relayIdle        time.Duration              // -relay-idle: close a relay stream with no bytes either way for this long (0: never)
-	lanPublic        [4]byte                    // -lan-public-addr: address announced for LAN members to viewers outside the LAN (zero: off)
+	log                *slog.Logger
+	relay              bool                       // -relay: carry traffic for players who can't reach each other (relay.go)
+	relayForce         bool                       // -relay-force: with relay, send every stream through it (a test aid)
+	pass               atomic.Pointer[passConfig] // sign-in pass settings; nil when no -pass-key-file is set (pass.go)
+	requireRelayPass   bool                       // -require-pass relay: the relay carries traffic only for players with a relay pass
+	requireConnectPass bool                       // -require-pass connect: a connection is a player only after AUTH (pass.go)
+	maxUnauth          int                        // -pass-max-unauth-conns: connections not yet signed in, in total (0: no limit)
+	maxUnauthPerAddr   int                        // -pass-max-unauth-per-addr: the same per remote address (0: no limit)
+	authTimeout        time.Duration              // how long after accept a connection has to sign in
+	maxPerSub          int                        // -pass-max-conns-per-sub: connections one account may hold (0 for no limit)
+	subConns           map[string]int             // connections per account, under mu
+	noPeer             map[string]bool            // -no-peer-titles: communication IDs of titles that use no peer traffic (title_peer.go)
+	relayIdle          time.Duration              // -relay-idle: close a relay stream with no bytes either way for this long (0: never)
+	lanPublic          [4]byte                    // -lan-public-addr: address announced for LAN members to viewers outside the LAN (zero: off)
 
 	httpToken string // -http-token: required by the status page when set (api.go)
 
@@ -88,6 +99,10 @@ type Server struct {
 	openConns      int                    // open connections in total
 	lastConnsLog   time.Time              // when a refusal for -max-conns was last logged
 	connsLogSkip   int                    // refusals for -max-conns not logged since then
+	unauthConns    int                    // connections not yet signed in, in total (connect mode)
+	unauthByAddr   map[string]int         // the same by remote address, keyed as addrConns
+	lastUnauthLog  time.Time              // when a refusal for the sign-in limits was last logged
+	unauthLogSkip  int                    // such refusals not logged since then
 
 	discover bool   // -discover: answer LAN DISCOVER packets (discover.go)
 	name     string // -name: shown in discovery, at most 24 bytes
@@ -132,6 +147,19 @@ type client struct {
 	authFails  int       // refused AUTH requests on this connection; the connection is closed after maxAuthFails
 	rttMs      uint16    // the player's own last round trip in milliseconds, from an optional HEARTBEAT body (display only)
 	rttAt      time.Time // when it was reported; the zero time means none or unknown
+
+	// Connect mode (-require-pass connect). A HELLO is parked in pend* until AUTH registers it, so commID stays empty and
+	// every "registered" check keeps meaning what it meant. helloSeen and authed are under s.mu. The rest is only touched
+	// by the connection's own goroutine (admit, run, handle, handleAuth), so it needs no lock.
+	helloSeen  bool
+	authed     bool
+	pendComm   string
+	pendOnline string
+	pendPort   uint16
+	unauth     bool      // counted in unauthConns until it signs in or goes away; written under s.mu
+	unauthKey  string    // its key in unauthByAddr
+	authBy     time.Time // sign in before this, counted from accept
+	gateUntil  time.Time // close the connection at this time unless a refresh AUTH moved it; zero: never
 	rooms      map[uint64]*room
 	output     clientOutput
 }
@@ -152,7 +180,12 @@ func NewServer(maxRooms int, verbose bool) *Server {
 		streams:  map[uint32]*stream{},
 		subConns: map[string]int{},
 		maxRooms: maxRooms,
-		started:  time.Now(),
+
+		authTimeout:      defaultAuthTimeout,
+		maxUnauth:        defaultMaxUnauth,
+		maxUnauthPerAddr: defaultMaxUnauthPerAddr,
+		unauthByAddr:     map[string]int{},
+		started:          time.Now(),
 
 		maxPlayerRooms: 8,
 		maxConns:       defaultMaxConns,
@@ -221,6 +254,7 @@ func addrLimitKey(a netip.Addr) string {
 // the connection. It is a goroutine of its own because a PROXY header has to
 // be read first, and a slow proxy must not stall Accept.
 func (s *Server) admit(conn net.Conn) {
+	accepted := time.Now() // the sign-in time (connect mode) counts from here, not from the PROXY header or HELLO
 	peer := connAddr(conn)
 	real := peer
 	if s.proxyProto && s.trusted(peer) {
@@ -263,24 +297,59 @@ func (s *Server) admit(conn net.Conn) {
 		conn.Close()
 		return
 	}
+	if s.requireConnectPass && ((s.maxUnauthPerAddr > 0 && s.unauthByAddr[limitKey] >= s.maxUnauthPerAddr) || (s.maxUnauth > 0 && s.unauthConns >= s.maxUnauth)) {
+		var skipped int
+		logIt := time.Since(s.lastUnauthLog) >= time.Second
+		if logIt {
+			s.lastUnauthLog, skipped, s.unauthLogSkip = time.Now(), s.unauthLogSkip, 0
+		} else {
+			s.unauthLogSkip++
+		}
+		s.mu.Unlock()
+		if logIt {
+			s.log.Warn("connection refused", "addr", host, "reason", "too many connections not signed in", "refused_since_last_line", skipped)
+		}
+		conn.Close()
+		return
+	}
 	s.addrConns[limitKey]++
 	s.openConns++
 	s.nextID++
 	s.conns++
 	c := &client{id: s.nextID, conn: conn, addr: real.Unmap().WithZone(""), rooms: map[uint64]*room{}}
+	if s.requireConnectPass {
+		s.unauthByAddr[limitKey]++
+		s.unauthConns++
+		c.unauth, c.unauthKey, c.authBy = true, limitKey, accepted.Add(s.authTimeout)
+	}
 	s.log.Debug("connected", "client", c.id, "addr", host)
 	if real.Is4() {
 		c.ip = real.As4()
 	}
-	s.clients[c.id] = c
+	if !s.requireConnectPass { // in connect mode the client is listed when AUTH accepts it: no id lookup finds it before
+		s.clients[c.id] = c
+	}
 	s.mu.Unlock()
 	s.run(c)
 	s.mu.Lock()
+	s.releaseUnauth(c)
 	s.openConns--
 	if s.addrConns[limitKey]--; s.addrConns[limitKey] <= 0 {
 		delete(s.addrConns, limitKey)
 	}
 	s.mu.Unlock()
+}
+
+// releaseUnauth stops counting c as a connection that has not signed in. Safe to call twice. The caller holds s.mu.
+func (s *Server) releaseUnauth(c *client) {
+	if !c.unauth {
+		return
+	}
+	c.unauth = false
+	if s.unauthByAddr[c.unauthKey]--; s.unauthByAddr[c.unauthKey] <= 0 {
+		delete(s.unauthByAddr, c.unauthKey)
+	}
+	s.unauthConns--
 }
 
 func (s *Server) run(c *client) {
@@ -305,10 +374,26 @@ func (s *Server) run(c *client) {
 
 	windowStart, inWindow := time.Now(), 0
 	for first := true; ; first = false {
-		c.conn.SetReadDeadline(time.Now().Add(clientTimeout))
-		t, p, err := readPacket(c.conn)
+		dl, why := time.Now().Add(clientTimeout), ""
+		if c.unauth && c.authBy.Before(dl) { // absolute: a HEARTBEAT only brings the loop back here, it does not move this
+			dl, why = c.authBy, "no sign-in in time"
+		} else if !c.gateUntil.IsZero() && c.gateUntil.Before(dl) {
+			dl, why = c.gateUntil, "pass expired"
+		}
+		c.conn.SetReadDeadline(dl)
+		limit := maxPayload
+		if c.unauth {
+			limit = maxUnauthFrame
+		}
+		t, p, err := readPacketLimit(c.conn, limit)
 		if err != nil {
-			if err != io.EOF {
+			var ne net.Error
+			switch {
+			case errors.Is(err, errFrameTooLong):
+				s.log.Warn("connection closed", "client", c.id, "reason", "frame too long before sign-in", "limit", limit)
+			case why != "" && errors.As(err, &ne) && ne.Timeout():
+				s.log.Warn("connection closed", "client", c.id, "online_id", c.onlineID, "reason", why)
+			case err != io.EOF:
 				s.log.Info("read failed", "client", c.id, "err", err)
 			}
 			return
@@ -317,6 +402,7 @@ func (s *Server) run(c *client) {
 			relayLeg = true
 			s.mu.Lock()
 			delete(s.clients, c.id)
+			s.releaseUnauth(c) // a leg can splice for hours and is not waiting to sign in
 			s.mu.Unlock()
 			if !s.streamLeg(c.conn, t, p) {
 				c.conn.Close()
@@ -341,9 +427,10 @@ func (s *Server) handle(c *client, t byte, p []byte) {
 	if r.err != nil {
 		return
 	}
-	// commID is cleared under s.mu by another client's HELLO that takes over this player's name, so it is read under s.mu too.
+	// commID is cleared under s.mu by another client's HELLO (or AUTH, in connect mode) that takes over this player's name, so it is read under s.mu too.
 	s.mu.Lock()
-	noHello := c.commID == ""
+	noHello := c.commID == "" && !c.helloSeen
+	gated := s.requireConnectPass && !c.authed
 	closed := c.outputClosed()
 	s.mu.Unlock()
 	if closed {
@@ -353,6 +440,31 @@ func (s *Server) handle(c *client, t byte, p []byte) {
 		s.log.Debug("request before hello", "client", c.id, "type", t)
 		c.send(msgError, errReply(req, errNoHello))
 		return
+	}
+	if gated { // connect mode, not signed in: HELLO (parks its fields), AUTH, HEARTBEAT and the pass bits of GET_CAPS only
+		switch t {
+		case msgHello:
+		case msgAuth:
+			s.handleAuth(c, req, r)
+			return
+		case msgHeartbeat: // keeps nothing alive: the sign-in deadline is absolute
+			return
+		case msgGetCaps:
+			s.mu.Lock()
+			if !c.outputClosed() {
+				w := &writer{}
+				w.u32(req)
+				w.u32(s.preAuthCaps(c))
+				w.blob(nil) // no version text before sign-in: the pass bits only
+				c.send(msgCaps, w.b)
+			}
+			s.mu.Unlock()
+			return
+		default: // every other type, defined or not, so a probe cannot tell them apart
+			s.log.Debug("request before sign-in", "client", c.id, "type", t)
+			c.send(msgError, errReply(req, errPass))
+			return
+		}
 	}
 
 	switch t {
@@ -426,42 +538,82 @@ func (s *Server) handle(c *client, t byte, p []byte) {
 	s.mu.Unlock()
 }
 
+// hello handles HELLO. Without connect mode it registers the player. With it the fields are only parked on the connection and
+// nothing is reserved, listed or issued until AUTH accepts a pass (handleAuth), so an unauthenticated connection cannot hold a
+// name.
 func (s *Server) hello(c *client, req uint32, r *reader) (byte, []byte) {
-	if c.commID != "" { // HELLO is sent once per connection; a second one changes nothing
+	if c.commID != "" || c.helloSeen { // HELLO is sent once per connection; a second one changes nothing
 		return msgError, errReply(req, errBadRequest)
 	}
 	commID, onlineID, port := r.str(12), r.str(16), r.u16()
 	if r.err != nil || commID == "" {
 		return msgError, errReply(req, errBadRequest)
 	}
-	// One player per name, as PSN IDs are unique, compared case-insensitively
-	// like them. The same name from the same address is the same player
-	// reconnecting -- a title that crashed and restarted -- whose old
-	// connection can linger until clientTimeout, so it gives way.
+	if s.requireConnectPass {
+		c.helloSeen, c.pendComm, c.pendOnline, c.pendPort = true, commID, onlineID, port
+		s.log.Debug("hello parked until AUTH", "client", c.id)
+		return s.helloAck(c, req, commID, 0, helloPassConnect)
+	}
+	return s.register(c, commID, onlineID, port, req)
+}
+
+// register makes c the player onlineID for the title commID: the name check, a takeover, the token and the HELLO_ACK.
+func (s *Server) register(c *client, commID, onlineID string, port uint16, req uint32) (byte, []byte) {
+	victims, taken := s.nameConflict(c, onlineID)
+	if taken {
+		s.log.Warn("hello refused", "client", c.id, "reason", "name taken", "online_id", onlineID, "addr", c.addr.String())
+		return msgError, errReply(req, errNameTaken)
+	}
+	s.takeOver(victims, c)
+	c.commID, c.onlineID, c.p2pPort = commID, onlineID, port
+	s.newToken(c)
+	s.log.Info("hello", "client", c.id, "comm_id", commID, "online_id", onlineID, "addr", c.addr.String(), "p2p_port", port)
+	return s.helloAck(c, req, commID, c.token, 0)
+}
+
+// nameConflict looks for other players with the name onlineID. One player per name, as PSN IDs are unique, compared
+// case-insensitively like them. The same name from the same address is the same player reconnecting -- a title that crashed
+// and restarted -- whose old connection can linger until clientTimeout, so it gives way: those are victims. A name held from
+// another address is taken. It changes nothing. The caller holds s.mu.
+func (s *Server) nameConflict(c *client, onlineID string) (victims []*client, taken bool) {
 	for _, o := range s.clients {
 		if o == c || o.commID == "" || !strings.EqualFold(o.onlineID, onlineID) {
 			continue
 		}
 		if !sameAddr(o.addr, c.addr) {
-			s.log.Warn("hello refused", "client", c.id, "reason", "name taken", "online_id", onlineID, "addr", c.addr.String())
-			return msgError, errReply(req, errNameTaken)
+			return nil, true
 		}
-		s.log.Info("reconnected", "client", c.id, "replaces", o.id, "online_id", onlineID)
+		victims = append(victims, o)
+	}
+	return victims, false
+}
+
+// takeOver retires the connections c replaces. The caller holds s.mu.
+func (s *Server) takeOver(victims []*client, c *client) {
+	for _, o := range victims {
+		s.log.Info("reconnected", "client", c.id, "replaces", o.id, "online_id", o.onlineID)
 		o.commID = "" // no longer counts; its run loop cleans up once Close lands
-		s.dropSub(o)  // and its account no longer counts against the limit
+		o.helloSeen, o.authed = false, false
+		s.dropSub(o) // and its account no longer counts against the limit
 		o.stopOutput()
 	}
-	c.commID, c.onlineID, c.p2pPort = commID, onlineID, port
+}
+
+// newToken gives c its UDP token, never 0.
+func (s *Server) newToken(c *client) {
 	var tok [4]byte
 	crand.Read(tok[:])
-	c.token = binary.BigEndian.Uint32(tok[:]) | 1 // never 0
-	s.log.Info("hello", "client", c.id, "comm_id", commID, "online_id", onlineID, "addr", c.addr.String(), "p2p_port", port)
+	c.token = binary.BigEndian.Uint32(tok[:]) | 1
+}
+
+// helloAck is the HELLO_ACK for c; token is 0 while c has not signed in. extra is OR-ed into the flags.
+func (s *Server) helloAck(c *client, req uint32, commID string, token uint32, extra uint8) (byte, []byte) {
 	w := &writer{}
 	w.u32(req)
 	w.u32(c.id)
 	w.bytes(c.ip[:])
-	w.u32(c.token)
-	var flags uint8
+	w.u32(token)
+	flags := extra
 	if s.relay && !s.noPeer[commID] {
 		flags |= 1 // the relay is available
 	}

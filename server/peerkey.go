@@ -23,8 +23,9 @@ const (
 	msgPeerAuth = 0x03 // request: no body; OK. Opts the client in to PEER_KEY pushes
 	msgPeerKey  = 0xA8 // push: room u64 | user u32 | key [16]
 
-	helloPeerKeys = 4 // HELLO_ACK flags bit 2: the server issues peer keys
-	peerKeyLen    = 16
+	helloPeerKeys    = 4 // HELLO_ACK flags bit 2: the server issues peer keys
+	helloPassConnect = 8 // HELLO_ACK flags bit 3: a pass is needed to connect (-require-pass connect); a hint, not authority
+	peerKeyLen       = 16
 )
 
 // peerAuth turns PEER_AUTH on for c and sends the keys for the rooms it is

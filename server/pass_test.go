@@ -300,13 +300,16 @@ func TestPassRevokedFile(t *testing.T) {
 }
 
 func TestParseRequirePass(t *testing.T) {
-	for in, want := range map[string]bool{"": false, "relay": true, " relay , ": true} {
-		if got, err := parseRequirePass(in); err != nil || got != want {
-			t.Errorf("%q: %v %v", in, got, err)
+	for in, want := range map[string][2]bool{ // connect, relay
+		"": {false, false}, "relay": {false, true}, " relay , ": {false, true}, "connect": {true, false},
+		" connect ": {true, false}, "relay,connect": {true, true}, "connect,relay,connect": {true, true},
+	} {
+		if connect, relay, err := parseRequirePass(in); err != nil || connect != want[0] || relay != want[1] {
+			t.Errorf("%q: %v %v %v", in, connect, relay, err)
 		}
 	}
-	for _, in := range []string{"connect", "relay,connect", "all"} {
-		if _, err := parseRequirePass(in); err == nil {
+	for _, in := range []string{"all", "connect,x", "Connect", "relay;connect"} {
+		if _, _, err := parseRequirePass(in); err == nil {
 			t.Errorf("%q accepted", in)
 		}
 	}

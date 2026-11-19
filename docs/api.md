@@ -100,7 +100,7 @@ last eight; the default is off.
   old connection and accepts the new one.
 - `p2p_port` is the UDP port the title receives peer traffic on, or 0.
 
-HELLO must come first. Any other request before it gets ERROR 7. A connection sends HELLO once; a second HELLO on the same connection gets ERROR 1 and changes nothing.
+HELLO must come first. Any other request before it gets ERROR 7. A connection sends HELLO once; a second HELLO on the same connection gets ERROR 1 and changes nothing. Under `-require-pass connect` HELLO reserves no name and makes no token until AUTH is accepted (see [Connect mode](#connect-mode)).
 
 **Limits:** every blob a client puts in a room (CREATE_ROOM, JOIN_ROOM, SET_ROOM_DATA,
 ROOM_MESSAGE) is at most 4096 bytes, else error 1. Game files do not go over the wire.
@@ -115,9 +115,9 @@ client's `psnr_poll` sends a HEARTBEAT every 20 seconds.
 
 | Type | Name | Payload (after `req`) |
 |---|---|---|
-| 0x81 | HELLO_ACK | `user_id u32` `public_ip [4]` `token u32` (the token UDP PROBEs carry; 0.3 on) `flags u8` (bit 0: the server relays; 0.3 on. Clear for a title in `-no-peer-titles`, after 0.5.0. bit 1: invite-only rooms, see below; 0.4 on. bit 2: the server issues peer keys, see "Peer keys"; after 0.4) |
+| 0x81 | HELLO_ACK | `user_id u32` `public_ip [4]` `token u32` (the token UDP PROBEs carry; 0.3 on) `flags u8` (bit 0: the server relays; 0.3 on. Clear for a title in `-no-peer-titles`, after 0.5.0. bit 1: invite-only rooms, see below; 0.4 on. bit 2: the server issues peer keys, see "Peer keys"; after 0.4. bit 3: a pass is needed to connect, `-require-pass connect`, and `token` is 0 until AUTH; a hint only, see [Connect mode](#connect-mode)) |
 | 0x94 | CAPS | `bits u32` `version blob`: which features the server offers this player (bits below), and the server version text |
-| 0x93 | OK | — |
+| 0x93 | OK | — (to AUTH under `-require-pass connect`: `token u32`, the UDP token; read it only if 4 more bytes are there) |
 | 0x8F | ERROR | `code u32` |
 
 **Capabilities (GET_CAPS, after 0.5.0).** A title that needs only some features can ask, after HELLO, what the server offers it before it relies on one. The reply's `bits` are:
@@ -131,7 +131,7 @@ client's `psnr_poll` sends a HEARTBEAT every 20 seconds.
 | 4 | probe | the server answers a UDP PROBE from this player's P2P socket; clear for a title in `-no-peer-titles` |
 | 5 | relay | the server relays streams and datagrams for this player: `-relay` is on and the title is not in `-no-peer-titles` |
 | 6 | discover | the server answers LAN discovery (`-discover`) |
-| 7 | pass for relay | `-require-pass relay` is on: the relay needs a pass (see [Sign-in passes](#sign-in-passes)); bit 5 stays clear until one with the `relay` scope is accepted |
+| 7 | pass for relay | `-require-pass relay` is on (before AUTH under `-require-pass connect` this is the only bit GET_CAPS shows, and its version text is empty): the relay needs a pass (see [Sign-in passes](#sign-in-passes)); bit 5 stays clear until one with the `relay` scope is accepted |
 
 A clear bit means the server does not offer the feature to this player. Ignore bits you do not know: later versions may add them. GET_CAPS before HELLO gets ERROR 7 (no hello). A server that predates GET_CAPS answers it with ERROR 1 (bad request); treat that as "nothing reported". The relay bit repeats HELLO_ACK's bit 0.
 
@@ -146,9 +146,9 @@ A clear bit means the server does not offer the feature to this player. Ignore b
 | 5 | not in that room |
 | 6 | limit reached: the server's room limit, or the player is already in `-max-player-rooms` rooms; for a score request, the server's score store failed or a title, board or player limit was reached (see [Leaderboards](#leaderboards)); for JOIN_ROOM, JOIN_BY_CODE or SET_ROOM_DATA, the room's state would not fit one ROOM_JOINED reply (see Rooms) |
 | 7 | no HELLO yet |
-| 8 | name taken (HELLO): another player on this server has it |
+| 8 | name taken (HELLO; under `-require-pass connect`, AUTH): another player on this server has it |
 | 9 | no relay (STREAM_*): the server runs without `-relay` |
-| 10 | pass refused (AUTH), or a pass is needed (STREAM_*): the pass is malformed, expired, for another server, signed by an unknown key, revoked or not allowed here; nothing changed |
+| 10 | pass refused (AUTH), or a pass is needed (STREAM_*): the pass is malformed, expired, for another server, signed by an unknown key, revoked or not allowed here; nothing changed. Under `-require-pass connect`, also any request but HELLO, AUTH, HEARTBEAT and GET_CAPS before AUTH is accepted (see [Connect mode](#connect-mode)) |
 
 ## Sign-in passes
 
@@ -176,7 +176,7 @@ server will not ignore a key binding):
 | `iss` | equals `-pass-issuer` |
 | `aud` | equals `-pass-audience`, which must not be empty |
 | `sub` | `github:<number>` or `discord:<number>` (1 to 19 digits, no leading zero); no name or email |
-| `scope` | an array of `"connect"` and `"relay"`, no repeats; `connect` is accepted but not used yet |
+| `scope` | an array of `"connect"` and `"relay"`, no repeats; `connect` is needed for `-require-pass connect` and ignored otherwise |
 | `iat`, `exp` | whole seconds; `exp` after `iat` and at most 3600 s later; both compared with 60 s of skew |
 
 **What it opens.** With `-require-pass relay`, a stream or a relayed datagram between two players needs a pass with the `relay`
@@ -186,6 +186,38 @@ pass. `-pass-max-conns-per-sub` limits how many connections one account can hold
 SIGHUP the server reads it again and closes their live connections. A key taken out of the key file ends the passes it signed at the same SIGHUP: their holders lose the relay until they sign in again.
 
 **What a client can rely on.** Only GET_CAPS bit 5 says whether this player can use the relay. HELLO_ACK flag bit 0 and the relay hint in ROUTE still describe the server, not the pass, so a player without a pass who follows them gets ERROR 10. A refused connection count (`-pass-max-conns-per-sub`) also answers ERROR 10; an old connection that has gone quiet counts until the server notices it is gone.
+
+### Connect mode
+
+`-require-pass connect` (comma-separate it with `relay` to require both) makes AUTH the way in. A connection is not a player
+until a pass with the `connect` scope is accepted. Off by default; a server without it behaves as described above.
+
+- **Before AUTH.** HELLO is read but only parked: it reserves no name, makes no token (HELLO_ACK carries `token` 0 and flag bit 3),
+  and the connection is in no player list, room, UDP lookup or relay lookup. A PROBE or RELAY datagram with its id is dropped as
+  `unauthorized`. The only requests answered are AUTH, HEARTBEAT (no reply, as usual) and GET_CAPS, which shows only bit 7 when
+  the relay needs a pass. Every other request, defined or not, gets ERROR 10, and a second HELLO gets ERROR 1. A request before
+  HELLO still gets ERROR 7, AUTH included.
+- **AUTH accepted.** The server registers the player as HELLO does without this mode: the name check (ERROR 8 if another address
+  holds the name; the same address takes over its old connection), the account limit, and the UDP `token`. OK carries that
+  `token u32`; a refresh returns the same one. The pass is verified before anything is changed, and a refused AUTH changes nothing.
+  A refused name counts like a refused pass toward the 3 refusals that close the connection.
+- **Names.** Only a signed-in connection holds a name, so a connection that never signs in cannot keep anyone out of theirs. A
+  name is still not authenticated: it proves nothing about who the player is.
+- **Time.** A connection must sign in within 30 seconds of being accepted. The time is counted from accept, not from HELLO, and
+  HEARTBEAT does not extend it. Before AUTH a frame may declare at most 2055 payload bytes (a 2048-byte pass and its framing); a
+  longer header closes the connection before the body is read. After AUTH the usual limits apply.
+- **Limits.** `-pass-max-unauth-conns` (default 64) and `-pass-max-unauth-per-addr` (default 4) cap the connections that have not
+  signed in; one over the limit is closed at accept with no reply. They also count against `-max-conns` and
+  `-max-conns-per-addr`. A relay stream connection counts until its first frame arrives.
+- **Refresh.** A second AUTH is the one allowed repeat: same account, and the pass must carry the `connect` scope too, so a
+  refresh cannot drop it. The connection is closed 60 s after the current pass's `exp` unless a refresh moved that time, so a
+  client refreshes before then. A key taken out of the key file closes its holders' connections at SIGHUP.
+- **Old clients.** A client that does not send AUTH is refused on purpose: its first request after HELLO gets ERROR 10 and it is
+  closed at the deadline. HELLO_ACK flag bit 3 and the token are hints for clients, not authority; a forged server can say
+  anything.
+- **Not covered.** A relay stream that is already open keeps running after its pass expires or its account is revoked; only new
+  streams and datagrams are checked. Passes bound to a client key (version 2), the login service and a client that sends AUTH
+  are not built.
 
 **Limits, plainly.** A pass is a bearer token sent over the game's plain TCP: anyone who can read the connection can use it until
 it expires, so it lives at most an hour. It proves an account signed in; it does not prove anything about the player and holds no

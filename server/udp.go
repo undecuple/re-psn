@@ -103,7 +103,7 @@ func (s *Server) serveUDP(pc net.PacketConn, now func() time.Time) error {
 
 		local := usableLocalIP([4]byte(buf[13:17]), [4]byte(ip))
 		s.mu.Lock()
-		c := s.clients[id]
+		c := s.clients[id] // under -require-pass connect a player is listed only after AUTH, so before it this is a drop as "unauthorized"
 		ok = c != nil && c.commID != "" && c.token == token
 		off := ok && s.noPeer[c.commID]
 		mismatch := ok && !off && !s.udpAnySource && c.ip != [4]byte(ip)
