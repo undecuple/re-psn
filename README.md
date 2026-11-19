@@ -413,7 +413,7 @@ re-psn runs with no settings at all. [docs/running.md](docs/running.md) has the 
 
 ### Settings
 
-Each of the 35 flags can also be set as a `RE_PSN_<FLAG>` variable. A flag on the command line wins, then the variable; a value
+Each of the 41 flags can also be set as a `RE_PSN_<FLAG>` variable. A flag on the command line wins, then the variable; a value
 that does not parse stops the server at start.
 
 <details>
@@ -449,6 +449,12 @@ Variables are upper case, with dashes as underscores. Defaults are those of `./r
 | `-relay-idle` | `RE_PSN_RELAY_IDLE` | `600` | With `-relay`, close a relay stream after this many seconds with no bytes in either direction (0: never); not in v0.5.0 |
 | `-relay-force` | `RE_PSN_RELAY_FORCE` | off | With `-relay`, send every stream through the relay, even between players who could connect directly. For testing the relay from one network; uses the host's bandwidth |
 | `-no-peer-titles` | `RE_PSN_NO_PEER_TITLES` | none | Comma-separated communication IDs of titles that use no peer traffic. For their players the server answers no UDP probe, relays nothing and routes nothing, and HELLO_ACK says the relay is off; rooms and scores work as usual. Other titles are unaffected; not in v0.5.0 |
+| `-pass-key-file` | `RE_PSN_PASS_KEY_FILE` | none | File of public keys that sign-in passes are checked against (one `<kid> <base64url key>` per line, mode 0600, read again on SIGHUP); needs `-pass-issuer` and `-pass-audience`. See [Sign-in passes](docs/api.md#sign-in-passes) |
+| `-pass-issuer` | `RE_PSN_PASS_ISSUER` | none | The issuer a pass must carry exactly (needs `-pass-key-file`) |
+| `-pass-audience` | `RE_PSN_PASS_AUDIENCE` | none | The audience a pass must carry exactly, so a pass made for another server is refused (needs `-pass-key-file`) |
+| `-require-pass` | `RE_PSN_REQUIRE_PASS` | none | What needs a pass: `relay` is the only value so far. The relay then carries traffic only between players who both hold an unexpired pass with the `relay` scope |
+| `-pass-revoked-file` | `RE_PSN_PASS_REVOKED_FILE` | none | File of accounts to refuse, one `github:<number>` or `discord:<number>` per line; read again on SIGHUP |
+| `-pass-max-conns-per-sub` | `RE_PSN_PASS_MAX_CONNS_PER_SUB` | `2` | Connections one signed-in account may hold (0: no limit) |
 | `-discover` | `RE_PSN_DISCOVER` | off | Answer LAN discovery broadcasts on the game UDP port, from private-network senders only ([connecting.md](docs/connecting.md#finding-a-server-on-the-lan)) |
 | `-name` | `RE_PSN_NAME` | none | Server name shown in LAN discovery: at most 24 printable ASCII bytes; shown only with `-discover` |
 | `-lan-public-addr` | `RE_PSN_LAN_PUBLIC_ADDR` | none | IPv4 address given to players outside the LAN as the address of players who connected over a private, carrier-grade NAT or link-local address; the host must forward each such player's P2P port |
