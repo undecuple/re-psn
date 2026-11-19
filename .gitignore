@@ -39,3 +39,4 @@ psnr.env
 /work/
 /app/shell/target/
 /app/shell/gen/
+/docker/re-psn.public.env

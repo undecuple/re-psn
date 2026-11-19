@@ -116,6 +116,13 @@ for a server you cannot afford to carry traffic for.
 - **Bans:** [fail2ban.md](fail2ban.md) has a disabled example for repeated status-token failures. Game and UDP bans are not
   covered; use your firewall.
 
+## Docker Compose
+
+[`docker/docker-compose.public.yml`](../docker/docker-compose.public.yml) applies these settings to a container: non-root, no
+capabilities, a read-only root, limits, a health check, rotated JSON logs, the status page on localhost with a token, and
+the relay, discovery and Medius off. [public-compose.md](public-compose.md) says what each setting is for and what the file
+does not do.
+
 ## Upgrades and restarts
 
 Rooms and scores live in memory, so every restart disconnects everyone and empties the boards. Pick a quiet time, stop the
