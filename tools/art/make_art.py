@@ -11,7 +11,10 @@ for the apps and the site, the images use dark), the transcripts in docs/art/tra
 tools/art/capture.sh; this script only draws them and never adds output), and JetBrains Mono (SIL OFL 1.1), fetched
 from the tagged release of the official repository and pinned by SHA-256. The fonts are not committed, only the images.
 
-Outputs: docs/img/banner.png (1280x320: the name, a one-line description and the palette; an opaque panel with
+The banner's status strip shows, for each component of tools/badges.py, the status word that module derives from
+docs/features.tsv (weakest row wins), so the image cannot say more than the list; both are inputs below.
+
+Outputs: docs/img/banner.png (1280x320: the name, a one-line description, a status strip and the palette; an opaque panel with
 rounded, transparent corners, so it reads on light and dark pages), docs/img/social.png and one docs/img/term-*.png per
 transcript. social.png (1280x640, larger type, fewer words, everything inside SOCIAL_SAFE because sites crop the edges)
 is for the repository's social preview. It is uploaded by hand in the repository settings (Settings, General, Social
@@ -35,10 +38,13 @@ import urllib.request
 import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "tools"))
+import badges  # noqa: E402  (the status words and colours of the README badges; the banner's strip reads them)
 PALETTE = "docs/art/palette.json"
 TRANSCRIPTS = "docs/art/transcripts"
 OUT = "docs/img"
 MANIFEST = "tools/art/art.json"
+STRIP_INPUTS = (badges.DATA, "tools/badges.py")   # the banner's status strip is drawn from these, so --check pins them
 # zlib versions --check accepts. The committed PNGs were made with 1.3; ubuntu-latest now maps to images whose system
 # zlib is 1.3 or 1.3.1. 1.3.1 is listed provisionally: no run on it has shown the images come out byte for byte the same
 # yet. The first CI run on it does (--check compares every byte); if that run fails on a PNG difference, 1.3.1 comes out
@@ -209,8 +215,24 @@ def png_bytes(img):
     return buf.getvalue()
 
 
-def banner(fonts, pal):
-    """The README banner: the name with a cursor, the description, the traits, the repository, and a palette strip."""
+def hex_rgb(h):
+    return tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
+
+
+def strip_cells(root=ROOT):
+    """[(label, status word, status key)] for the banner's status strip: tools/badges.py's components, each with the
+    weakest status of its rows in docs/features.tsv. The word is the badge's word, never a stronger one."""
+    statuses = badges.read_statuses(pathlib.Path(root))
+    out = []
+    for _name, label, ids in badges.COMPONENTS:
+        key = badges.weakest(ids, statuses)
+        out.append((label, badges.STATUS_STYLE[key][0], key))
+    return out
+
+
+def banner(fonts, pal, cells):
+    """The README banner: the name with a cursor, the description, the traits, the repository, a status strip (one
+    two-band cell per component: its label, then its status word in the badge colour) and a palette strip."""
     from PIL import Image, ImageDraw
     w, h = BANNER
     W, H = w * SS, h * SS
@@ -219,8 +241,8 @@ def banner(fonts, pal):
     m = 64 * SS
     # the name: "re-" muted, "psn" bright, then a block cursor in the accent green
     name = "".join(NAME)
-    f = fit(fonts, "bold", name + "_", W - 2 * m, 74 * SS)
-    x, y = m, 52 * SS
+    f = fit(fonts, "bold", name + "_", W - 2 * m, 56 * SS)
+    x, y = m, 44 * SS
     top = cap_top(f)
     ink.text((x, y - top), NAME[0], f, pal["grey2"])
     x += f.getlength(NAME[0])
@@ -228,11 +250,11 @@ def banner(fonts, pal):
     x += f.getlength(NAME[1]) + 10 * SS
     capb = f.getbbox("H")
     ink.rect((x, y, x + f.getlength("_") * 0.8, y + capb[3] - capb[1]), pal["green"])
-    y += capb[3] - capb[1] + 38 * SS
+    y += capb[3] - capb[1] + 28 * SS
     # the description
     ft = fit(fonts, "regular", TAGLINE, W - 2 * m, 22 * SS)
     ink.text((m, y - cap_top(ft)), TAGLINE, ft, pal["fg0"])
-    y += 22 * SS + 30 * SS
+    y += 22 * SS + 24 * SS
     # the traits, joined by accent dots
     fs = fonts.get("regular", 18 * SS)
     x = m
@@ -242,9 +264,24 @@ def banner(fonts, pal):
             x += fs.getlength("  ·  ")
         ink.text((x, y - cap_top(fs)), t, fs, pal["grey2"])
         x += fs.getlength(t)
+    # the status strip: label band over status band, one cell per component
+    y += 30 * SS
+    n, gap = len(cells), 8 * SS
+    cw = (W - 2 * m - (n - 1) * gap) // n
+    bh = 25 * SS
+    fl, fv = fonts.get("regular", 14 * SS), fonts.get("bold", 15 * SS)
+    for i, (label, word, key) in enumerate(cells):
+        x0 = m + i * (cw + gap)
+        ink.rect((x0, y, x0 + cw, y + bh), pal["bg3"], radius=4 * SS)
+        ink.rect((x0, y + bh, x0 + cw, y + 2 * bh), hex_rgb(badges.STATUS_STYLE[key][1]), radius=4 * SS)
+        ink.rect((x0, y + bh - 4 * SS, x0 + cw, y + bh + 1), pal["bg3"])        # square the inner edge of the top band
+        ink.rect((x0, y + bh, x0 + cw, y + bh + 4 * SS), hex_rgb(badges.STATUS_STYLE[key][1]))
+        for text, font, fg, y0 in ((label, fl, pal["fg1"], y), (word, fv, hex_rgb(badges.STATUS_STYLE[key][2]), y + bh)):
+            cb = font.getbbox("H")
+            ink.text((x0 + (cw - font.getlength(text)) / 2, y0 + (bh - (cb[3] - cb[1])) / 2 - cb[1]), text, font, fg)
     # the repository, bottom right, and the palette strip, bottom left
     fr = fonts.get("regular", 16 * SS)
-    by = H - 60 * SS
+    by = H - MARGIN * SS - 14 * SS
     capr = fr.getbbox("H")
     ink.text((W - m - fr.getlength(REPO), by + 4 * SS - (capr[3] - capr[1]) // 2 - capr[1]), REPO, fr, pal["grey1"])
     accents = ("red", "orange", "yellow", "green", "aqua", "blue", "purple")
@@ -375,7 +412,7 @@ def render(fonts, root=ROOT):
     """-> ({image name: PNG bytes}, problems). Nothing is written."""
     pal = load_palette(root)
     files, probs = {}, []
-    img, box = banner(fonts, pal)
+    img, box = banner(fonts, pal, strip_cells(root))
     files["banner.png"] = png_bytes(img)
     probs += margin_problems("banner.png", img.size, box)
     img, box = social(fonts, pal)
@@ -404,7 +441,7 @@ def zlib_version():
 
 def manifest(files, root=ROOT):
     from PIL import Image
-    inputs = [PALETTE] + [f"{TRANSCRIPTS}/{n}" for n in TERMS]
+    inputs = [PALETTE, *STRIP_INPUTS] + [f"{TRANSCRIPTS}/{n}" for n in TERMS]
     outs = {}
     for name, data in sorted(files.items()):
         with Image.open(io.BytesIO(data)) as im:

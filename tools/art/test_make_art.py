@@ -99,6 +99,85 @@ class RenderTest(unittest.TestCase):
         self.assertTrue(make_art.margin_problems("x.png", (200, 100), (40, 40, 161, 60)))
 
 
+@unittest.skipUnless(HAVE_PIL, "Pillow is not installed")
+class StripTest(unittest.TestCase):
+    """The banner's status strip says what tools/badges.py says for docs/features.tsv, and no more."""
+
+    def copy_root(self, d):
+        d = pathlib.Path(d)
+        for rel in [make_art.PALETTE, *make_art.STRIP_INPUTS] + [f"{make_art.TRANSCRIPTS}/{n}" for n in make_art.TERMS]:
+            (d / rel).parent.mkdir(parents=True, exist_ok=True)
+            (d / rel).write_bytes((make_art.ROOT / rel).read_bytes())
+        return d
+
+    def test_words_equal_the_badges(self):
+        cells = make_art.strip_cells()
+        self.assertEqual([c[0] for c in cells], [label for _n, label, _i in make_art.badges.COMPONENTS])
+        st = make_art.badges.read_statuses(make_art.ROOT)
+        for (label, word, key), (_n, _l, ids) in zip(cells, make_art.badges.COMPONENTS):
+            self.assertEqual(key, make_art.badges.weakest(ids, st))
+            self.assertEqual(word, make_art.badges.STATUS_STYLE[key][0])
+        self.assertEqual(len(cells), 7)
+
+    def test_strip_text_is_drawn(self):
+        # every label and word of the strip is drawn, by the banner's own call
+        from PIL import ImageDraw
+        drawn = []
+        orig = make_art.Ink.text
+
+        def spy(self, xy, s, font, fill):
+            drawn.append(s)
+            return orig(self, xy, s, font, fill)
+        make_art.Ink.text = spy
+        try:
+            cells = make_art.strip_cells()
+            make_art.banner(fonts(), make_art.load_palette(make_art.ROOT), cells)
+        finally:
+            make_art.Ink.text = orig
+        for label, word, _k in cells:
+            self.assertIn(label, drawn)
+            self.assertIn(word, drawn)
+
+    def test_changed_status_changes_the_render(self):
+        import tempfile
+        f = fonts()
+        base, _ = make_art.render(f)
+        with tempfile.TemporaryDirectory() as t:
+            d = self.copy_root(t)
+            tsv = d / make_art.badges.DATA
+            lines = tsv.read_text(encoding="utf-8").split("\n")
+            ids = make_art.badges.COMPONENTS[1][2]          # Relay: net-relay
+            out = []
+            for l in lines:
+                c = l.split("\t")
+                if len(c) > 4 and c[0] == ids[0]:
+                    c[4] = "planned" if c[4] != "planned" else "available"
+                    l = "\t".join(c)
+                out.append(l)
+            tsv.write_text("\n".join(out), encoding="utf-8")
+            self.assertNotEqual(make_art.strip_cells(d), make_art.strip_cells())
+            changed, _ = make_art.render(f, d)
+        self.assertNotEqual(changed["banner.png"], base["banner.png"])
+        self.assertEqual(changed["social.png"], base["social.png"])
+
+    def test_every_status_fits_inside_its_cell_and_the_margins(self):
+        from PIL import Image, ImageDraw
+        f = fonts()
+        pal = make_art.load_palette(make_art.ROOT)
+        for key in make_art.badges.WEAK_FIRST:
+            word = make_art.badges.STATUS_STYLE[key][0]
+            cells = [(label, word, key) for _n, label, _i in make_art.badges.COMPONENTS]
+            _img, box = make_art.banner(f, pal, cells)
+            self.assertEqual(make_art.margin_problems("banner.png", make_art.BANNER, box), [] if not f.stand_in else
+                             make_art.margin_problems("banner.png", make_art.BANNER, box), key)
+            if f.stand_in:
+                continue
+            cw = (make_art.BANNER[0] * make_art.SS - 2 * 64 * make_art.SS - 6 * 8 * make_art.SS) // 7
+            for font in (f.get("regular", 14 * make_art.SS), f.get("bold", 15 * make_art.SS)):
+                for text in [word] + [c[0] for c in cells]:
+                    self.assertLessEqual(font.getlength(text) + 8 * make_art.SS, cw, text)
+
+
 @unittest.skipUnless(HAVE_PIL, "needs Pillow")
 class VersionCheckTest(unittest.TestCase):
     """--check accepts the listed zlib versions and refuses others before it renders anything."""
