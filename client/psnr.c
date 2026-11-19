@@ -74,6 +74,7 @@ struct psnr_client {
     int      dead;
     uint32_t user_id, token;              /* from HELLO_ACK; UDP probes carry them */
     int      relay;                       /* HELLO_ACK: the server relays */
+    int      pass_hint;                   /* HELLO_ACK flag bit 3 */
     uint8_t  server_ip[4], local_ip[4];   /* the TCP connection's two ends */
     uint16_t server_port;
     uint16_t rtt[RTT_SAMPLES];            /* round trips of recent psnr_call replies, in ms */
@@ -407,6 +408,7 @@ static psnr_client* connect_impl(const char* host, uint16_t port,
     if (ok) c->user_id = psnr_get32(ack.data);
     if (ok && ack.len >= 12) c->token = psnr_get32(ack.data + 8);
     if (ok && ack.len >= 13) c->relay = ack.data[12] & 1;
+    if (ok && ack.len >= 13) c->pass_hint = (ack.data[12] >> 3) & 1;
     if (ok && out_user_id) *out_user_id = psnr_get32(ack.data);
     if (ok && out_public_ip) memcpy(out_public_ip, ack.data + 4, 4);
     psnr_msg_free(&ack);
@@ -463,6 +465,43 @@ int psnr_probe_reply(const void* buf, size_t len, uint8_t ip[4], uint16_t* port)
     memcpy(ip, p + 5, 4);
     *port = psnr_get16(p + 9);
     return 1;
+}
+
+int psnr_pass_hint(const psnr_client* c)
+{
+    return c->pass_hint;
+}
+
+int psnr_auth(psnr_client* c, const void* pass, size_t len, int timeout_ms)
+{
+    psnr_msg m;
+    uint8_t* body;
+    volatile uint8_t* w;
+    size_t i;
+    int r, rc;
+    if (!c || !pass || len == 0 || len > PSNR_PASS_MAX || timeout_ms <= 0) return PSNR_AUTH_E_ARG;
+    if (c->dead) return PSNR_AUTH_E_IO;
+    body = (uint8_t*)malloc(3 + len);
+    if (!body) return PSNR_AUTH_E_NOMEM;
+    body[0] = 1;                                   /* version 1: a bearer pass */
+    psnr_put16(body + 1, (uint16_t)len);
+    memcpy(body + 3, pass, len);
+    r = psnr_call(c, PSNR_AUTH, body, (uint32_t)(3 + len), &m, timeout_ms);
+    w = body;                                      /* wipe our copy; volatile so it is not optimised away */
+    for (i = 0; i < 3 + len; i++) w[i] = 0;
+    free(body);
+    if (r == 0) return PSNR_AUTH_E_TIMEOUT;
+    if (r < 0) return PSNR_AUTH_E_IO;
+    if (m.type == PSNR_OK) {
+        if (m.len == 4) c->token = psnr_get32(m.data);   /* connect mode only; else keep the HELLO token */
+        rc = PSNR_AUTH_OK;
+    } else if (m.type == PSNR_ERROR && m.len >= 4 && psnr_get32(m.data) != 0 && psnr_get32(m.data) <= 0x7FFFFFFFu) {
+        rc = (int)psnr_get32(m.data);
+    } else {
+        rc = PSNR_AUTH_E_REPLY;
+    }
+    psnr_msg_free(&m);
+    return rc;
 }
 
 int psnr_relay_available(const psnr_client* c)

@@ -2,7 +2,7 @@
 
 Game clients talk to the server over one TCP connection (default port 36100).
 The server is in `server/`, the C client is in `client/psnr.h`, and both are
-tested against each other (`server/client_test.go`).
+tested against each other (`server/client_test.go`, `server/client_auth_test.go`).
 
 The desktop's [profile/trophy/social framework](app-framework-api.md) has its own versioned local broker and HTTPS
 contracts. Its identities do not authenticate sessions on the game protocol described here.
@@ -216,8 +216,18 @@ until a pass with the `connect` scope is accepted. Off by default; a server with
   closed at the deadline. HELLO_ACK flag bit 3 and the token are hints for clients, not authority; a forged server can say
   anything.
 - **Not covered.** A relay stream that is already open keeps running after its pass expires or its account is revoked; only new
-  streams and datagrams are checked. Passes bound to a client key (version 2), the login service and a client that sends AUTH
-  are not built.
+  streams and datagrams are checked. Passes bound to a client key (version 2) and the login service are not built.
+
+### Sending a pass from a client
+
+The C client has `psnr_auth(c, pass, len, timeout_ms)` and the desktop app's Go client has `Conn.Auth(ctx, pass)`. Both send AUTH with
+version 1 and the pass exactly as given, 1 to 2048 bytes, and refuse an empty or longer pass before anything is sent (the C client also refuses a timeout of 0 or less). Neither
+fetches, stores, parses or checks a pass, and neither prints or logs it; the title or host program holds the pass and decides
+whether to send it and to which server. The result is OK, or the ERROR code: 10 (pass refused or needed), 8 (name taken, in connect
+mode) or 1 (a server with no pass settings, or from before AUTH: not proof of anything, see above). Under `-require-pass connect` the
+OK carries the UDP token and the client uses it from then on; without those four bytes it keeps the HELLO token. A second call is the
+refresh, and a client makes it before the current pass's `exp`. HELLO_ACK flag bit 3 (`psnr_pass_hint`, `HelloAck.PassRequired`) and
+GET_CAPS bit 7 (`PSNR_CAP_PASS_RELAY`) tell a client whether to expect a pass; they are hints only. The Go client has no GET_CAPS call yet.
 
 **Limits, plainly.** A pass is a bearer token sent over the game's plain TCP: anyone who can read the connection can use it until
 it expires, so it lives at most an hour. It proves an account signed in; it does not prove anything about the player and holds no

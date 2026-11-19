@@ -35,6 +35,7 @@ func (h Hello) encode(e *encoder) {
 const (
 	FlagRelay     = 1 << 0 // the server relays traffic (-relay)
 	FlagRoomCodes = 1 << 1 // the server has invite-only rooms
+	FlagPass      = 1 << 3 // the server wants AUTH before it treats this connection as a player (a hint only)
 )
 
 // HelloAck is the server's answer to HELLO.
@@ -51,8 +52,20 @@ func (a HelloAck) Relay() bool { return a.Flags&FlagRelay != 0 }
 // RoomCodes reports whether the server has invite-only rooms.
 func (a HelloAck) RoomCodes() bool { return a.Flags&FlagRoomCodes != 0 }
 
+// PassRequired reports HELLO_ACK flag bit 3: the server wants a pass to connect (-require-pass connect). It is a hint
+// from the server, not proof: a forged or older server can leave it clear or set it. See docs/api.md, Sign-in passes.
+func (a HelloAck) PassRequired() bool { return a.Flags&FlagPass != 0 }
+
 func decodeHelloAck(d *decoder) HelloAck {
 	return HelloAck{UserID: d.u32(), PublicIP: netip.AddrFrom4(d.ip()), Token: d.u32(), Flags: d.u8()}
+}
+
+// decodeAuthReply reads the token only if exactly 4 bytes are there (a reply to AUTH outside connect mode has none).
+func decodeAuthReply(d *decoder) AuthReply {
+	if len(d.b) == 4 {
+		return AuthReply{Token: d.u32(), HasToken: true}
+	}
+	return AuthReply{}
 }
 
 // Member is one room member entry. Addr is where this client should send the member's P2P traffic.
