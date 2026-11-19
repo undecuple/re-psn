@@ -181,9 +181,9 @@ server will not ignore a key binding):
 
 **What it opens.** With `-require-pass relay`, a stream or a relayed datagram between two players needs a pass with the `relay`
 scope at both ends that has not run out (see below); otherwise STREAM_CONNECT and STREAM_ACCEPT get ERROR 10 and the datagram is dropped and
-counted as `relay_no_pass`. The pass lapses 60 s after `exp` (the skew AUTH allows) without the connection closing, so a pass is good for up to 61 minutes. The pass is checked when a stream or datagram starts: a stream already open keeps running until it ends or idles out (`-relay-idle`), even if its account is revoked or its pass expires meanwhile. Rooms, scores and direct peer traffic need no
+counted as `relay_no_pass`. The pass lapses 60 s after `exp` (the skew AUTH allows) without the connection closing, so a pass is good for up to 61 minutes. The pass is checked when a stream or datagram starts, and a stream that is open ends when the pass of either player lapses (60 s after `exp`, unless that player's own connection sends a refresh AUTH; a closed connection cannot extend it), when the key that signed it leaves the key file, or when its account is revoked; it may still end earlier on its own or by idling out (`-relay-idle`). Rooms, scores and direct peer traffic need no
 pass. `-pass-max-conns-per-sub` limits how many connections one account can hold. `-pass-revoked-file` lists accounts to refuse; on
-SIGHUP the server reads it again and closes their live connections. A key taken out of the key file ends the passes it signed at the same SIGHUP: their holders lose the relay until they sign in again.
+SIGHUP the server reads it again and closes their live connections and open relay streams. A key taken out of the key file ends the passes it signed at the same SIGHUP, and the relay streams they cover: their holders lose the relay until they sign in again.
 
 **What a client can rely on.** Only GET_CAPS bit 5 says whether this player can use the relay. HELLO_ACK flag bit 0 and the relay hint in ROUTE still describe the server, not the pass, so a player without a pass who follows them gets ERROR 10. A refused connection count (`-pass-max-conns-per-sub`) also answers ERROR 10; an old connection that has gone quiet counts until the server notices it is gone.
 
@@ -215,8 +215,10 @@ until a pass with the `connect` scope is accepted. Off by default; a server with
 - **Old clients.** A client that does not send AUTH is refused on purpose: its first request after HELLO gets ERROR 10 and it is
   closed at the deadline. HELLO_ACK flag bit 3 and the token are hints for clients, not authority; a forged server can say
   anything.
-- **Not covered.** A relay stream that is already open keeps running after its pass expires or its account is revoked; only new
-  streams and datagrams are checked. Passes bound to a client key (version 2) and the login service are not built.
+- **Open relay streams.** A relay stream ends with the passes of its two players. With `-require-pass relay` or `connect` it ends 60 s
+  after the earlier `exp` unless that player's own connection sends a refresh AUTH, and at SIGHUP when the key that signed either pass was removed;
+  in every mode it ends at SIGHUP when either account is revoked.
+- **Not covered.** Passes bound to a client key (version 2) and the login service are not built.
 
 ### Sending a pass from a client
 

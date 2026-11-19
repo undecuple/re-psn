@@ -46,6 +46,147 @@ type stream struct {
 	accept chan net.Conn // the target's leg, once it accepts
 }
 
+// streamEnd is one player of a relay stream as its pass stood: the account, key and expiry are kept after the player's
+// connection is gone, so the stream still ends with its pass.
+type streamEnd struct {
+	c   *client
+	sub string
+	kid string
+	exp int64
+}
+
+// liveStream is a relay stream from its offer to the end of its splice, kept so a reload, or the end of a pass, can close it.
+// All fields are under s.mu.
+type liveStream struct {
+	id    uint32
+	st    *stream
+	ends  [2]streamEnd
+	a, b  net.Conn // the connecting leg, and the accepting leg once it has arrived
+	timer *time.Timer
+	cut   bool // closed by cutStream: a leg that arrives later is closed too
+	done  bool // the splice ended
+}
+
+// streamCutReason says why ls must end under p at now, or "" if it may go on; next is when the first pass at an end lapses
+// (zero if none can). Where a pass is needed (-require-pass relay or connect) a stream ends with its pass as the control
+// connection does: 60 s after exp, when its key leaves the key file, or when its account is revoked; with no pass needed
+// only the revocation counts. The caller holds s.mu.
+func (s *Server) streamCutReason(ls *liveStream, p *passConfig, now time.Time) (reason string, next time.Time) {
+	if p == nil {
+		return "", time.Time{}
+	}
+	gated := s.requireRelayPass || s.requireConnectPass
+	for i := range ls.ends {
+		e := &ls.ends[i]
+		if e.sub == "" {
+			continue
+		}
+		if e.c != nil && e.c.sub == e.sub { // a refresh moved the expiry; once the connection is gone nothing can
+			e.kid, e.exp = e.c.passKid, e.c.passExp
+		}
+		if p.revoked[e.sub] {
+			return "pass revoked", time.Time{}
+		}
+		if !gated {
+			continue
+		}
+		if p.keys[e.kid] == nil {
+			return "pass key removed", time.Time{}
+		}
+		end := time.Unix(e.exp+passSkew, 0)
+		if now.Unix() >= e.exp+passSkew {
+			return "pass expired", time.Time{}
+		}
+		if next.IsZero() || end.Before(next) {
+			next = end
+		}
+	}
+	return "", next
+}
+
+// armStream makes ls's timer fire at next, or leaves it unarmed when next is zero. The caller holds s.mu.
+func (s *Server) armStream(ls *liveStream, next time.Time) {
+	if next.IsZero() || ls.done || ls.cut {
+		return
+	}
+	if ls.timer == nil {
+		ls.timer = time.AfterFunc(time.Until(next), func() { s.streamTimer(ls) })
+	} else {
+		ls.timer.Reset(time.Until(next))
+	}
+}
+
+// rearmStreams moves the timers of c's streams after its AUTH changed its pass: a refresh can end sooner as well as later.
+// The caller holds s.mu.
+func (s *Server) rearmStreams(c *client) {
+	for ls := range s.live {
+		if ls.ends[0].c == c || ls.ends[1].c == c {
+			_, next := s.streamCutReason(ls, s.pass.Load(), time.Now())
+			s.armStream(ls, next)
+		}
+	}
+}
+
+// cutStream marks ls cut and returns the legs to close. The caller holds s.mu, closes them after releasing it and logs.
+func (s *Server) cutStream(ls *liveStream) []net.Conn {
+	if ls.cut {
+		return nil
+	}
+	ls.cut = true
+	if _, waiting := s.streams[ls.id]; waiting { // no target can accept it any more, and the wait for one is over
+		delete(s.streams, ls.id)
+		ls.st.accept <- nil // nobody else has sent on it: the leg that takes a stream out of the table is the one that sends
+	}
+	if ls.timer != nil {
+		ls.timer.Stop()
+	}
+	conns := []net.Conn{ls.a}
+	if ls.b != nil {
+		conns = append(conns, ls.b)
+	}
+	return conns
+}
+
+// streamTimer runs when the first pass of a stream may have lapsed: it ends the stream, or waits for the new end if a refresh
+// moved it.
+func (s *Server) streamTimer(ls *liveStream) {
+	s.mu.Lock()
+	if ls.done || ls.cut {
+		s.mu.Unlock()
+		return
+	}
+	reason, next := s.streamCutReason(ls, s.pass.Load(), time.Now())
+	var conns []net.Conn
+	if reason != "" {
+		conns = s.cutStream(ls)
+	} else {
+		s.armStream(ls, next)
+	}
+	s.mu.Unlock()
+	s.closeStream(ls, conns, reason)
+}
+
+func (s *Server) closeStream(ls *liveStream, conns []net.Conn, reason string) {
+	if len(conns) == 0 {
+		return
+	}
+	s.log.Warn("relay stream closed", "stream", ls.id, "reason", reason)
+	for _, c := range conns {
+		c.Close()
+	}
+}
+
+// endStream forgets ls when its splice is over or it never started: the timer is stopped and nothing keeps the stream.
+func (s *Server) endStream(ls *liveStream) {
+	s.mu.Lock()
+	ls.done = true
+	if ls.timer != nil {
+		ls.timer.Stop()
+	}
+	delete(s.live, ls)
+	s.mu.Unlock()
+}
+
 // relayStream is how a player needing the relay for streams is told.
 // The target can't take a direct connection when it's behind a router (its
 // probe came from a public address that isn't its own) and the viewer isn't
@@ -122,6 +263,9 @@ func (s *Server) streamLeg(conn net.Conn, t byte, p []byte) (handedOff bool) {
 		if !ok {
 			return fail(errNotFound)
 		}
+		if s.acceptHook != nil {
+			s.acceptHook()
+		}
 		if ready() != nil {
 			st.accept <- nil
 			return false
@@ -137,9 +281,25 @@ func (s *Server) streamLeg(conn net.Conn, t byte, p []byte) (handedOff bool) {
 	noPass := ok && s.requireRelayPass && !(from.passAllows(scopeRelay, time.Now()) && to.passAllows(scopeRelay, time.Now()))
 	off := ok && (s.noPeer[from.commID] || s.noPeer[to.commID])
 	var st *stream
+	var ls *liveStream
 	if ok && !off && !noPass {
-		s.nextStream++
-		st = &stream{id: s.nextStream, from: from, to: to, accept: make(chan net.Conn, 1)}
+		// registered here, under the lock that offers it: a reload either sees it or has already changed what this checks
+		ls = &liveStream{ends: [2]streamEnd{{c: from, sub: from.sub, kid: from.passKid, exp: from.passExp}, {c: to, sub: to.sub, kid: to.passKid, exp: to.passExp}}, a: conn}
+		var next time.Time
+		if reason, n := s.streamCutReason(ls, s.pass.Load(), time.Now()); reason != "" {
+			noPass, ls = true, nil
+		} else {
+			next = n
+		}
+		if ls != nil {
+			s.nextStream++
+			st = &stream{id: s.nextStream, from: from, to: to, accept: make(chan net.Conn, 1)}
+			ls.id, ls.st = st.id, st
+			s.live[ls] = struct{}{}
+			s.armStream(ls, next)
+		}
+	}
+	if st != nil {
 		s.streams[st.id] = st
 		w := &writer{}
 		w.u32(st.id)
@@ -159,7 +319,21 @@ func (s *Server) streamLeg(conn net.Conn, t byte, p []byte) (handedOff bool) {
 	}
 	s.log.Debug("relay stream", "stream", st.id, "from", from.onlineID, "to", to.onlineID, "vport", vport)
 
+	defer s.endStream(ls)
 	other := s.awaitAccept(st, streamAcceptTimeout)
+	s.mu.Lock()
+	cut := ls.cut
+	if other != nil {
+		ls.b = other
+	}
+	s.mu.Unlock()
+	if cut { // closed while waiting: the legs are closed by whoever cut it, and by us for one that came later
+		if other != nil {
+			other.Close()
+		}
+		conn.Close()
+		return false
+	}
 	if other == nil {
 		select {
 		case <-s.stopped:
