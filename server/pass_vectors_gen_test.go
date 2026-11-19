@@ -389,6 +389,8 @@ func TestPassVectorsFileIsCurrent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// A Windows checkout may turn the file's line feeds into CR LF; the vectors are the same.
+	got = bytes.ReplaceAll(got, []byte("\r\n"), []byte("\n"))
 	if !bytes.Equal(got, want) {
 		t.Fatalf("%s is not what the generator makes; run PASS_VECTORS_UPDATE=1 go test -run TestPassVectorsFileIsCurrent ./server and review the diff", vecFile)
 	}
