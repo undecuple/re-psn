@@ -19,6 +19,18 @@
 > only games you own. re-psn is not affiliated with or endorsed by Sony Interactive Entertainment.
 
 <p align="center">
+  <a href="docs/features.md#rooms-and-matchmaking"><img src="docs/img/badges/server.svg" alt="Server: available" height="20"></a>
+  <a href="docs/features.md#network"><img src="docs/img/badges/relay.svg" alt="Relay: available" height="20"></a>
+  <a href="docs/features.md#network"><img src="docs/img/badges/sign-in-passes.svg" alt="Sign-in passes: available" height="20"></a>
+  <a href="docs/features.md#client"><img src="docs/img/badges/c-client.svg" alt="C client: available" height="20"></a>
+  <a href="docs/features.md#client"><img src="docs/img/badges/desktop-app.svg" alt="Desktop app: in progress" height="20"></a>
+  <a href="docs/features.md#network"><img src="docs/img/badges/lan-discovery.svg" alt="LAN discovery: available" height="20"></a>
+  <a href="docs/features.md#status-page"><img src="docs/img/badges/admin-api.svg" alt="Admin API: partial" height="20"></a>
+</p>
+
+<p align="center"><em>Each badge shows the status word from the features list; available means merged, with a test or a recorded run. No shipped game is claimed to work. Sign-in passes have no login service yet, so nothing can mint a pass outside tests.</em></p>
+
+<p align="center">
   <img src="docs/project-facts.svg" alt="Project Facts: what re-psn does, its limits and how to use it" width="624">
 </p>
 

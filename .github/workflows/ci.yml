@@ -81,6 +81,7 @@ jobs:
         run: |
           python3 tools/repo_check.py
           python3 tools/features.py --check
+          python3 tools/badges.py --check
           python3 tools/site.py --check
           python3 -m unittest -v
       # The website's script: its command logic is tested with Node's own test runner (Node is on the runner image).
