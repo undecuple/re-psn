@@ -1390,7 +1390,8 @@
      "**Server:** optional sign-in passes for the relay.",
      "**Server:** optional `-require-pass connect`, with `-pass-max-unauth-conns` (default 64) and `-pass-max-unauth-per-addr` (default 4).",
      "**Docs:** `docs/public-server.md`: recommended settings for a server that the internet can reach.",
-     "**Clients:** AUTH from the C client and the desktop app's Go client."
+     "**Clients:** AUTH from the C client and the desktop app's Go client.",
+     "**Docs and tests:** the sign-in pass format is written down exactly in `docs/api.md` (text, base64url without padding, the 2048-byte limit, Ed25519 over the text as sent, integer numbers, the eight fields and the ninth ..."
     ],
     "Changed": [
      "**Server:** a client that is not a player yet can no longer fill the log with warn lines.",
@@ -1408,7 +1409,7 @@
     ]
    },
    "counts": {
-    "Added": 7,
+    "Added": 8,
     "Changed": 12
    }
   },

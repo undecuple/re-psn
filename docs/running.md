@@ -15,6 +15,7 @@ behind a reverse proxy, logging, ports, firewall rules, and what state it keeps.
 - [Settings for a server the internet can reach](public-server.md)
 - [Environment variables](#environment-variables)
 - [Logging](#logging)
+- [Sign-in passes: keys, clocks and logs](#sign-in-passes-keys-clocks-and-logs)
 - [Slow clients and event delivery](#slow-clients-and-event-delivery)
 - [Ports](#ports)
 - [Firewall](#firewall)
@@ -252,6 +253,60 @@ Rotate the file with logrotate or your service manager (`copytruncate`, or resta
 
 For optional host bans after repeated HTTP status-token refusals, see [fail2ban.md](fail2ban.md). Its disabled example
 uses JSON journal logs and a separate firewall action; game/UDP bans and live host enforcement are not covered.
+
+## Sign-in passes: keys, clocks and logs
+
+This is for a host that turns on `-pass-key-file` and runs a login service of its own; what a pass is, is in
+[Sign-in passes](api.md#sign-in-passes). Your server only reads public keys from a file. Your login service keeps the private key. Nothing
+copies a key from one to the other: you do it, on purpose, and a mistake shows up in the log, not in a player's screen.
+
+**Rotating the signing key.** A pass lives at most 3600 s, and the server accepts it for 60 s more. Give the new key a new `kid`
+(a `kid` is never reused for another key), and take the old one out only when no pass it signed can still be in use:
+
+1. Add a line `<new kid> <new public key>` to the key file of your server, keeping the old line. The file holds at most 16 keys.
+2. Send your server SIGHUP (`kill -HUP <pid>`, or `docker kill -s HUP <container>`) and wait for `pass settings reloaded` in its log. See below if it says anything else.
+3. Tell your login service to sign with the new key and `kid`. From now on it makes no pass with the old one.
+4. Wait one hour and a minute (3660 s), counted from step 3. The last pass signed with the old key has then run out, even with the 60 s of skew.
+5. Remove the old line, send SIGHUP and check the log again. Now only the new key is trusted.
+
+Do not skip the wait. A key taken out of the file ends the passes it signed at once, and with `-require-pass connect` it closes those
+players' connections and with `relay` the relay streams they cover; the players need a new pass. Taking the key out is also the way to react to a key that leaked, and
+the same effect is what you want then.
+
+**Clocks.** A pass is checked against the clock of your server, with 60 s of tolerance. Run NTP (chrony, systemd-timesyncd or the
+time service of your system) on the host of your server and on the host of your login service, and look at them now and then (`timedatectl`
+should say `System clock synchronized: yes`). A server clock more than 60 s behind
+refuses a fresh pass as `not yet valid`. A clock ahead of the login service's cuts the life of every pass by that much: a pass of 3600 s checked by a server clock 120 s ahead
+stops being accepted 3540 s after it was made instead of 3660. Only a clock ahead by the pass's whole life plus 60 s (3660 s for a pass of the longest life) refuses a fresh pass, as `expired`.
+
+**Why a pass was refused.** The player gets only ERROR 10, with no reason. The reason is in the server log, at warn level, so it shows at the default
+`-log-level info`:
+
+```
+level=WARN msg="pass refused" reason="not yet valid" client=17 skipped_since_last_line=0
+```
+
+These lines are limited: each reason is written at most once a second, and `skipped_since_last_line` counts the refusals of that reason left out since its
+previous line (see [Logging](#logging)). A name conflict is the exception to "pass refused": under `-require-pass connect` the connection also needs a free
+online ID, and when another player holds it AUTH is answered with ERROR 8 and the log says `hello refused` with `reason="name taken"`, not `pass refused`. The pass itself had passed its checks.
+
+The reasons are: `too long` and `format` (the text is not a pass), `payload` (the JSON is wrong), `key or version` (no such `kid`, or `v`
+is not `v1`), `signature`, `bound pass on a bearer-only server`, `issuer`, `audience`, `subject`, `lifetime`, `not yet valid`,
+`expired`, `scope`, `revoked`, `revoked or key removed` (a reload happened while the pass was checked), `other subject` (a refresh
+for a different account), `too many connections for one account` and `request` (the AUTH request itself is malformed). A line that says `connection closed`
+with `too many refused passes` follows the third refusal on one connection. A pass, a key or an account number is never in these lines; an account shows as a short tag that
+changes at each start. Check a refused pass against the matching vector in [`server/testdata/pass_vectors.jsonl`](../server/testdata/pass_vectors.jsonl) when you are unsure what a reason means.
+
+**Reloading.** At start, a key file or revoke file that cannot be read stops the server. At SIGHUP the same files are read again, the signal gives the sender no answer, and the log
+is the only report:
+
+- `pass settings reloaded` (info): both files were read and are now in force.
+- `pass settings reload failed; the previous ones stay in force` (warn), with `err=` naming the file and the line: nothing changed. The old keys and the old revoke list both stay, even if only one file was bad.
+  Typical causes are a file that group or others can read (use mode 0600, or 0400 on a container mount), a repeated `kid`, a key that is not 32 bytes in base64url without padding, more than 16 keys,
+  or an empty file.
+
+So the server never ends up with no keys by accident, but it can end up with old ones without anyone being told: read the log after every SIGHUP, and do not call a rotation finished until
+you have seen `pass settings reloaded`. The flags themselves (`-pass-issuer`, `-pass-audience`, `-require-pass`) are read only at start; changing them needs a restart.
 
 ## Slow clients and event delivery
 

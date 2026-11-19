@@ -191,6 +191,55 @@ SIGHUP the server reads it again and closes their live connections and open rela
 
 **What a client can rely on.** Only GET_CAPS bit 5 says whether this player can use the relay. HELLO_ACK flag bit 0 and the relay hint in ROUTE still describe the server, not the pass, so a player without a pass who follows them gets ERROR 10. A refused connection count (`-pass-max-conns-per-sub`) also answers ERROR 10; an old connection that has gone quiet counts until the server notices it is gone.
 
+### The pass format, exactly
+
+This is the whole format, so that a login service, or any other program, can make or check a pass without reading the server's
+code. [`server/testdata/pass_vectors.jsonl`](../server/testdata/pass_vectors.jsonl) holds worked examples (see below).
+
+- **Text.** A pass is ASCII of at most 2048 bytes in all, counting `v1.` and both dots; a longer one is refused before anything is
+  decoded. It has three parts, each followed by one `.` except the last: the letters `v1`, the payload, the signature. No space,
+  line break or other character is allowed anywhere in it.
+- **base64url, no padding.** The payload and the signature use the alphabet of RFC 4648 section 5 (`A-Z a-z 0-9 - _`) without `=`.
+  The unused bits of the last character must be zero, so every byte string has one spelling. `+`, `/` and `=` are refused.
+- **Signature.** 64 bytes, Ed25519 (RFC 8032), over the ASCII bytes of `v1.` followed by the payload part exactly as it appears in
+  the pass. It is not made over the decoded payload, and nothing is canonicalised.
+- **Payload.** One JSON object (RFC 8259) in UTF-8, with no byte order mark and nothing after it but whitespace. A login service
+  writes it compact. It has the eight names in the table above (`v`, `kid`, `iss`, `aud`, `sub`, `scope`, `iat`, `exp`), all
+  lowercase and each once, in any order. The server also reads a ninth name, `cnf`, which is only ever refused: a pass that has it,
+  with any value, even `null`, is refused. Any other name, a missing field, or a value of another type refuses the pass, and a
+  strict checker also refuses `null` where a string, number or list belongs (the next section says what this server does with it). `iat` and `exp` are JSON
+  integers written in decimal, with no fraction and no exponent: `1800000000.0` and `1.8e9` are refused although their value is
+  whole. `iat` is from 0 to 2^40, `exp` is after `iat` and at most 3600 later, and a number that does not fit 64 bits is refused.
+  `scope` holds one or two strings from `connect` and `relay`, no repeat, in either order. Every string is compared exactly: no case folding, no trimming.
+- **Time.** At the moment of checking, `iat` is at most 60 s ahead of the clock and `exp` is more than 60 s behind it. A pass is
+  therefore good from 60 s before its `iat` to 59 s after its `exp`.
+
+**What the Go server does today.** It reads the payload with Go's `encoding/json`, which is more lenient than the list above in three
+ways, and this server does not tighten them:
+
+- **Key names are matched without regard to case.** `"AUD"`, `"auD"` and `"Sub"` are taken for `aud` and `sub`.
+- **A repeated key is not an error, and the last one wins.** `"aud":"other","aud":"mine"` is read as `mine`, and `exp` given twice
+  is the second. The same holds across spellings that differ only in case: the last of `"aud"` and `"AUD"` wins.
+- **A `null` is read as a missing value, and a missing `iat` is read as 0.** `"sub":null` is an empty subject and `"exp":null` is
+  an `exp` of 0, so each is refused by the check that follows (`subject`, `lifetime`, and so on). `iat` is the one field this lets through: `"iat":null`,
+  or no `iat` at all, is an `iat` of 0, and with an `exp` of 3600 or less the pass is accepted until 60 s after that `exp`.
+  A login service must always write all eight fields with real values, and a strict checker refuses a `null` and a missing `iat`.
+
+Everything else above is enforced as written; a `null` for any other field is refused, as is a missing one. A key that is not one of the eight even when case is ignored refuses the pass. Only
+your own login service signs passes, so a payload like this can exist only if that service wrote it; a login service must never
+write a repeated key or a key with capitals. A program that checks passes without being this server should refuse all of these. Two readers that disagree about a
+repeated key can disagree about a pass, which is why the file marks these payloads for strict checkers.
+
+**Test vectors.** `server/testdata/pass_vectors.jsonl` has one JSON object per line. The first line is `meta`: the key id, the public key,
+the issuer and the audience a verifier is set up with, and a statement that the key is a throwaway made for tests (its seed is the
+SHA-256 of a public sentence, so anyone can make it again, and no server or login service may trust it). Each other line is one
+input, `pass` checked at `now` (Unix seconds), with `accept` (what the Go server does) and, for a refusal, the server's `reason`
+text. Where `strict` is `false`, the Go server accepts a pass that a strict checker must refuse; there are seven such lines. The
+file has valid passes, bad signatures, a wrong issuer or audience, an unknown key id, both ends of the 60 s skew, lifetimes, whole and fractional numbers, `null` and missing fields, unknown fields, `cnf`,
+repeated keys, case variants, padded and standard-alphabet encodings, every `scope` form, and 2048 and 2049 byte passes. `TestPassVectors` runs
+every line against the server's check; `TestPassVectorsFileIsCurrent` checks that the file matches the generator in `server/pass_vectors_gen_test.go`,
+whose comment says how to rewrite it after a change.
+
 ### Connect mode
 
 `-require-pass connect` (comma-separate it with `relay` to require both) makes AUTH the way in. A connection is not a player
