@@ -12,6 +12,7 @@ All notable changes to this project are documented here. The format follows
 - **Docs:** `docs/public-server.md`: recommended settings for a server that the internet can reach. What you take on (no authentication, no flood protection, no TLS, no moderation tool), a table of each relevant setting with a value and a reason, the relay and its unlimited bandwidth, which ports to publish, running as an unprivileged service, what to watch in `/api/stats`, and what to tell players. It says no public instance exists.
 
 ### Changed
+- **Docs:** the README's first screen now follows the website's look: a centred title and one-line description that says it is unofficial fan work, two badge rows in the site's colours (with the Discord invite badge), and a divider image between sections.
 - **Docs:** the README settings table (now 43 flags) and the website's settings list include the two sign-in limit flags for connect mode.
 - **Docs:** the README settings table and the website's settings list now include the six sign-in pass flags (`-pass-key-file`, `-pass-issuer`, `-pass-audience`, `-require-pass`, `-pass-revoked-file`, `-pass-max-conns-per-sub`), and the README says 41 flags, not 35. The sign-in pass change had left both stale.
 - **Docs:** the "Project Facts" label on the README is wider and larger (shown at 624 pixels, not 420), with sharper edges and more text on each line, and the Purpose column no longer crowds the right edge.
