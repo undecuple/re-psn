@@ -4,7 +4,7 @@
  "repository": "https://github.com/undecuple/re-psn",
  "go": "1.22",
  "status_counts": {
-  "available": 44,
+  "available": 45,
   "unverified": 3,
   "partial": 9,
   "in-progress": 6,
@@ -857,11 +857,23 @@
    "id": "net-pass-relay",
    "area": "Network",
    "feature": "Sign-in passes for the relay",
-   "detail": "Optional: `-pass-key-file`, `-pass-issuer`, `-pass-audience` and `-require-pass relay` make the relay carry traffic only for players who hold a short-lived pass (Ed25519, checked offline) signed by a login service the host trusts. AUTH (0x05), ERROR 10, GET_CAPS bit 7, `relay_no_pass`. Off by default. The login service and the clients are separate work; connect gating is not built.",
+   "detail": "Optional: `-pass-key-file`, `-pass-issuer`, `-pass-audience` and `-require-pass relay` make the relay carry traffic only for players who hold a short-lived pass (Ed25519, checked offline) signed by a login service the host trusts. AUTH (0x05), ERROR 10, GET_CAPS bit 7, `relay_no_pass`. Off by default. The login service and the clients are separate work; see the connect row for connect gating.",
    "status": "available",
    "since": "main",
    "evidence": "server/pass.go, TestCheckPassRefusals, TestRelayUDPNeedsPassesAtBothEnds, TestStreamsNeedPassesAtBothEnds, TestReloadClosesRevokedAccountsAndKeepsOldSettingsOnError",
    "note": "No client or login service exists yet, so nothing can mint a pass outside tests; a test-only throwaway key is all that has been run.",
+   "status_label": "available",
+   "status_class": "ok"
+  },
+  {
+   "id": "net-pass-connect",
+   "area": "Network",
+   "feature": "Sign-in passes to connect",
+   "detail": "Optional: `-require-pass connect` makes a connection a player only after AUTH accepts a pass with the `connect` scope. Until then HELLO reserves no name and makes no token; every request but AUTH, HEARTBEAT and GET_CAPS gets ERROR 10; the connection is closed 30 s after accept if it has not signed in, and 60 s after its pass expires unless refreshed. Caps: `-pass-max-unauth-conns`, `-pass-max-unauth-per-addr`. Off by default. An already-open relay stream outlives expiry and revocation; passes bound to a client key, the login service and client AUTH are not built.",
+   "status": "available",
+   "since": "main",
+   "evidence": "server/pass.go, TestConnectGateRefusesEveryRequestBeforeAuth, TestConnectDeadlineNotExtendedByHeartbeat, TestConnectNameClashAtAuth, TestConnectUnauthLimits",
+   "note": "No client or login service exists yet, so nothing can mint a pass outside tests; a test-only throwaway key is all that has been run. Names are still not authenticated.",
    "status_label": "available",
    "status_class": "ok"
   },
@@ -1046,6 +1058,7 @@
    "status-latency",
    "net-relay-force",
    "net-pass-relay",
+   "net-pass-connect",
    "net-no-peer-titles",
    "net-caps",
    "net-peer-keys",
@@ -1271,7 +1284,7 @@
    "flag": "-require-pass",
    "variable": "RE_PSN_REQUIRE_PASS",
    "default": "none",
-   "description": "What needs a pass: relay is the only value so far. The relay then carries traffic only between players who both hold an unexpired pass with the relay scope"
+   "description": "What needs a pass, comma-separated: relay (the relay carries traffic only between players who both hold an unexpired pass with the relay scope) and connect (after HELLO nothing but AUTH, HEARTBEAT and the pass bit of GET_CAPS works until a pass with the connect scope is accepted; a client that never sends AUTH gets ERROR 10 and is closed after 30 s)"
   },
   {
    "flag": "-pass-revoked-file",
@@ -1284,6 +1297,18 @@
    "variable": "RE_PSN_PASS_MAX_CONNS_PER_SUB",
    "default": "2",
    "description": "Connections one signed-in account may hold (0: no limit)"
+  },
+  {
+   "flag": "-pass-max-unauth-conns",
+   "variable": "RE_PSN_PASS_MAX_UNAUTH_CONNS",
+   "default": "64",
+   "description": "With -require-pass connect: connections that have not signed in yet, in total (0: no limit); a further one is closed at once"
+  },
+  {
+   "flag": "-pass-max-unauth-per-addr",
+   "variable": "RE_PSN_PASS_MAX_UNAUTH_PER_ADDR",
+   "default": "4",
+   "description": "With -require-pass connect: connections that have not signed in yet from one remote address (an IPv6 address counts as its /64; 0: no limit)"
   },
   {
    "flag": "-discover",
@@ -1347,17 +1372,19 @@
    "sections": {
     "Added": [
      "**Server:** optional sign-in passes for the relay.",
+     "**Server:** optional `-require-pass connect`, with `-pass-max-unauth-conns` (default 64) and `-pass-max-unauth-per-addr` (default 4).",
      "**Docs:** `docs/public-server.md`: recommended settings for a server that the internet can reach."
     ],
     "Changed": [
+     "**Docs:** the README settings table (now 43 flags) and the website's settings list include the two sign-in limit flags for connect mode.",
      "**Docs:** the README settings table and the website's settings list now include the six sign-in pass flags (`-pass-key-file`, `-pass-issuer`, `-pass-audience`, `-require-pass`, `-pass-revoked-file`, ...",
      "**Docs:** the \"Project Facts\" label on the README is wider and larger (shown at 624 pixels, not 420), with sharper edges and more text on each line, and the Purpose column no longer crowds the right edge.",
      "**Docs and tooling:** the README and `docker/README.md` name v0.8.0 and its container image as the newest (its manifest lists amd64 and arm64 and is readable without a login), and the notes about `re-psn-window` say it ..."
     ]
    },
    "counts": {
-    "Added": 2,
-    "Changed": 3
+    "Added": 3,
+    "Changed": 4
    }
   },
   "latest": {

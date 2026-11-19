@@ -68,9 +68,11 @@ func main() {
 	passKeyFile := flag.String("pass-key-file", envStr("pass-key-file", ""), "file of public keys (one \"<kid> <base64url key>\" per line, mode 0600) that sign-in passes are checked against; read again on SIGHUP")
 	passIssuer := flag.String("pass-issuer", envStr("pass-issuer", ""), "the issuer name a pass must carry (needs -pass-key-file)")
 	passAudience := flag.String("pass-audience", envStr("pass-audience", ""), "the audience a pass must carry, so a pass for another server is refused (needs -pass-key-file)")
-	requirePass := flag.String("require-pass", envStr("require-pass", ""), "what needs a pass: relay (the relay carries traffic only for players who signed in); needs -pass-key-file")
+	requirePass := flag.String("require-pass", envStr("require-pass", ""), "what needs a pass, a comma list: relay (the relay carries traffic only for players who signed in) and connect (nothing but AUTH, HEARTBEAT and GET_CAPS works until a pass with scope connect is accepted); needs -pass-key-file")
 	passRevoked := flag.String("pass-revoked-file", envStr("pass-revoked-file", ""), "file of accounts to refuse, one github:<number> or discord:<number> per line (mode 0600); read again on SIGHUP")
 	passPerSub := num("pass-max-conns-per-sub", 2, "connections one signed-in account may hold (0 for no limit)")
+	passUnauth := num("pass-max-unauth-conns", defaultMaxUnauth, "with -require-pass connect: connections that have not signed in yet, in total (0 for no limit)")
+	passUnauthAddr := num("pass-max-unauth-per-addr", defaultMaxUnauthPerAddr, "with -require-pass connect: connections that have not signed in yet per remote address; an IPv6 address counts as its /64 (0 for no limit)")
 	noPeer := flag.String("no-peer-titles", "", "comma-separated communication IDs of titles that use no peer traffic: for their players the server answers no UDP probe and does not relay or route (they still use rooms and scores; off unless set)")
 	name := flag.String("name", "", "server name shown in LAN discovery, at most 24 printable ASCII bytes (default: none)")
 	db := flag.String("db", "off", "score storage: off or memory (both keep scores in memory; no database backend is built yet)")
@@ -163,15 +165,18 @@ func main() {
 	}
 	s.trustedProxies, s.proxyProto = trusted, *proxyProto
 	s.udpAnySource = *udpAny
-	passRelay, err := parseRequirePass(*requirePass)
+	passConnect, passRelay, err := parseRequirePass(*requirePass)
 	if err != nil {
 		fatal(err)
 	}
 	if *passPerSub < 0 {
 		fatal(errors.New("-pass-max-conns-per-sub must not be negative"))
 	}
+	if *passUnauth < 0 || *passUnauthAddr < 0 {
+		fatal(errors.New("-pass-max-unauth-conns and -pass-max-unauth-per-addr must not be negative"))
+	}
 	if *passKeyFile == "" {
-		if passRelay || *passIssuer != "" || *passAudience != "" || *passRevoked != "" {
+		if passRelay || passConnect || *passIssuer != "" || *passAudience != "" || *passRevoked != "" {
 			fatal(errors.New("-require-pass, -pass-issuer, -pass-audience and -pass-revoked-file need -pass-key-file"))
 		}
 	} else {
@@ -190,7 +195,11 @@ func main() {
 		}
 		s.pass.Store(&passConfig{keys: keys, revoked: revoked, issuer: *passIssuer, aud: *passAudience})
 		s.requireRelayPass, s.maxPerSub = passRelay, *passPerSub
-		logger.Info("sign-in passes", "keys", len(keys), "require_relay", passRelay, "max_conns_per_account", *passPerSub)
+		s.requireConnectPass, s.maxUnauth, s.maxUnauthPerAddr = passConnect, *passUnauth, *passUnauthAddr
+		logger.Info("sign-in passes", "keys", len(keys), "require_relay", passRelay, "require_connect", passConnect, "max_conns_per_account", *passPerSub, "max_unauth_conns", *passUnauth, "max_unauth_per_addr", *passUnauthAddr)
+		if passConnect {
+			logger.Warn("-require-pass connect: clients without AUTH are refused with ERROR 10")
+		}
 		if passRelay && !*relay {
 			logger.Warn("-require-pass relay does nothing while -relay is off")
 		}

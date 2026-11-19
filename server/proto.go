@@ -64,16 +64,27 @@ const (
 	errNoHello      = 7
 	errNameTaken    = 8 // HELLO: another player on this server has the name
 	errNoRelay      = 9 // STREAM_*: the server runs without -relay
+	// 10 is errPass (pass.go)
 )
 
 const maxPayload = 0xFFFF
 
-func readPacket(r io.Reader) (byte, []byte, error) {
+// errFrameTooLong is readPacketLimit's answer to a header that declares more payload than the caller accepts.
+var errFrameTooLong = errors.New("frame too long")
+
+func readPacket(r io.Reader) (byte, []byte, error) { return readPacketLimit(r, maxPayload) }
+
+// readPacketLimit is readPacket for a caller that accepts at most max payload bytes. A longer declared length is refused
+// from the header alone, before any payload byte is read.
+func readPacketLimit(r io.Reader, max int) (byte, []byte, error) {
 	var hdr [3]byte
 	if _, err := io.ReadFull(r, hdr[:]); err != nil {
 		return 0, nil, err
 	}
 	n := int(binary.BigEndian.Uint16(hdr[1:]))
+	if n > max {
+		return 0, nil, errFrameTooLong
+	}
 	// The payload buffer grows with the bytes that arrive, so a header that declares a long payload and sends none costs
 	// only readChunk, not the declared length.
 	p := make([]byte, 0, min(n, readChunk))

@@ -22,7 +22,7 @@ const (
 	capProbe     = 1 << 4 // the UDP probe: the server answers a PROBE from this player's P2P socket
 	capRelay     = 1 << 5 // relay streams and relay datagrams for this player
 	capDiscover  = 1 << 6 // the server answers LAN discovery (-discover)
-	capPassRelay = 1 << 7 // the relay needs a pass (AUTH) for this player; capRelay is clear until one with scope relay is accepted
+	capPassRelay = 1 << 7 // the relay needs a pass (AUTH) for this player; capRelay is clear until one with scope relay is accepted. Also the only bit GET_CAPS shows before AUTH under -require-pass connect
 )
 
 // capsFor is the bit set for c's title. The probe and the relay depend on -no-peer-titles and -relay; the rest are
@@ -44,6 +44,15 @@ func (s *Server) capsFor(c *client) uint32 {
 		bits |= capDiscover
 	}
 	return bits
+}
+
+// preAuthCaps is all GET_CAPS shows a connection that has said HELLO but not yet signed in under -require-pass connect:
+// the pass bit, as capsFor would set it, and nothing else. The caller holds s.mu.
+func (s *Server) preAuthCaps(c *client) uint32 {
+	if s.relay && s.requireRelayPass && !s.noPeer[c.pendComm] {
+		return capPassRelay
+	}
+	return 0
 }
 
 func (s *Server) getCaps(c *client, req uint32) (byte, []byte) {
