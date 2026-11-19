@@ -24,6 +24,8 @@ instance and there are no accounts: you run your own server. The [project README
 
 ## Develop
 
+- [Developer guide](developers.md): set up a checkout, add a feature, regenerate files and send a pull request.
+- [Requesting a title](title-requests.md): what compatibility means here and what to send to ask for a game to be checked.
 - [Integrating re-psn into a recompiled game](integrating.md): choose an integration path for your port.
 - [Protocol](api.md): how game clients talk to the server over TCP, message by message.
 - [Architecture](architecture.md): the server, the C client, the relay and how the parts fit.

@@ -2,7 +2,7 @@
 
 How to report a problem or send a change to re-psn: the ground rules, what a pull request should hold, and which tests to run.
 re-psn began as a fork of [sp00nznet/psnr](https://github.com/sp00nznet/psnr), by sp00nz, and is now a repository of its own. Bug reports, fixes and ideas are welcome here, through
-the issue forms (bug report, feature request) or a pull request. Something that is also wrong in upstream may be worth
+the issue forms (bug report, feature request, title request) or a pull request. The [developer guide](docs/developers.md) walks through setup and a change; [Requesting a title](docs/title-requests.md) says what to send for a game. Something that is also wrong in upstream may be worth
 reporting there too.
 
 ## Ground rules

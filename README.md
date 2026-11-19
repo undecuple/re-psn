@@ -311,7 +311,8 @@ Start with [Integrating re-psn into a recompiled game](docs/integrating.md): exi
 C/C++ integration, callback ownership, peer/relay transport and failure handling. The [minimal C example](client/examples/minimal.c)
 is compiled and exercised against a loopback server by the required native-client check. For app-managed local trophies,
 use the separate [scoped C/C++ SDK](docs/app-framework.md#recomp-developer-contract). Source-level runtime findings
-are pinned; synthetic checks do not certify a title's gameplay or NAT behavior.
+are pinned; synthetic checks do not certify a title's gameplay or NAT behavior. To contribute, see the
+[developer guide](docs/developers.md); to ask for a game to be checked, see [Requesting a title](docs/title-requests.md).
 
 <p align="center"><img src="docs/img/divider.svg" alt="" width="660"></p>
 
