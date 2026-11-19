@@ -49,8 +49,9 @@ func badAuthFlood(t *testing.T, addr string, n int) {
 	}
 }
 
-// waitConns waits until the server has admitted n connections in all: a reset connection can still be waiting in the accept queue
-// when the last client call returns, and the counters read zero before it is admitted.
+// waitConns waits until the server has admitted n connections in all. A client that resets a connection before the server has
+// admitted it can leave it uncounted for good (Windows drops a reset connection from the accept queue), so a test that resets
+// connections waits here for each one first.
 func waitConns(t *testing.T, s *Server, n int) {
 	t.Helper()
 	var got int
@@ -142,6 +143,7 @@ func TestLogFloodFromUnsignedClients(t *testing.T) {
 		s, addr := startConnectServer(t, p, false, quiet(&log))
 		for i := 0; i < n; i++ {
 			c := dialRaw(t, addr)
+			waitConns(t, s, i+1)       // a connection reset while it still waits in the accept queue may never be admitted, on Windows
 			c.conn.Write([]byte{0x05}) // part of a frame, then a reset
 			abruptClose(c)
 		}
