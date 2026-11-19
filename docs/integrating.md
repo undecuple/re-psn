@@ -121,7 +121,7 @@ The inspected bridge checks whether variables are present: `PS3_NET_ONLINE=0` st
 configuration. Use a valid online name starting with a letter, 3–16 letters/digits/`-`/`_`, and peer port 1–65535.
 That name rule is the desktop app's and this guide's advice. The server itself only needs a non-empty communication ID (12 bytes
 at most) and takes a name of up to 16 bytes as sent, empty included. It compares names without regard to case, and the C client
-truncates longer values. The port parser does not validate that range for you. `PSNR_SERVER` is a host or IPv4 address with an optional port
+refuses longer ones (`psnr_connect` returns NULL). The port parser does not validate that range for you. `PSNR_SERVER` is a host or IPv4 address with an optional port
 (default 36100), not an HTTP URL. The C transport uses IPv4; use a name resolving to IPv4 or an IPv4 literal.
 [Setup and enable checks](https://github.com/sp00nznet/ps3recomp/blob/de4f090328ea08bef6b2f15caec0b85e343a7ece/libs/network/np_psnr.c#L60-L100).
 
