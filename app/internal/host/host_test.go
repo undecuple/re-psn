@@ -133,7 +133,7 @@ func hello(t *testing.T, address string) client.HelloAck {
 }
 func requireReleased(t *testing.T, address string) {
 	t.Helper()
-	deadline := time.Now().Add(2 * time.Second)
+	deadline := time.Now().Add(10 * time.Second) // a killed child's sockets can take a few seconds to free on Windows
 	a, err := net.ResolveUDPAddr("udp4", address)
 	if err != nil {
 		t.Fatal(err)
@@ -230,7 +230,9 @@ func TestManagerRealLifecycleAuthenticatedStatusAndRestart(t *testing.T) {
 	if hello(t, address).Relay() {
 		t.Fatal("inherited relay option escaped sanitization")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// Stop waits up to 3 s for the child to exit, then kills it; a loaded Windows runner needs room beyond that, so a slow stop is
+	// not a failure and only a real hang is.
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	if err := m.Stop(ctx); err != nil {
 		t.Fatal(err)
