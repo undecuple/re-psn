@@ -60,6 +60,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		s.handlers.Wait()
 		close(done)
 	}()
+	defer s.flushAllLimited()
 	select {
 	case <-done:
 		return nil

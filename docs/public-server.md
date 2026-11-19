@@ -110,7 +110,9 @@ for a server you cannot afford to carry traffic for.
 - `GET /healthz` on the status listener, with the token, reports whether both serving loops are active; use it with a
   supervisor ([restarts.md](restarts.md)). It is a liveness check, not a test that games work.
 - **Warn lines** in the log: refused connections (too many from one address), a UDP probe from another address (once per
-  player), a connection closed for its request rate, a name taken.
+  player), a connection closed for its request rate, a name taken. Lines a client can repeat before it is a player
+  (refused connections, taken names, and under `-require-pass connect` refused passes) are written at most once a second for each
+  kind, ending in `skipped_since_last_line=N`; [running.md](running.md#logging) lists which, and which counters exist.
 - **Bans:** [fail2ban.md](fail2ban.md) has a disabled example for repeated status-token failures. Game and UDP bans are not
   covered; use your firewall.
 

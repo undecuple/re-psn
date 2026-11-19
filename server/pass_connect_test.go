@@ -567,7 +567,7 @@ func TestConnectUnauthLimits(t *testing.T) {
 		for i := 0; i < 5; i++ {                    // a burst of refusals is one log line
 			unauthClosedWithin(t, dialRaw(t, addr), 3*time.Second)
 		}
-		if got := strings.Count(log.String(), "too many connections not signed in"); got != 1 {
+		if got, _ := limitedAccount(log.String(), "connection refused", "too many connections not signed in"); got != 1 {
 			t.Fatalf("%d refusal lines in a burst, want 1 (rate limited):\n%s", got, log.String())
 		}
 		if rt, _ := a.call(msgGetCaps, nil); rt != msgCaps {
@@ -709,9 +709,8 @@ func TestConnectDeadline(t *testing.T) {
 	c := dialRaw(t, addr)
 	helloAck(t, c, "a")
 	unauthClosedWithin(t, c, 5*time.Second)
-	if got := strings.Count(log.String(), "no sign-in in time"); got != 2 {
-		t.Fatalf("the reason was logged %d times, want 2:\n%s", got, log.String())
-	}
+	// the line is rate limited: each close is a line or is counted as left out
+	waitLimited(t, &log, "connection closed", "no sign-in in time", 2)
 }
 
 // HEARTBEAT keeps a signed-in client alive but does not move the sign-in deadline.
