@@ -47,6 +47,7 @@ extern "C" {
 /* Message types; payloads in docs/api.md. */
 enum {
     PSNR_HELLO = 0x01, PSNR_HEARTBEAT = 0x02, PSNR_PEER_AUTH = 0x03, PSNR_GET_CAPS = 0x04,
+    PSNR_AUTH = 0x05,
     PSNR_CREATE_ROOM = 0x10, PSNR_SEARCH_ROOMS = 0x11, PSNR_JOIN_ROOM = 0x12,
     PSNR_LEAVE_ROOM = 0x13, PSNR_SET_ROOM_DATA = 0x14, PSNR_ROOM_MESSAGE = 0x15,
     PSNR_KICK_MEMBER = 0x16, PSNR_SET_ROOM_ACCESS = 0x17, PSNR_JOIN_BY_CODE = 0x18,
@@ -70,7 +71,8 @@ enum {
 enum {
     PSNR_E_BAD_REQUEST = 1, PSNR_E_NOT_FOUND = 2, PSNR_E_ROOM_FULL = 3,
     PSNR_E_NOT_OWNER = 4, PSNR_E_NOT_IN_ROOM = 5, PSNR_E_LIMIT = 6, PSNR_E_NO_HELLO = 7,
-    PSNR_E_NAME_TAKEN = 8, PSNR_E_NO_RELAY = 9
+    PSNR_E_NAME_TAKEN = 8, PSNR_E_NO_RELAY = 9,
+    PSNR_E_PASS = 10   /* a sign-in pass is needed, or the one sent was refused (psnr_auth) */
 };
 
 /* Set by the client itself, not sent by a server: the host's connect policy refused every address
@@ -335,7 +337,8 @@ enum {
     PSNR_CAP_PEER_KEYS = 1u << 3,  /* PEER_AUTH and PEER_KEY pushes */
     PSNR_CAP_PROBE = 1u << 4,      /* the server answers a UDP PROBE from this player's P2P socket */
     PSNR_CAP_RELAY = 1u << 5,      /* relay streams and datagrams for this player */
-    PSNR_CAP_DISCOVER = 1u << 6    /* the server answers LAN discovery */
+    PSNR_CAP_DISCOVER = 1u << 6,   /* the server answers LAN discovery */
+    PSNR_CAP_PASS_RELAY = 1u << 7  /* the relay needs a sign-in pass (-require-pass relay); a hint, see psnr_auth */
 };
 typedef struct {
     uint32_t bits;
@@ -343,6 +346,43 @@ typedef struct {
     uint16_t version_len;
 } psnr_caps;
 int psnr_caps_parse(const psnr_msg* m, psnr_caps* out);   /* CAPS; 1 ok, 0 bad (short, or bytes left over) */
+
+/* Sign-in passes (docs/api.md, "Sign-in passes"). Optional: a server asks for one only if its host turned that on.
+ * The client never fetches, stores, parses or checks a pass. The title or host program gives it the opaque
+ * bytes it holds, the library sends them in AUTH and reports what the server answered. Nothing the library
+ * prints or returns contains the pass, and the copy it builds to send is wiped before psnr_auth returns. Keep
+ * your own copy out of logs too.
+ *
+ * psnr_auth sends AUTH (version 1) after HELLO and waits up to timeout_ms for the reply. pass is 1 to
+ * PSNR_PASS_MAX bytes; an empty, NULL or longer one, or a timeout_ms of 0 or less, is refused before anything is sent
+ * (PSNR_AUTH_E_ARG, and the connection is unchanged). A second call on the same connection is a refresh (same account, new expiry): call it
+ * before the current pass runs out, since the server closes the connection soon after.
+ *
+ * Returns PSNR_AUTH_OK (0) when the server accepted the pass. A positive value is the ERROR code the server
+ * answered: PSNR_E_PASS (the pass is refused, or a pass is needed), PSNR_E_NAME_TAKEN (under -require-pass
+ * connect, another player has the name), or PSNR_E_BAD_REQUEST, which is what a server with no pass settings, or one
+ * from before AUTH, answers. ERROR 1 and capability bit PSNR_CAP_PASS_RELAY are hints, not proof: both can be forged
+ * on a plain TCP connection, so only the player's own settings decide whether to send a pass and to which server.
+ * A negative value is a local failure (PSNR_AUTH_E_*).
+ *
+ * Under -require-pass connect the OK reply carries the UDP token: when it does, the client uses it from then on in
+ * psnr_probe_packet and psnr_relay_wrap (a refresh returns the same one). Without those four bytes (the relay-only
+ * mode) the HELLO token stays. After AUTH is refused, nothing changed on the server. Three refused AUTH requests in
+ * a row make the server close the connection. */
+#define PSNR_PASS_MAX 2048
+enum {
+    PSNR_AUTH_OK = 0,
+    PSNR_AUTH_E_ARG = -1,      /* pass NULL, empty or over PSNR_PASS_MAX, or timeout_ms <= 0; nothing was sent */
+    PSNR_AUTH_E_IO = -2,       /* the connection is dead or the write failed (psnr_dead_reason says why) */
+    PSNR_AUTH_E_TIMEOUT = -3,  /* no reply within timeout_ms; the pass may still have been accepted, so call psnr_auth again */
+    PSNR_AUTH_E_REPLY = -4,    /* a reply that is neither OK nor a well-formed ERROR */
+    PSNR_AUTH_E_NOMEM = -5
+};
+int psnr_auth(psnr_client* c, const void* pass, size_t len, int timeout_ms);
+
+/* HELLO_ACK flag bit 3: the server wants a pass to connect (-require-pass connect). A hint only: a forged or older
+ * server can say anything. 1 if set, 0 if clear. */
+int psnr_pass_hint(const psnr_client* c);
 
 /* Big-endian field helpers for building and reading payloads. */
 static inline uint8_t* psnr_put16(uint8_t* p, uint16_t v) { p[0] = (uint8_t)(v >> 8); p[1] = (uint8_t)v; return p + 2; }

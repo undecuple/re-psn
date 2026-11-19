@@ -33,12 +33,14 @@ const (
 	ErrNoHello      ErrorCode = 7
 	ErrNameTaken    ErrorCode = 8
 	ErrNoRelay      ErrorCode = 9
+	ErrPass         ErrorCode = 10
 )
 
 var codeNames = map[ErrorCode]string{
 	ErrBadRequest: "bad request", ErrNotFound: "not found", ErrRoomFull: "room full",
 	ErrNotOwner: "not the room owner", ErrNotInRoom: "not in that room", ErrLimitReached: "limit reached",
 	ErrNoHello: "no HELLO yet", ErrNameTaken: "name taken", ErrNoRelay: "no relay",
+	ErrPass: "pass needed or refused",
 }
 
 func (c ErrorCode) String() string {

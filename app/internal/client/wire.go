@@ -14,6 +14,7 @@ import (
 const (
 	typeHello        = 0x01
 	typeHeartbeat    = 0x02
+	typeAuth         = 0x05
 	typeCreateRoom   = 0x10
 	typeSearchRooms  = 0x11
 	typeJoinRoom     = 0x12
@@ -43,6 +44,7 @@ const (
 	commIDLen   = 12
 	onlineIDLen = 16
 	maxPayload  = 0xFFFF
+	maxPass     = 2048 // AUTH pass blob
 	maxRoomBlob = 4096 // every blob put in a room
 	maxComment  = 64   // RECORD_SCORE comment
 	maxRows     = 100  // GET_RANKING count, GET_RANKING_BY_ID n

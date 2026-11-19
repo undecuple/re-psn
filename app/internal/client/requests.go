@@ -21,6 +21,34 @@ func (c *Conn) Hello(ctx context.Context, h Hello) (HelloAck, error) {
 	return finish(op, d, decodeHelloAck(d))
 }
 
+// AuthReply is the OK reply to AUTH.
+type AuthReply struct {
+	// Token is the UDP token the server issued when it accepted the pass under -require-pass connect. It is only
+	// meaningful when HasToken is true; otherwise keep the HELLO token.
+	Token    uint32
+	HasToken bool
+}
+
+// Auth sends AUTH (version 1) with a sign-in pass, which must follow HELLO. The pass is an opaque blob of 1 to 2048
+// bytes that the caller got from a login service: Auth does not parse or check it, never logs it, and keeps no copy
+// (nothing in the returned error or reply holds it). A second Auth on the same connection is a refresh. A refused
+// pass is a *ServerError with code ErrPass; a taken name under -require-pass connect is ErrNameTaken; a server with
+// no pass settings, or one from before AUTH, answers ErrBadRequest (that is not proof of anything, see docs/api.md).
+func (c *Conn) Auth(ctx context.Context, pass []byte) (AuthReply, error) {
+	const op = "auth"
+	if len(pass) == 0 || len(pass) > maxPass {
+		return AuthReply{}, fmt.Errorf("%s: pass of %d bytes: want 1-%d", op, len(pass), maxPass)
+	}
+	d, err := c.call(ctx, op, typeAuth, typeOK, func(e *encoder) {
+		e.u8(1)
+		e.blob(pass)
+	})
+	if err != nil {
+		return AuthReply{}, err
+	}
+	return decodeAuthReply(d), nil
+}
+
 // Heartbeat sends HEARTBEAT, which keeps the connection alive and has no reply. After ReportRTT(true), and once a
 // call has been timed, it carries the round trip in milliseconds (rtt_ms); otherwise it has no body, as before.
 func (c *Conn) Heartbeat(ctx context.Context) error {

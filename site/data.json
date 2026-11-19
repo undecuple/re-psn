@@ -4,7 +4,7 @@
  "repository": "https://github.com/undecuple/re-psn",
  "go": "1.22",
  "status_counts": {
-  "available": 45,
+  "available": 46,
   "unverified": 3,
   "partial": 9,
   "in-progress": 6,
@@ -857,11 +857,11 @@
    "id": "net-pass-relay",
    "area": "Network",
    "feature": "Sign-in passes for the relay",
-   "detail": "Optional: `-pass-key-file`, `-pass-issuer`, `-pass-audience` and `-require-pass relay` make the relay carry traffic only for players who hold a short-lived pass (Ed25519, checked offline) signed by a login service the host trusts. AUTH (0x05), ERROR 10, GET_CAPS bit 7, `relay_no_pass`. Off by default. The login service and the clients are separate work; see the connect row for connect gating.",
+   "detail": "Optional: `-pass-key-file`, `-pass-issuer`, `-pass-audience` and `-require-pass relay` make the relay carry traffic only for players who hold a short-lived pass (Ed25519, checked offline) signed by a login service the host trusts. AUTH (0x05), ERROR 10, GET_CAPS bit 7, `relay_no_pass`. Off by default. The login service is separate work; see the connect row for connect gating. The C client and the app's Go client can send AUTH.",
    "status": "available",
    "since": "main",
-   "evidence": "server/pass.go, TestCheckPassRefusals, TestRelayUDPNeedsPassesAtBothEnds, TestStreamsNeedPassesAtBothEnds, TestReloadClosesRevokedAccountsAndKeepsOldSettingsOnError",
-   "note": "No client or login service exists yet, so nothing can mint a pass outside tests; a test-only throwaway key is all that has been run.",
+   "evidence": "server/pass.go, TestCheckPassRefusals, TestRelayUDPNeedsPassesAtBothEnds, TestStreamsNeedPassesAtBothEnds, TestReloadClosesRevokedAccountsAndKeepsOldSettingsOnError, TestCClientAuth, TestAuthConnectMode",
+   "note": "No login service exists yet, so nothing can mint a pass outside tests; a test-only throwaway key is all that has been run.",
    "status_label": "available",
    "status_class": "ok"
   },
@@ -869,11 +869,23 @@
    "id": "net-pass-connect",
    "area": "Network",
    "feature": "Sign-in passes to connect",
-   "detail": "Optional: `-require-pass connect` makes a connection a player only after AUTH accepts a pass with the `connect` scope. Until then HELLO reserves no name and makes no token; every request but AUTH, HEARTBEAT and GET_CAPS gets ERROR 10; the connection is closed 30 s after accept if it has not signed in, and 60 s after its pass expires unless refreshed. Caps: `-pass-max-unauth-conns`, `-pass-max-unauth-per-addr`. Off by default. An already-open relay stream outlives expiry and revocation; passes bound to a client key, the login service and client AUTH are not built.",
+   "detail": "Optional: `-require-pass connect` makes a connection a player only after AUTH accepts a pass with the `connect` scope. Until then HELLO reserves no name and makes no token; every request but AUTH, HEARTBEAT and GET_CAPS gets ERROR 10; the connection is closed 30 s after accept if it has not signed in, and 60 s after its pass expires unless refreshed. Caps: `-pass-max-unauth-conns`, `-pass-max-unauth-per-addr`. Off by default. An already-open relay stream outlives expiry and revocation; passes bound to a client key and the login service are not built. The C client and the app's Go client can send AUTH.",
    "status": "available",
    "since": "main",
-   "evidence": "server/pass.go, TestConnectGateRefusesEveryRequestBeforeAuth, TestConnectDeadlineNotExtendedByHeartbeat, TestConnectNameClashAtAuth, TestConnectUnauthLimits",
-   "note": "No client or login service exists yet, so nothing can mint a pass outside tests; a test-only throwaway key is all that has been run. Names are still not authenticated.",
+   "evidence": "server/pass.go, TestConnectGateRefusesEveryRequestBeforeAuth, TestConnectDeadlineNotExtendedByHeartbeat, TestConnectNameClashAtAuth, TestConnectUnauthLimits, TestCClientAuth, TestAuthConnectMode",
+   "note": "No login service exists yet, so nothing can mint a pass outside tests; a test-only throwaway key is all that has been run. Names are still not authenticated.",
+   "status_label": "available",
+   "status_class": "ok"
+  },
+  {
+   "id": "client-pass-auth",
+   "area": "Client",
+   "feature": "Sign-in pass from the clients",
+   "detail": "The C client's `psnr_auth` and the desktop app's `Conn.Auth` send AUTH (version 1) with an opaque pass of 1 to 2048 bytes and return the server's answer (ERROR 10 pass refused or needed, 8 name taken, 1 from a server with no pass settings). `psnr_pass_hint` and `HelloAck.PassRequired` read HELLO_ACK flag bit 3; the UDP token in an OK under `-require-pass connect` replaces the HELLO token. A pass is never fetched, stored, parsed or logged by the clients.",
+   "status": "available",
+   "since": "main",
+   "evidence": "client/psnr.c, client/test_auth.c, app/internal/client/requests.go, TestCClientAuth, TestAuthConnectMode, TestAuthRefusals, TestAuthRelayOnlyMode, TestAuthOldServerAnswersBadRequest",
+   "note": "No login service and no sign-in screen in the app, so nothing outside tests holds a pass. Run on Linux against the real server with throwaway keys; not run on Windows or macOS. The Go client has no GET_CAPS call, so bit 7 is a C-client constant only. Relative to a real title and a real login service: untested.",
    "status_label": "available",
    "status_class": "ok"
   },
@@ -1059,6 +1071,7 @@
    "net-relay-force",
    "net-pass-relay",
    "net-pass-connect",
+   "client-pass-auth",
    "net-no-peer-titles",
    "net-caps",
    "net-peer-keys",
@@ -1373,7 +1386,8 @@
     "Added": [
      "**Server:** optional sign-in passes for the relay.",
      "**Server:** optional `-require-pass connect`, with `-pass-max-unauth-conns` (default 64) and `-pass-max-unauth-per-addr` (default 4).",
-     "**Docs:** `docs/public-server.md`: recommended settings for a server that the internet can reach."
+     "**Docs:** `docs/public-server.md`: recommended settings for a server that the internet can reach.",
+     "**Clients:** AUTH from the C client and the desktop app's Go client."
     ],
     "Changed": [
      "**Docs:** `docs/README.md`, an index of every page in `docs/` and the app, deploy, docker and lab READMEs, grouped by what you want to do (play and connect, host, develop, operate, maintain, reference).",
@@ -1386,7 +1400,7 @@
     ]
    },
    "counts": {
-    "Added": 3,
+    "Added": 4,
     "Changed": 7
    }
   },
