@@ -1385,6 +1385,7 @@
    "sections": {
     "Added": [
      "**Docker:** `docker/docker-compose.public.yml`, a compose file for a host who exposes their own server to the internet, and `docs/public-compose.md`, which says why each setting is there and what the file leaves out.",
+     "**Clients:** a build and install path for the C client and a single-file Python client.",
      "**Docs and tooling:** the README shows seven status badges (server, relay, sign-in passes, C client, desktop app, LAN discovery, admin API) in the site's colours, each linking to its table in the features list.",
      "**Server:** optional sign-in passes for the relay.",
      "**Server:** optional `-require-pass connect`, with `-pass-max-unauth-conns` (default 64) and `-pass-max-unauth-per-addr` (default 4).",
@@ -1407,7 +1408,7 @@
     ]
    },
    "counts": {
-    "Added": 6,
+    "Added": 7,
     "Changed": 12
    }
   },

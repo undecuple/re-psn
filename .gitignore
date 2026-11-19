@@ -14,6 +14,8 @@ __pycache__/
 *.obj
 /client/test_psnr
 /client/test_psnr.exe
+/client/libpsnr.a
+/client/psnr.pc
 /app/re-psn-app
 /app/re-psn-app.exe
 /app/cmd/re-psn-app/re-psn-app

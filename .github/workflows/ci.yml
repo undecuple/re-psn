@@ -84,6 +84,10 @@ jobs:
           python3 tools/badges.py --check
           python3 tools/site.py --check
           python3 -m unittest -v
+      # The single-file Python client against a real server built from this tree (loopback only).
+      - name: Python client tests
+        if: runner.os == 'Linux'
+        run: python3 -m unittest discover -s client/python -v
       # The website's script: its command logic is tested with Node's own test runner (Node is on the runner image).
       - name: site script tests
         if: runner.os == 'Linux'
