@@ -11,6 +11,7 @@ All notable changes to this project are documented here. The format follows
 - **Docs:** `docs/public-server.md`: recommended settings for a server that the internet can reach. What you take on (no authentication, no flood protection, no TLS, no moderation tool), a table of each relevant setting with a value and a reason, the relay and its unlimited bandwidth, which ports to publish, running as an unprivileged service, what to watch in `/api/stats`, and what to tell players. It says no public instance exists.
 
 ### Changed
+- **Docs:** the README settings table and the website's settings list now include the six sign-in pass flags (`-pass-key-file`, `-pass-issuer`, `-pass-audience`, `-require-pass`, `-pass-revoked-file`, `-pass-max-conns-per-sub`), and the README says 41 flags, not 35. The sign-in pass change had left both stale.
 - **Docs:** the "Project Facts" label on the README is wider and larger (shown at 624 pixels, not 420), with sharper edges and more text on each line, and the Purpose column no longer crowds the right edge.
 - **Docs and tooling:** the README and `docker/README.md` name v0.8.0 and its container image as the newest (its manifest lists amd64 and arm64 and is readable without a login), and the notes about `re-psn-window` say it is in the app archives from v0.8.0 on. No row of the features list changes its `since` value: the website row stays at `main`, as the site is deployed from `main`, not released.
 
