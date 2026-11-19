@@ -381,12 +381,12 @@ func (s *Server) handleAuth(c *client, req uint32, r *reader) {
 	refuse := func(code uint32) {
 		c.send(msgError, errReply(req, code))
 		if c.authFails++; c.authFails >= maxAuthFails {
-			s.log.Warn("connection closed", "client", c.id, "reason", "too many refused passes")
+			s.limitedWarn("connection closed", "too many refused passes", "client", c.id)
 			go c.conn.Close()
 		}
 	}
 	deny := func(why string) {
-		s.log.Warn("pass refused", "client", c.id, "reason", why)
+		s.limitedWarn("pass refused", why, "client", c.id)
 		refuse(errPass)
 	}
 	if !ok {
@@ -410,7 +410,7 @@ func (s *Server) handleAuth(c *client, req uint32, r *reader) {
 		if s.requireConnectPass {
 			var taken bool
 			if victims, taken = s.nameConflict(c, c.pendOnline); taken {
-				s.log.Warn("hello refused", "client", c.id, "reason", "name taken", "online_id", c.pendOnline, "addr", c.addr.String())
+				s.limitedWarn("hello refused", "name taken", "client", c.id, "online_id", c.pendOnline, "addr", c.addr.String())
 				refuse(errNameTaken)
 				return
 			}
@@ -427,7 +427,7 @@ func (s *Server) handleAuth(c *client, req uint32, r *reader) {
 		}
 		if s.requireConnectPass { // every check has passed: register
 			s.takeOver(victims, c)
-			c.commID, c.onlineID, c.p2pPort = c.pendComm, c.pendOnline, c.pendPort
+			c.commID, c.onlineID, c.p2pPort, c.registered = c.pendComm, c.pendOnline, c.pendPort, true
 			c.pendComm, c.pendOnline, c.pendPort, c.helloSeen = "", "", 0, false
 			s.newToken(c)
 			s.clients[c.id] = c

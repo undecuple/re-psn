@@ -1391,6 +1391,7 @@
      "**Clients:** AUTH from the C client and the desktop app's Go client."
     ],
     "Changed": [
+     "**Server:** a client that is not a player yet can no longer fill the log with warn lines.",
      "**Server:** a relay stream that is already open now ends when a pass stops covering it.",
      "**Docs:** the comments in `client/psnr.h` and `client/psnr_app.h` are now Doxygen blocks (`@file`, `@defgroup` groups, `@brief`, `@param`, `@return`, `@note`), and every public declaration has text.",
      "**Docs and tooling:** the README banner (`docs/img/banner.png`) has a status strip along the bottom: one cell for each component of the README badges (Server, Relay, Sign-in passes, C client, Desktop app, LAN discovery, ...",
@@ -1405,7 +1406,7 @@
    },
    "counts": {
     "Added": 5,
-    "Changed": 10
+    "Changed": 11
    }
   },
   "latest": {

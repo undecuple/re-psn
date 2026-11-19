@@ -224,9 +224,29 @@ is about them; it never holds the status page token, the UDP probe token, the `-
 
 | Level | Events |
 |---|---|
-| info | server start (and the storage backend), a stop on SIGINT or SIGTERM, an earlier instance replaced (`-replace`), each HELLO (client, title, online ID, address), a reconnect that replaces a connection, each disconnect, a failed read |
-| warn | a connection refused (too many from one address), a UDP probe from another address than the player's TCP connection (once per player), a connection closed for its request rate, a HELLO refused (name taken), a room request refused (room limit, blob over limit), an unknown request type, a status page request refused (path only), a score request or status page that the score store failed |
-| debug | connects, requests before HELLO, room created, joined and closed, relay streams, UDP probe results |
+| info | server start (and the storage backend), a stop on SIGINT or SIGTERM, an earlier instance replaced (`-replace`), each HELLO (client, title, online ID, address), a reconnect that replaces a connection, each disconnect and failed read of a connection that became a player |
+| warn | a connection refused (too many from one address, in total, or not signed in; no valid PROXY header; all limited, see below), a UDP probe from another address than the player's TCP connection (once per player), a connection closed for its request rate (limited before sign-in), a HELLO refused (name taken; limited), a pass refused or a connection closed for refused passes or before it signed in (limited), a room request refused (room limit, blob over limit), an unknown request type, a status page request refused (path only), a score request or status page that the score store failed |
+| debug | connects, a disconnect or failed read of a connection that never became a player, requests before HELLO, room created, joined and closed, relay streams, UDP probe results |
+
+A client that is not a player yet can repeat some of these at will. Those warn lines are limited, each kind on its own: a
+kind is its message and reason (for example `connection refused` with `too many connections`, or `pass refused` for a given
+reason). A kind writes at most one line a second, ending in `skipped_since_last_line=N`, the number of lines of that kind left
+out since its previous line. When a kind stops with lines left out, a `log lines left out` line with its message (`line=`),
+its reason and the count follows a second after its last line, and at shutdown. So the log never says less than the number of events, but
+the second and later lines of a burst have no client or address. Which events are limited:
+
+- a connection refused for the per-address, total or not-signed-in limit, and a trusted proxy's connection with no valid PROXY
+  header;
+- a HELLO refused for a taken name, in plain mode and at AUTH in connect mode (the address is in the first line only);
+- under `-require-pass connect` also: a pass refused, a connection closed for refused passes, for no sign-in in time, for a
+  frame too long before sign-in, or for its request rate before it signed in.
+
+Without `-require-pass connect` a connection that is not signed in has no sign-in state: a connection closed for its request
+rate is always logged, and each connect, HELLO and close still writes its info lines, bounded only by the per-address limit
+(`-max-conns-per-addr`). The lines about a player (one who is registered: HELLO accepted, or signed in in connect mode) are never left out.
+The counters in `/api/stats` are not changed: `tcp_refusals` has `conns`, `conns_per_addr` and `req_rate` for the total and per-address
+refusals and the request-rate closes, and `connections_total` counts every connection. The other events have no counter; their number is in the
+`skipped_since_last_line` counts. The warn line for a refused status page token, which [fail2ban.md](fail2ban.md) reads, is not limited.
 
 Rotate the file with logrotate or your service manager (`copytruncate`, or restart after moving it); the server does not rotate it.
 

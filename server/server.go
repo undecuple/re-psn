@@ -91,19 +91,17 @@ type Server struct {
 
 	statsCache *snapshotCache // the status page and /api/stats share one snapshot per second (api.go); nil: every request builds its own
 
-	maxPlayerRooms int                    // rooms one player may be in at once
-	maxConns       int                    // open connections in total, players and relay legs (0: no limit)
-	maxPerAddr     int                    // open connections per remote address
-	maxReqRate     int                    // requests per second per connection
-	addrConns      map[string]int         // open connections by remote host
-	addrMisses     map[string]*addrMisses // wrong room codes by remote host and window
-	openConns      int                    // open connections in total
-	lastConnsLog   time.Time              // when a refusal for -max-conns was last logged
-	connsLogSkip   int                    // refusals for -max-conns not logged since then
-	unauthConns    int                    // connections not yet signed in, in total (connect mode)
-	unauthByAddr   map[string]int         // the same by remote address, keyed as addrConns
-	lastUnauthLog  time.Time              // when a refusal for the sign-in limits was last logged
-	unauthLogSkip  int                    // such refusals not logged since then
+	maxPlayerRooms int                        // rooms one player may be in at once
+	maxConns       int                        // open connections in total, players and relay legs (0: no limit)
+	maxPerAddr     int                        // open connections per remote address
+	maxReqRate     int                        // requests per second per connection
+	addrConns      map[string]int             // open connections by remote host
+	addrMisses     map[string]*addrMisses     // wrong room codes by remote host and window
+	openConns      int                        // open connections in total
+	unauthConns    int                        // connections not yet signed in, in total (connect mode)
+	unauthByAddr   map[string]int             // the same by remote address, keyed as addrConns
+	limitMu        sync.Mutex                 // guards limited
+	limited        map[[2]string]*limitedKind // limitedWarn's state by message and reason
 
 	discover bool   // -discover: answer LAN DISCOVER packets (discover.go)
 	name     string // -name: shown in discovery, at most 24 bytes
@@ -154,6 +152,7 @@ type client struct {
 	// every "registered" check keeps meaning what it meant. helloSeen and authed are under s.mu. The rest is only touched
 	// by the connection's own goroutine (admit, run, handle, handleAuth), so it needs no lock.
 	helloSeen  bool
+	registered bool // became a player (HELLO accepted, or in connect mode AUTH accepted); kept when a takeover clears commID. Under s.mu.
 	authed     bool
 	pendComm   string
 	pendOnline string
@@ -265,7 +264,7 @@ func (s *Server) admit(conn net.Conn) {
 		a, ok, err := readProxyHeader(conn)
 		if err != nil {
 			// a trusted peer that sends none is a misconfigured proxy: close, never fall back to its address
-			s.log.Warn("connection refused", "addr", peer.String(), "reason", "no valid PROXY header from a trusted proxy")
+			s.limitedWarn("connection refused", "no valid PROXY header from a trusted proxy", "addr", peer.String())
 			conn.Close()
 			return
 		}
@@ -279,39 +278,20 @@ func (s *Server) admit(conn net.Conn) {
 	if s.maxPerAddr > 0 && s.addrConns[limitKey] >= s.maxPerAddr {
 		s.mu.Unlock()
 		atomic.AddUint64(&s.refusedConns, 1)
-		s.log.Warn("connection refused", "addr", host, "reason", "too many connections", "limit", s.maxPerAddr)
+		s.limitedWarn("connection refused", "too many connections", "addr", host, "limit", s.maxPerAddr)
 		conn.Close()
 		return
 	}
 	if s.maxConns > 0 && s.openConns >= s.maxConns {
-		// a flood must not also flood the log: one line a second, with the number left out in between
-		var skipped int
-		logIt := time.Since(s.lastConnsLog) >= time.Second
-		if logIt {
-			s.lastConnsLog, skipped, s.connsLogSkip = time.Now(), s.connsLogSkip, 0
-		} else {
-			s.connsLogSkip++
-		}
 		s.mu.Unlock()
 		atomic.AddUint64(&s.refusedTotal, 1)
-		if logIt {
-			s.log.Warn("connection refused", "reason", "too many connections in total", "limit", s.maxConns, "refused_since_last_line", skipped)
-		}
+		s.limitedWarn("connection refused", "too many connections in total", "limit", s.maxConns)
 		conn.Close()
 		return
 	}
 	if s.requireConnectPass && ((s.maxUnauthPerAddr > 0 && s.unauthByAddr[limitKey] >= s.maxUnauthPerAddr) || (s.maxUnauth > 0 && s.unauthConns >= s.maxUnauth)) {
-		var skipped int
-		logIt := time.Since(s.lastUnauthLog) >= time.Second
-		if logIt {
-			s.lastUnauthLog, skipped, s.unauthLogSkip = time.Now(), s.unauthLogSkip, 0
-		} else {
-			s.unauthLogSkip++
-		}
 		s.mu.Unlock()
-		if logIt {
-			s.log.Warn("connection refused", "addr", host, "reason", "too many connections not signed in", "refused_since_last_line", skipped)
-		}
+		s.limitedWarn("connection refused", "too many connections not signed in", "addr", host)
 		conn.Close()
 		return
 	}
@@ -355,14 +335,89 @@ func (s *Server) releaseUnauth(c *client) {
 	s.unauthConns--
 }
 
+// limitedKind is what limitedWarn remembers about one kind of line: when it last wrote one, how many it has left out since, and
+// the timer that reports them if nothing else of that kind follows.
+type limitedKind struct {
+	last    time.Time
+	skipped int
+	timer   *time.Timer
+}
+
+// limitedWarn writes a warning for something a client that has not signed in can cause at will: at most one line a second for
+// each kind (message and reason), ending in the number of lines of that kind left out since the previous one. A kind that stops
+// with lines left out reports them one second after its last line, or at shutdown, in a "log lines left out" line.
+func (s *Server) limitedWarn(msg, reason string, args ...any) {
+	k := [2]string{msg, reason}
+	now := time.Now()
+	s.limitMu.Lock()
+	if s.limited == nil {
+		s.limited = map[[2]string]*limitedKind{}
+	}
+	st := s.limited[k]
+	if st == nil {
+		st = &limitedKind{}
+		s.limited[k] = st
+	}
+	if now.Sub(st.last) < time.Second {
+		st.skipped++
+		if st.timer == nil {
+			st.timer = time.AfterFunc(st.last.Add(time.Second).Sub(now), func() { s.flushLimited(k, false) })
+		}
+		s.limitMu.Unlock()
+		return
+	}
+	skipped := st.skipped
+	st.skipped, st.last = 0, now
+	s.limitMu.Unlock()
+	s.log.Warn(msg, append(append([]any{"reason", reason}, args...), "skipped_since_last_line", skipped)...)
+}
+
+// flushLimited writes the line for what a kind has left out, if anything; the timer calls it, and so does Shutdown for every kind.
+func (s *Server) flushLimited(k [2]string, final bool) {
+	s.limitMu.Lock()
+	st := s.limited[k]
+	if st == nil {
+		s.limitMu.Unlock()
+		return
+	}
+	if st.timer != nil {
+		st.timer.Stop()
+		st.timer = nil
+	}
+	n := st.skipped
+	st.skipped = 0
+	if !final {
+		st.last = time.Now()
+	}
+	s.limitMu.Unlock()
+	if n > 0 {
+		s.log.Warn("log lines left out", "line", k[0], "reason", k[1], "skipped_since_last_line", n)
+	}
+}
+
+// flushAllLimited reports every kind's lines left out; at shutdown.
+func (s *Server) flushAllLimited() {
+	s.limitMu.Lock()
+	keys := make([][2]string, 0, len(s.limited))
+	for k := range s.limited {
+		keys = append(keys, k)
+	}
+	s.limitMu.Unlock()
+	for _, k := range keys {
+		s.flushLimited(k, true)
+	}
+}
+
 func (s *Server) run(c *client) {
 	relayLeg := false // a relay stream connection, not a player
+	var player bool   // c.registered, as the deferred cleanup read it
 	defer func() {
 		if relayLeg {
 			return
 		}
 		c.stopOutput()
 		s.mu.Lock()
+		player = c.registered
 		var out []push
 		for _, r := range c.rooms {
 			out = append(out, s.leave(r, c)...)
@@ -372,7 +427,11 @@ func (s *Server) run(c *client) {
 		s.flush(out)
 		s.mu.Unlock()
 		c.waitOutput()
-		s.log.Info("disconnected", "client", c.id, "online_id", c.onlineID)
+		if !player { // never registered as a player: a flood of such connections must not be a flood of lines
+			s.log.Debug("disconnected", "client", c.id)
+		} else {
+			s.log.Info("disconnected", "client", c.id, "online_id", c.onlineID)
+		}
 	}()
 
 	windowStart, inWindow := time.Now(), 0
@@ -393,11 +452,19 @@ func (s *Server) run(c *client) {
 			var ne net.Error
 			switch {
 			case errors.Is(err, errFrameTooLong):
-				s.log.Warn("connection closed", "client", c.id, "reason", "frame too long before sign-in", "limit", limit)
+				s.limitedWarn("connection closed", "frame too long before sign-in", "client", c.id, "limit", limit)
 			case why != "" && errors.As(err, &ne) && ne.Timeout():
-				s.log.Warn("connection closed", "client", c.id, "online_id", c.onlineID, "reason", why)
+				if c.unauth {
+					s.limitedWarn("connection closed", why, "client", c.id)
+				} else {
+					s.log.Warn("connection closed", "client", c.id, "online_id", c.onlineID, "reason", why)
+				}
 			case err != io.EOF:
-				s.log.Info("read failed", "client", c.id, "err", err)
+				if !c.registered { // an abrupt close before the player is registered: anyone can cause it at will
+					s.log.Debug("read failed", "client", c.id, "err", err)
+				} else {
+					s.log.Info("read failed", "client", c.id, "err", err)
+				}
 			}
 			return
 		}
@@ -417,7 +484,11 @@ func (s *Server) run(c *client) {
 		}
 		if inWindow++; s.maxReqRate > 0 && inWindow > s.maxReqRate {
 			atomic.AddUint64(&s.refusedReqRate, 1)
-			s.log.Warn("connection closed", "client", c.id, "online_id", c.onlineID, "reason", "request rate", "limit", s.maxReqRate)
+			if c.unauth {
+				s.limitedWarn("connection closed", "request rate", "client", c.id, "limit", s.maxReqRate)
+			} else {
+				s.log.Warn("connection closed", "client", c.id, "online_id", c.onlineID, "reason", "request rate", "limit", s.maxReqRate)
+			}
 			return
 		}
 		s.handle(c, t, p)
@@ -564,11 +635,11 @@ func (s *Server) hello(c *client, req uint32, r *reader) (byte, []byte) {
 func (s *Server) register(c *client, commID, onlineID string, port uint16, req uint32) (byte, []byte) {
 	victims, taken := s.nameConflict(c, onlineID)
 	if taken {
-		s.log.Warn("hello refused", "client", c.id, "reason", "name taken", "online_id", onlineID, "addr", c.addr.String())
+		s.limitedWarn("hello refused", "name taken", "client", c.id, "online_id", onlineID, "addr", c.addr.String())
 		return msgError, errReply(req, errNameTaken)
 	}
 	s.takeOver(victims, c)
-	c.commID, c.onlineID, c.p2pPort = commID, onlineID, port
+	c.commID, c.onlineID, c.p2pPort, c.registered = commID, onlineID, port, true
 	s.newToken(c)
 	s.log.Info("hello", "client", c.id, "comm_id", commID, "online_id", onlineID, "addr", c.addr.String(), "p2p_port", port)
 	return s.helloAck(c, req, commID, c.token, 0)
