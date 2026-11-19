@@ -28,7 +28,8 @@ instance and there are no accounts: you run your own server. The [project README
 - [Developer guide](developers.md): set up a checkout, add a feature, regenerate files and send a pull request.
 - [Requesting a title](title-requests.md): what compatibility means here and what to send to ask for a game to be checked.
 - [Integrating re-psn into a recompiled game](integrating.md): choose an integration path for your port.
-- [Protocol](api.md): how game clients talk to the server over TCP, message by message.
+- [Protocol guide](api.md): how game clients talk to the server over TCP, message by message, with advice.
+- [Protocol specification](protocol.md): the reference for writing a second client or server: byte layouts, state machine, error codes, limits.
 - [Architecture](architecture.md): the server, the C client, the relay and how the parts fit.
 - [App framework API](app-framework-api.md): the Go package for an app-owned trophy store, identities and friends.
 - [Desktop profiles, trophies and authenticated friends](app-framework.md): how the desktop app uses that framework.
