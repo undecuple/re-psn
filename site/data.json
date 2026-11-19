@@ -1384,6 +1384,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "**Docs and tooling:** the README shows seven status badges (server, relay, sign-in passes, C client, desktop app, LAN discovery, admin API) in the site's colours, each linking to its table in the features list.",
      "**Server:** optional sign-in passes for the relay.",
      "**Server:** optional `-require-pass connect`, with `-pass-max-unauth-conns` (default 64) and `-pass-max-unauth-per-addr` (default 4).",
      "**Docs:** `docs/public-server.md`: recommended settings for a server that the internet can reach.",
@@ -1400,7 +1401,7 @@
     ]
    },
    "counts": {
-    "Added": 4,
+    "Added": 5,
     "Changed": 7
    }
   },
