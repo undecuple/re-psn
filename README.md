@@ -1,13 +1,14 @@
-# re-psn
-
 <div align="center">
 
 ![re-psn: matchmaking rooms and leaderboards for recompiled PS3 games; self-hosted, with NAT traversal, an optional relay and a desktop app](docs/img/banner.png)
 
-**Run your own matchmaking and leaderboard server for statically recompiled PS3 games: one small binary, no accounts, no cloud.**
+# re-psn
 
-[![CI](https://github.com/undecuple/re-psn/actions/workflows/ci.yml/badge.svg)](https://github.com/undecuple/re-psn/actions/workflows/ci.yml) <!-- version -->![version v0.8.0](https://img.shields.io/badge/pre--release-v0.8.0-997e95?labelColor=2b2733&style=flat-square)<!-- /version --> ![status: alpha](https://img.shields.io/badge/status-alpha-a86438?labelColor=45403d&style=flat-square)
-![licence: MIT](https://img.shields.io/badge/licence-MIT-a7d8b0?labelColor=2b2733&style=flat-square) [![Ask DeepWiki](https://img.shields.io/badge/DeepWiki-Ask-007ac0)](https://deepwiki.com/undecuple/re-psn)
+**re-psn // Unofficial fan work: your own matchmaking and leaderboard server for statically recompiled PS3 games. One small binary, no accounts, no cloud.**
+
+[![CI](https://github.com/undecuple/re-psn/actions/workflows/ci.yml/badge.svg)](https://github.com/undecuple/re-psn/actions/workflows/ci.yml) <!-- version -->![version v0.8.0](https://img.shields.io/badge/pre--release-v0.8.0-997e95?labelColor=2b2733&style=flat-square)<!-- /version --> ![status: alpha](https://img.shields.io/badge/status-alpha-a86438?labelColor=45403d&style=flat-square) [![Discord: join](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white&labelColor=2b2733&style=flat-square)](https://discord.gg/W8fMT78Q7k)
+<br>
+[![licence: MIT](https://img.shields.io/badge/licence-MIT-a7d8b0?labelColor=2b2733&style=flat-square)](LICENSE) [![last commit](https://img.shields.io/github/last-commit/undecuple/re-psn?color=997e95&labelColor=2b2733&style=flat-square)](https://github.com/undecuple/re-psn/commits/main) [![stars](https://img.shields.io/github/stars/undecuple/re-psn?color=a7d8b0&labelColor=2b2733&style=flat-square)](https://github.com/undecuple/re-psn/stargazers) ![platform: Linux and Windows](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-8288a0?labelColor=2b2733&style=flat-square) ![unofficial fan work](https://img.shields.io/badge/unofficial-fan%20work-997e95?labelColor=2b2733&style=flat-square) [![Ask DeepWiki](https://img.shields.io/badge/DeepWiki-Ask-007ac0)](https://deepwiki.com/undecuple/re-psn)
 
 **[Download](https://github.com/undecuple/re-psn/releases)** · [Quick start](#quick-start-host-a-server) · [Features](docs/features.md) · [Install](#install) · [Configuration](#configuration) · [Documentation](#more) · [Website](https://undecuple.github.io/re-psn/) · [Report an issue](https://github.com/undecuple/re-psn/issues/new/choose)
 
@@ -54,7 +55,7 @@ claimed to work yet; see the [features list](docs/features.md) for what is teste
 More ways to install (container, install script, from source) are under [Install](#install); the [wiki](https://github.com/undecuple/re-psn/wiki)
 has short guides for players and hosts.
 
----
+<p align="center"><img src="docs/img/divider.svg" alt="" width="660"></p>
 
 ## What makes it different
 
@@ -68,7 +69,7 @@ has short guides for players and hosts.
 | A lobby you can read: games by name, verified player counts and player-reported latency | in v0.5.0: [features list](docs/features.md), [`/api/stats`](docs/api.md#http) |
 | Every feature says how far it got | [features list](docs/features.md) with status and evidence |
 
----
+<p align="center"><img src="docs/img/divider.svg" alt="" width="660"></p>
 
 ## Coming soon
 
@@ -78,7 +79,7 @@ launch profiles, extra app themes, a metrics endpoint and signed releases. Curre
 authenticate gameplay names. The [features list](docs/features.md) and [roadmap](ROADMAP.md) distinguish source work
 from released features.
 
----
+<p align="center"><img src="docs/img/divider.svg" alt="" width="660"></p>
 
 ## Contents
 
@@ -98,7 +99,7 @@ from released features.
 - [Website](#website)
 - [Credits](#credits), [Licence](#licence), [How AI was used](#how-ai-was-used)
 
----
+<p align="center"><img src="docs/img/divider.svg" alt="" width="660"></p>
 
 ## About this project
 
@@ -109,7 +110,7 @@ files and release tooling. The [features list](docs/features.md) and [CHANGELOG.
 added a lobby view with game names, verified player counts and player-reported latency. It also added `-relay-force` for testing
 the relay from one network, LAN discovery (`-discover`), the server half of opt-in peer keys, and archives of the desktop app.
 
----
+<p align="center"><img src="docs/img/divider.svg" alt="" width="660"></p>
 
 ## Overview
 
@@ -164,7 +165,7 @@ That side is upstream's work and not part of this repository. It needs a ps3reco
 point a game at the server (its `docs/ONLINE.md` lists the rest). With it, upstream has played Simpsons Arcade online, two players
 from lobby to Stage 1 in sync, on one machine and later across two with either player behind a NAT.
 
----
+<p align="center"><img src="docs/img/divider.svg" alt="" width="660"></p>
 
 ## Example
 
@@ -236,7 +237,7 @@ Routers and the relay are tested in Docker by the
 "connections total" counts every connection since the server started, including the ones the C client's test suite makes
 on purpose to be refused, so it is higher than the one player shown.
 
----
+<p align="center"><img src="docs/img/divider.svg" alt="" width="660"></p>
 
 ## Features
 
@@ -257,7 +258,7 @@ Available on `main` today; [docs/features.md](docs/features.md) has every featur
 Partial, unverified and planned work (release archives and the AppImage, the nginx and HAProxy examples, storage backends, the
 desktop apps and more) is in [ROADMAP.md](ROADMAP.md) too.
 
----
+<p align="center"><img src="docs/img/divider.svg" alt="" width="660"></p>
 
 ## Desktop app
 
@@ -291,7 +292,7 @@ and [Lip Gloss](https://github.com/charmbracelet/lipgloss) (MIT); the browser as
 The game server stays standard-library only. [Build and startup instructions](app/README.md#build-and-test) cover
 source use and platform qualifications.
 
----
+<p align="center"><img src="docs/img/divider.svg" alt="" width="660"></p>
 
 ## For recomp developers
 
@@ -301,7 +302,7 @@ is compiled and exercised against a loopback server by the required native-clien
 use the separate [scoped C/C++ SDK](docs/app-framework.md#recomp-developer-contract). Source-level runtime findings
 are pinned; synthetic checks do not certify a title's gameplay or NAT behavior.
 
----
+<p align="center"><img src="docs/img/divider.svg" alt="" width="660"></p>
 
 ## Install
 
@@ -404,7 +405,7 @@ without it, add `--appimage-extract-and-run` as the first argument. The tarball 
 
 </details>
 
----
+<p align="center"><img src="docs/img/divider.svg" alt="" width="660"></p>
 
 ## Configuration
 
@@ -522,7 +523,7 @@ What to set before the server goes behind a proxy or on the internet.
 
 </details>
 
----
+<p align="center"><img src="docs/img/divider.svg" alt="" width="660"></p>
 
 ## Security and privacy
 
@@ -540,7 +541,7 @@ use the [encrypted recovery flow](docs/app-framework.md#portable-identity-and-en
 
 Limits, the UDP source check and how to report a vulnerability privately are in [SECURITY.md](SECURITY.md).
 
----
+<p align="center"><img src="docs/img/divider.svg" alt="" width="660"></p>
 
 ## More
 
@@ -572,7 +573,7 @@ not affiliated with Sony. Bug reports still belong in [issues](https://github.co
 | [KNOWN_ISSUES.md](KNOWN_ISSUES.md) | What is known not to work or not to have been checked |
 | [CHANGELOG.md](CHANGELOG.md), [NOTICE.md](NOTICE.md) | What changed; third-party components and credits |
 
----
+<p align="center"><img src="docs/img/divider.svg" alt="" width="660"></p>
 
 ## Website
 
@@ -581,7 +582,7 @@ The project page is built from `site/` by [tools/site.py](tools/site.py) out of 
 
 Command output has a file header, line-number gutter and syntax-style colours. See [docs/website.md](docs/website.md) for controls and contributor browser checks.
 
----
+<p align="center"><img src="docs/img/divider.svg" alt="" width="660"></p>
 
 ## Credits
 
@@ -594,14 +595,14 @@ Command output has a file header, line-number gutter and syntax-style colours. S
 - [ps3recomp](https://github.com/sp00nznet/ps3recomp) is the recompiler whose NP modules use the client, and re-psn follows the
   model of [xlive](https://github.com/sp00nznet/xlive): the server handles discovery, game traffic goes peer to peer.
 
----
+<p align="center"><img src="docs/img/divider.svg" alt="" width="660"></p>
 
 ## Licence
 
 MIT, see [LICENSE](LICENSE); upstream's copyright line is kept and a line for re-psn's own changes is added. PlayStation, PS3 and PSN are trademarks of Sony Interactive
 Entertainment, used only to say what the server stands in for.
 
----
+<p align="center"><img src="docs/img/divider.svg" alt="" width="660"></p>
 
 ## How AI was used
 
