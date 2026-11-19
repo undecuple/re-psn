@@ -52,8 +52,7 @@ claimed to work yet; see the [features list](docs/features.md) for what is teste
 
 *Caveat: the release's Windows binary is cross-built and has not been run by us; the server's tests do run on Windows in CI.*
 
-More ways to install (container, install script, from source) are under [Install](#install); the [wiki](https://github.com/undecuple/re-psn/wiki)
-has short guides for players and hosts.
+More ways to install (container, install script, from source) are under [Install](#install).
 
 <p align="center"><img src="docs/img/divider.svg" alt="" width="660"></p>
 
@@ -547,7 +546,7 @@ Limits, the UDP source check and how to report a vulnerability privately are in 
 
 [ROADMAP.md](ROADMAP.md) lists what is done, what is planned (storage, health checks, desktop apps, private rooms and more) and what
 is out of scope. re-psn is for groups running their own server, not a public PSN replacement. Issues and pull requests are
-welcome; [CONTRIBUTING.md](CONTRIBUTING.md) has the ground rules and the tests to run.
+welcome; [CONTRIBUTING.md](CONTRIBUTING.md) has the ground rules and the tests to run. The [documentation index](docs/README.md) lists every page in `docs/`.
 
 [![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/W8fMT78Q7k)
 

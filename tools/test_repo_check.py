@@ -73,6 +73,26 @@ class RepoCheckTest(unittest.TestCase):
         self.track()
         self.good()
 
+    def test_docs_index_must_link_every_docs_page(self):
+        self.write("docs/README.md", "# Docs\n[other](guide.md#guide)\n")
+        self.track()
+        self.good()
+        self.write("docs/extra.md", "# Extra\n")
+        self.track()
+        err = self.bad("docs/README.md:1: docs index does not link docs/extra.md")
+        self.assertNotIn("docs/guide.md", err)
+        self.write("docs/README.md", "# Docs\n[a](guide.md) [b](./extra.md) [site](https://example.org/x.md)\n")
+        self.track()
+        self.good()
+
+    def test_docs_index_ignores_subfolders_and_is_optional(self):
+        self.write("docs/sub/page.md", "# Sub\n")
+        self.track()
+        self.good()
+        self.write("docs/README.md", "# Docs\n[a](guide.md)\n")
+        self.track()
+        self.good()
+
     def test_linked_image_target_is_checked(self):
         self.write("README.md", "[![image](docs/missing.png)](https://example.invalid/)\n")
         self.bad("missing tracked target: 'docs/missing.png'")
