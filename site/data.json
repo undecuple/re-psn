@@ -1391,6 +1391,7 @@
      "**Clients:** AUTH from the C client and the desktop app's Go client."
     ],
     "Changed": [
+     "**Docs and tooling:** the README banner (`docs/img/banner.png`) has a status strip along the bottom: one cell for each component of the README badges (Server, Relay, Sign-in passes, C client, Desktop app, LAN discovery, ...",
      "**Docs:** `docs/README.md`, an index of every page in `docs/` and the app, deploy, docker and lab READMEs, grouped by what you want to do (play and connect, host, develop, operate, maintain, reference).",
      "**Docs:** the README no longer points to the GitHub wiki.",
      "**Docs:** the README's first screen now follows the website's look: a centred title and one-line description that says it is unofficial fan work, two badge rows in the site's colours (with the Discord invite badge), and ...",
@@ -1402,7 +1403,7 @@
    },
    "counts": {
     "Added": 5,
-    "Changed": 7
+    "Changed": 8
    }
   },
   "latest": {
