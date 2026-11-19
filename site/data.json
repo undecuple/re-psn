@@ -1393,6 +1393,7 @@
     ],
     "Changed": [
      "**Server:** a client that is not a player yet can no longer fill the log with warn lines.",
+     "**Docs:** `docs/protocol.md`, a protocol specification: byte layouts for every TCP frame and UDP packet, the connection state machine, the order of checks and the error code each request can return, limits, versioning ...",
      "**Server:** a relay stream that is already open now ends when a pass stops covering it.",
      "**Docs:** the comments in `client/psnr.h` and `client/psnr_app.h` are now Doxygen blocks (`@file`, `@defgroup` groups, `@brief`, `@param`, `@return`, `@note`), and every public declaration has text.",
      "**Docs and tooling:** the README banner (`docs/img/banner.png`) has a status strip along the bottom: one cell for each component of the README badges (Server, Relay, Sign-in passes, C client, Desktop app, LAN discovery, ...",
@@ -1407,7 +1408,7 @@
    },
    "counts": {
     "Added": 6,
-    "Changed": 11
+    "Changed": 12
    }
   },
   "latest": {

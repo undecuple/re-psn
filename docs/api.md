@@ -4,6 +4,9 @@ Game clients talk to the server over one TCP connection (default port 36100).
 The server is in `server/`, the C client is in `client/psnr.h`, and both are
 tested against each other (`server/client_test.go`, `server/client_auth_test.go`).
 
+[protocol.md](protocol.md) is the reference for the same protocol: exact byte layouts, the order of checks and the error code
+each request can return. This page explains and advises.
+
 The desktop's [profile/trophy/social framework](app-framework-api.md) has its own versioned local broker and HTTPS
 contracts. Its identities do not authenticate sessions on the game protocol described here.
 
@@ -32,6 +35,7 @@ u8 type | u16 length | payload (length bytes)
   asynchronous, and titles do have more than one request outstanding.
 - **Pushes** (types `0xA0`–`0xAF`) are server-initiated events. They have no
   request id.
+- A request whose payload is under 4 bytes has no `req` to echo: the server drops it with no reply and leaves the connection open.
 
 Room replies and pushes for each control connection are queued in the order
 the server applies the corresponding room operations, including disconnects.
@@ -74,7 +78,7 @@ server carries it only with `-relay` (see [Relay](#relay)).
 | Type | Name | Request (after `req`) | Reply |
 |---|---|---|---|
 | 0x01 | HELLO | `comm_id [12]` `online_id [16]` `p2p_port u16` | HELLO_ACK |
-| 0x02 | HEARTBEAT | optional `rtt_ms u16` | none |
+| 0x02 | HEARTBEAT | optional `rtt_ms u16` | none (ERROR 7 before HELLO) |
 | 0x03 | PEER_AUTH | none | OK |
 | 0x04 | GET_CAPS | none | CAPS (after 0.5.0; a server from 0.5.0 or before answers ERROR 1) |
 | 0x05 | AUTH | `version u8` (1) `pass blob` (at most 2048 bytes) | OK, or ERROR 10; ERROR 1 from a server with no pass settings (and from one before this) |
@@ -131,7 +135,7 @@ client's `psnr_poll` sends a HEARTBEAT every 20 seconds.
 | 4 | probe | the server answers a UDP PROBE from this player's P2P socket; clear for a title in `-no-peer-titles` |
 | 5 | relay | the server relays streams and datagrams for this player: `-relay` is on and the title is not in `-no-peer-titles` |
 | 6 | discover | the server answers LAN discovery (`-discover`) |
-| 7 | pass for relay | `-require-pass relay` is on (before AUTH under `-require-pass connect` this is the only bit GET_CAPS shows, and its version text is empty): the relay needs a pass (see [Sign-in passes](#sign-in-passes)); bit 5 stays clear until one with the `relay` scope is accepted |
+| 7 | pass for relay | `-relay` and `-require-pass relay` are on and the title is not in `-no-peer-titles` (before AUTH under `-require-pass connect` this is the only bit GET_CAPS shows, and its version text is empty): the relay needs a pass (see [Sign-in passes](#sign-in-passes)); bit 5 stays clear until one with the `relay` scope is accepted |
 
 A clear bit means the server does not offer the feature to this player. Ignore bits you do not know: later versions may add them. GET_CAPS before HELLO gets ERROR 7 (no hello). A server that predates GET_CAPS answers it with ERROR 1 (bad request); treat that as "nothing reported". The relay bit repeats HELLO_ACK's bit 0.
 
@@ -143,7 +147,7 @@ A clear bit means the server does not offer the feature to this player. Ignore b
 | 2 | not found |
 | 3 | room full |
 | 4 | not the room owner |
-| 5 | not in that room |
+| 5 | not in that room, or no such room: every room request that names a room id, except JOIN_ROOM, answers 5 for an unknown room; JOIN_ROOM answers 2; JOIN_BY_CODE answers 2 for an unknown code |
 | 6 | limit reached: the server's room limit, or the player is already in `-max-player-rooms` rooms; for a score request, the server's score store failed or a title, board or player limit was reached (see [Leaderboards](#leaderboards)); for JOIN_ROOM, JOIN_BY_CODE or SET_ROOM_DATA, the room's state would not fit one ROOM_JOINED reply (see Rooms) |
 | 7 | no HELLO yet |
 | 8 | name taken (HELLO; under `-require-pass connect`, AUTH): another player on this server has it |
@@ -158,7 +162,7 @@ provider secret: it checks an Ed25519 signature offline against public keys from
 account signed in. It says nothing about who the player is or what name they use; `online_id` is still unauthenticated.
 
 **AUTH (0x05)** is sent after HELLO: `version u8` (1; 2 is reserved for a pass bound to a client key and is refused today) and
-`pass blob`, at most 2048 bytes. The reply is OK or ERROR 10. A refused AUTH changes nothing, and a connection is closed after 3 refused AUTH requests in a row (a good one starts the count again); bytes after the pass also refuse it. A second AUTH on the same
+`pass blob`, at most 2048 bytes. The reply is OK or ERROR 10. A refused AUTH changes nothing, and a connection is closed after 3 refused AUTH requests in a row (a good one starts the count again; the reply to the third is not guaranteed to arrive before the close); bytes after the pass also refuse it. A second AUTH on the same
 connection is a refresh: it must name the same account and replaces the first pass's scopes and expiry. A server with no pass
 settings answers ERROR 1, as a server from before AUTH does. A client must not treat ERROR 1, or capability bit 7, as proof of
 anything: both can be forged on a plain TCP connection. Whether to send a pass, and to which server, is the player's own
@@ -181,7 +185,7 @@ server will not ignore a key binding):
 
 **What it opens.** With `-require-pass relay`, a stream or a relayed datagram between two players needs a pass with the `relay`
 scope at both ends that has not run out (see below); otherwise STREAM_CONNECT and STREAM_ACCEPT get ERROR 10 and the datagram is dropped and
-counted as `relay_no_pass`. The pass lapses 60 s after `exp` (the skew AUTH allows) without the connection closing, so a pass is good for up to 61 minutes. The pass is checked when a stream or datagram starts, and a stream that is open ends when the pass of either player lapses (60 s after `exp`, unless that player's own connection sends a refresh AUTH; a closed connection cannot extend it), when the key that signed it leaves the key file, or when its account is revoked; it may still end earlier on its own or by idling out (`-relay-idle`). Rooms, scores and direct peer traffic need no
+counted as `relay_no_pass`. AUTH accepts a pass whose `iat` is up to 60 s ahead of the server's clock, and `exp` may be 3600 s after `iat`. The pass lapses 60 s after `exp` (the skew AUTH allows) without the connection closing, so a pass can open the relay for up to 3719 s, about 62 minutes, from when it was accepted. The pass is checked when a stream or datagram starts, and a stream that is open ends when the pass of either player lapses (60 s after `exp`, unless that player's own connection sends a refresh AUTH; a closed connection cannot extend it), when the key that signed it leaves the key file, or when its account is revoked; it may still end earlier on its own or by idling out (`-relay-idle`). Rooms, scores and direct peer traffic need no
 pass. `-pass-max-conns-per-sub` limits how many connections one account can hold. `-pass-revoked-file` lists accounts to refuse; on
 SIGHUP the server reads it again and closes their live connections and open relay streams. A key taken out of the key file ends the passes it signed at the same SIGHUP, and the relay streams they cover: their holders lose the relay until they sign in again.
 
@@ -232,7 +236,7 @@ refresh, and a client makes it before the current pass's `exp`. HELLO_ACK flag b
 GET_CAPS bit 7 (`PSNR_CAP_PASS_RELAY`) tell a client whether to expect a pass; they are hints only. The Go client has no GET_CAPS call yet.
 
 **Limits, plainly.** A pass is a bearer token sent over the game's plain TCP: anyone who can read the connection can use it until
-it expires, so it lives at most an hour. It proves an account signed in; it does not prove anything about the player and holds no
+it expires, so it lives at most about an hour (62 minutes with the clock skew, see above). It proves an account signed in; it does not prove anything about the player and holds no
 secret worth stealing. The server logs a short keyed hash of the account (the key is random, made at each start and never stored, so the tag cannot be reversed by guessing account numbers and changes after a restart), never a pass, and the status page and `/api/stats` never show an
 account. The login service that signs passes is not part of this server.
 
@@ -267,7 +271,7 @@ These are modelled on sceNpMatching2 rooms.
   opaque to the server and shown to searchers in ROOM_LIST, so a title can
   mark its room closed.
 - **ROOM_MESSAGE:** `to` is a member id, or 0 for every member except the
-  sender.
+  sender. A `to` that is not in the room, or is the sender, gets OK and delivers nothing.
 - **KICK_MEMBER:** only the owner may call it.
 - **SEARCH_ROOMS:** lists rooms of the caller's title that are not full,
   oldest first. `start` is a 0-based offset into that list.
@@ -300,7 +304,7 @@ These are modelled on sceNpMatching2 rooms.
 | 0x97 | ROOM_ACCESS | `mode u8` `code [8]` (NUL bytes unless mode is 1) |
 | 0x91 | ROOM_LIST | `total u16` `count u16`, then `count` × (`room_id u64` `owner online_id [16]` `cur u8` `max u8` `flags u32` `external blob`) |
 
-**Pushes.** These go to every member except the one who acted, unless noted.
+**Pushes.** These go to every member except the one who acted, unless noted. Two exceptions: a ROOM_MSG with `to` set goes to that member only, and the owner who kicks a member is told by MEMBER_LEFT, like the rest.
 
 | Type | Name | Payload |
 |---|---|---|
@@ -311,7 +315,7 @@ These are modelled on sceNpMatching2 rooms.
 | 0xA5 | KICKED | `room_id u64`, sent to the kicked member only; the rest get MEMBER_LEFT |
 | 0xA6 | STREAM_OFFER | `stream_id u32` `from_user u32` `vport u16`: a relayed stream is waiting for you (see "Relay") |
 | 0xA8 | PEER_KEY | `room_id u64` `user u32` `key [16]`: the key you share with that member in that room (see "Peer keys"); sent only to a member who sent PEER_AUTH, about a member who did too |
-| 0xA7 | ROUTE | `room_id u64` `user u32` `flags u8`: how to reach that member; bit 0 set = streams to it go through the relay (the server sets it for a player behind a router seen from outside its network, and for every player with `-relay-force`; never for a player of a title in `-no-peer-titles`). Sent to both sides when a member joins, only with `-relay` |
+| 0xA7 | ROUTE | `room_id u64` `user u32` `flags u8`: how to reach that member; bit 0 set = streams to it go through the relay (the server sets it for a player whose probe came from an address other than the `local_ip` it sent, and who is on another network, and for every player with `-relay-force`; never for a player of a title in `-no-peer-titles`). Sent to both sides when a member joins, only with `-relay` |
 
 ## Peer keys
 
@@ -338,11 +342,12 @@ These are modelled on sceNpScore.
 | 0x22 | GET_RANKING_BY_ID | `board u32` `n u16` (≤ 100) `online_id [16] × n` | RANKING |
 
 **Details:**
-- **`order`:** 0 = higher is better, 1 = lower is better (lap times). The
+- **`order`:** 0 = higher is better, 1 = lower is better (lap times); any other value acts as 0. The
   first RECORD_SCORE on a board sets it. On PSN this is server-side board
   config that the title never sends, so the client passes the order it knows
   from the title.
-- **GET_RANKING `start`:** a 1-based rank.
+- **GET_RANKING `start`:** a 1-based rank; 0 is ERROR 1. A `start` past the end, or a `count` of 0, gets zero rows, not an error.
+- **Names on a board** are matched exactly, capital letters included, although HELLO compares names case-insensitively.
 - **GET_RANKING_BY_ID** returns one row per requested id, in request order.
   An id with no score gets rank 0 and score 0.
 - **Limits** (memory store): the store keeps boards for at most 1000 titles,
@@ -361,7 +366,7 @@ These are modelled on sceNpScore.
 
 ## UDP
 
-The server also listens on UDP, on the same port as TCP (36100). This is how a
+The server also listens on UDP, by default on the same port as TCP (36100; `-tcp-addr` and `-udp-addr` can differ, and DISCOVER_REPLY carries both ports). This is how a
 player behind a router gets reachable: the router gives the title's P2P
 socket a public port that the server can't see over TCP. Every packet starts
 with the four bytes `PSNR` and a type byte.
@@ -411,9 +416,10 @@ with `-relay`: it costs the host's bandwidth. HELLO_ACK's flags say whether it
 is on.
 
 **Streams.** A player behind a router can't take an incoming connection. The
-server works out who is in that position: a member whose probe came from a
-public address that isn't its own, seen from another network. It tells the
-other members with a ROUTE push when that member joins. To open a stream to
+server works out who is in that position: a member whose probe came from an address that differs from the `local_ip` the member
+sent in its PROBE (a client that sends 0.0.0.0 or nothing usable counts as behind a router), seen from another network. It tells the
+other members with a ROUTE push when that member joins, and does not send another: a member that has not probed yet when someone
+joins gets a ROUTE without bit 0, and nothing corrects it later. To open a stream to
 such a member:
 
 1. Open a new TCP connection to the server and send, as its first message
@@ -488,8 +494,8 @@ the server never reroutes a datagram by itself, so a title that must not relay s
 the player knows which it is using.
 
 **What the relay carries.** Any payload that fits one UDP datagram: the server reads datagrams up to 65536 bytes and adds no
-size limit of its own, so 17 bytes less than that is the most one relayed datagram holds (the test sends 1, 1200, 1472, 9000
-and 60000 bytes whole). Datagrams are not queued, resent or reordered by the server. One source address gets `-max-udp-rate`
+size limit of its own, but an IPv4 UDP datagram holds at most 65507 bytes, and the relay header takes 17 of them, so the most one
+relayed datagram carries is 65490 bytes (the test sends 1, 1200, 1472, 9000 and 60000 bytes whole). Datagrams are not queued, resent or reordered by the server. One source address gets `-max-udp-rate`
 packets a second in total, 1000 by default, shared by its probes and relayed datagrams, and players behind one router share it,
 so a session of 60 packets a second per player is far inside it. On loopback a relayed datagram of 32 to 100 bytes arrives about
 70 microseconds after it was sent (median of three runs, a shared machine); on a real network the delay is the path to the
