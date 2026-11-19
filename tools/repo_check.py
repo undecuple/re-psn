@@ -46,6 +46,7 @@ import unicodedata
 from urllib.parse import unquote, urlsplit
 
 POLICY = "tools/repo_layout.json"
+DOCS_INDEX = "docs/README.md"
 LABEL = re.compile(r"(?<!\\)\[((?:\\.|[^\[\]\\]|\[[^\[\]]*\])*)\]")
 DEFINITION = re.compile(r"^ {0,3}\[([^\]]+)\]:[ \t]*(.*)$", re.MULTILINE)
 LINK_TAIL = re.compile(r'''\s*(?:(?:"[^"\n]*"|'[^'\n]*'|\([^\n]*\))\s*)?\)''')
@@ -512,7 +513,24 @@ class Checker:
                         self.error(name, line, error)
                     else:
                         self.target(name, line, value, base=base, glob=True)
+        self.docs_index()
         return sorted(self.errors)
+
+    def docs_index(self):
+        """When docs/README.md exists, every other docs/*.md page must be linked from it."""
+        if DOCS_INDEX not in self.files:
+            return
+        text = (self.root / DOCS_INDEX).read_text(encoding="utf-8")
+        linked = set()
+        for _, value, error in links(text):
+            if error or not value or EXTERNAL.match(value):
+                continue
+            path = unquote(urlsplit(value).path)
+            if path:
+                linked.add(posixpath.normpath(posixpath.join("docs", path)))
+        for name in sorted(self.files):
+            if posixpath.dirname(name) == "docs" and name.endswith(".md") and name != DOCS_INDEX and name not in linked:
+                self.error(DOCS_INDEX, 1, f"docs index does not link {name}; add it under the section for its readers")
 
 
 def main(argv=None):
