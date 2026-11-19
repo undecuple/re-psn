@@ -305,7 +305,7 @@ are pinned; synthetic checks do not certify a title's gameplay or NAT behavior.
 
 ## Install
 
-**Recommended:** download an official [release archive or AppImage](#release-archives) from the
+**Recommended:** download a [release archive or AppImage](#release-archives) from the
 [releases page](https://github.com/undecuple/re-psn/releases) and verify it against `SHA256SUMS`.
 
 Releases are pre-releases for now: the newest, [v0.8.0](https://github.com/undecuple/re-psn/releases/tag/v0.8.0), is on the [releases page](https://github.com/undecuple/re-psn/releases) (see [Release archives](#release-archives)). Its container image is `ghcr.io/undecuple/re-psn:0.8.0` (see [Container](#container)).
