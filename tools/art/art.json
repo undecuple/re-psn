@@ -29,7 +29,7 @@
  },
  "inputs": {
   "docs/art/palette.json": "b65bf190ed96d489f69bc0afb98da965cab883f0bbbd0fa1bb2dcf6963e5a849",
-  "docs/features.tsv": "781dfdb4c0671302a88f120f0a93d5b6678ef560f0130211c160b330d9a6ebbf",
+  "docs/features.tsv": "89f55614b464aa7ab7e193a7315889af459455791f826fda34b5e858ea7da847",
   "tools/badges.py": "aeb45587d67ac49e1ac9d8f68444cc57cc251c57040a7afc380796a7d5312668",
   "docs/art/transcripts/server.txt": "85e9620bdcb89f509fff60b0df04faf665df14e289cbfd0effcd847aa94d4de7",
   "docs/art/transcripts/alice.txt": "8df7a50877a38c6c1e8358a912dc62a730cf84d26a36c3575170c6e101b29ea0",
