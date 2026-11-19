@@ -15,8 +15,8 @@ package main
 // UDP lookup. Until then only AUTH, HEARTBEAT and GET_CAPS (pass bits only) are answered; anything else gets ERROR 10. AUTH
 // success registers the player, as HELLO does without the setting, and replies OK with the real UDP token. The connection
 // must sign in within a fixed time of accept, no HEARTBEAT extends it, and it is closed passSkew seconds after the pass
-// expires unless a refresh AUTH arrived. An already-open relay stream outlives that close and a revocation; only new
-// streams and datagrams are checked.
+// expires unless a refresh AUTH arrived. A relay stream that is already open ends the same way (relay.go): when either end's
+// pass has run out plus the skew, when its key leaves the key file, or when its account is revoked.
 //
 // A pass is "v1." + base64url(payload) + "." + base64url(signature) with no padding. The signature is Ed25519 over the
 // ASCII bytes "v1." + base64url(payload) as sent, so nothing is canonicalised. The payload is compact JSON with exactly the
@@ -42,6 +42,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"runtime"
 	"strings"
@@ -438,6 +439,7 @@ func (s *Server) handleAuth(c *client, req uint32, r *reader) {
 		c.sub = cl.sub
 	}
 	c.passScopes, c.passExp, c.passKid = cl.scopes, cl.exp, cl.kid
+	s.rearmStreams(c)
 	if s.requireConnectPass {
 		c.gateUntil = time.Unix(cl.exp+passSkew, 0) // the run loop reads this on this same goroutine
 	}
@@ -479,7 +481,8 @@ func (s *Server) reloadPass(keyFile, revokedFile string) error {
 			return err
 		}
 	}
-	s.pass.Store(&passConfig{keys: keys, revoked: revoked, issuer: old.issuer, aud: old.aud})
+	np := &passConfig{keys: keys, revoked: revoked, issuer: old.issuer, aud: old.aud}
+	s.pass.Store(np)
 	var closing []*client
 	removed := map[*client]bool{} // closing because the key went, not because the account was revoked
 	s.mu.Lock()
@@ -495,7 +498,22 @@ func (s *Server) reloadPass(keyFile, revokedFile string) error {
 			}
 		}
 	}
+	type cutLeg struct {
+		ls     *liveStream
+		conns  []net.Conn
+		reason string
+	}
+	var cutLegs []cutLeg
+	now := time.Now()
+	for ls := range s.live { // the same rule as for the connections above, and for a pass that has run out
+		if reason, _ := s.streamCutReason(ls, np, now); reason != "" {
+			cutLegs = append(cutLegs, cutLeg{ls, s.cutStream(ls), reason})
+		}
+	}
 	s.mu.Unlock()
+	for _, cl := range cutLegs {
+		s.closeStream(cl.ls, cl.conns, cl.reason)
+	}
 	for _, c := range closing {
 		reason := "pass revoked"
 		if removed[c] {

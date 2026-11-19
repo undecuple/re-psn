@@ -55,6 +55,7 @@ type Server struct {
 	requireConnectPass bool                       // -require-pass connect: a connection is a player only after AUTH (pass.go)
 	maxUnauth          int                        // -pass-max-unauth-conns: connections not yet signed in, in total (0: no limit)
 	maxUnauthPerAddr   int                        // -pass-max-unauth-per-addr: the same per remote address (0: no limit)
+	acceptHook         func()                     // a test aid: runs when an accepting leg has taken its stream from the table, before it answers (relay.go)
 	authTimeout        time.Duration              // how long after accept a connection has to sign in
 	maxPerSub          int                        // -pass-max-conns-per-sub: connections one account may hold (0 for no limit)
 	subConns           map[string]int             // connections per account, under mu
@@ -114,7 +115,8 @@ type Server struct {
 	trustedProxies []netip.Prefix // peers allowed to name the real client (proxy.go)
 	proxyProto     bool           // require a PROXY header from a trusted peer
 
-	streams    map[uint32]*stream // relay streams waiting for their target to accept
+	streams    map[uint32]*stream       // relay streams waiting for their target to accept
+	live       map[*liveStream]struct{} // relay streams from their offer to the end of their splice (relay.go)
 	nextStream uint32
 	relayed    uint64 // bytes carried by the relay (atomic)
 
@@ -178,6 +180,7 @@ func NewServer(maxRooms int, verbose bool) *Server {
 		byCode:   map[string]*room{},
 		scores:   store.NewMemory(),
 		streams:  map[uint32]*stream{},
+		live:     map[*liveStream]struct{}{},
 		subConns: map[string]int{},
 		maxRooms: maxRooms,
 
