@@ -1,0 +1,68 @@
+name: Title request
+description: Ask for a game title to be listed or its test level recorded
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read [Requesting a title](https://github.com/undecuple/re-psn/blob/main/docs/title-requests.md) first.
+        re-psn carries no game code, and a stock game cannot use it without a client-side integration.
+        Do not attach game files, keys, firmware, saves or private logs, and do not link to them.
+  - type: input
+    id: game
+    attributes:
+      label: Title name and region
+    validations:
+      required: true
+  - type: input
+    id: commid
+    attributes:
+      label: NP communication ID
+      description: The trophy data directory name, for example NPWR00153_00 (not the serial). Say where you read it.
+    validations:
+      required: true
+  - type: checkboxes
+    id: features
+    attributes:
+      label: Features it uses
+      options:
+        - label: Rooms
+        - label: Room data and messages
+        - label: Leaderboards
+  - type: dropdown
+    id: peer
+    attributes:
+      label: Does it send packets directly between players?
+      options:
+        - "Yes"
+        - "No"
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: client
+    attributes:
+      label: The client side
+      description: Which integration the game has (the C client, a runtime adapter, none yet), and who maintains it. A request cannot create one.
+  - type: dropdown
+    id: level
+    attributes:
+      label: Testing so far (your own view; the maintainers state the level)
+      options:
+        - Not tested
+        - Loopback-tested
+        - Tested with a real client
+    validations:
+      required: true
+  - type: textarea
+    id: ran
+    attributes:
+      label: What you ran, and what you did not
+      description: Commit or version, and the commands. If you ran nothing, write nothing run.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log lines (optional, needed above Not tested)
+      description: Server log (run with `-v`) or client output. Remove user names, addresses and paths first.
+      render: text
