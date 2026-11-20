@@ -3,6 +3,7 @@ name: release-notify
 # Posts one message to the project's Discord channel when a release is published (pre-releases too).
 # The webhook URL lives only in the repository secret DISCORD_RELEASE_WEBHOOK; without it (forks) the job does nothing.
 # The post pings only the project's own Discord role (ROLE, a public ID, not a secret); nothing else can be pinged.
+# The message text repeats the tag and the release link, because a forum card shows only that text and not the embed below it.
 
 on:
   release:
@@ -36,7 +37,7 @@ jobs:
           jq -n --arg tag "$TAG" --arg url "$URL" --arg kind "$kind" --arg body "$BODY" --arg role "$ROLE" '{
             username: "re-psn",
             thread_name: (("re-psn " + $tag) | .[0:100]),
-            content: ("<@&" + $role + ">"),
+            content: ("<@&" + $role + "> re-psn " + $tag + " is out" + (if $kind == "pre-release" then " (pre-release)" else "" end) + ": <" + $url + ">"),
             allowed_mentions: {parse: [], roles: [$role]},
             embeds: [{
               title: ("re-psn " + $tag + " is out"),
