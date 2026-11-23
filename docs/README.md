@@ -32,6 +32,7 @@ instance and there are no accounts: you run your own server. The [project README
 - [Protocol guide](api.md): how game clients talk to the server over TCP, message by message, with advice.
 - [Protocol specification](protocol.md): the reference for writing a second client or server: byte layouts, state machine, error codes, limits.
 - [Architecture](architecture.md): the server, the C client, the relay and how the parts fit.
+- [Code map](code-map.md): where things live: the layers and modules of the server, clients, app, site and CI, the main flows, entry points and which test runs where.
 - [App framework API](app-framework-api.md): the Go package for an app-owned trophy store, identities and friends.
 - [Desktop profiles, trophies and authenticated friends](app-framework.md): how the desktop app uses that framework.
 - [Admin API](admin-api.md): an experimental, read-only second HTTP listener.
