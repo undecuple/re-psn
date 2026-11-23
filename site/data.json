@@ -1382,8 +1382,14 @@
   "unreleased": {
    "version": "Unreleased",
    "date": "",
-   "sections": {},
-   "counts": {}
+   "sections": {
+    "Changed": [
+     "Docs: the client quick start no longer says the C client is two files (it is `psnr.c` and `psnr.h`, plus `psnr_app.c` and `psnr_app.h` for the local trophy SDK), the Python section lists what that client lacks ..."
+    ]
+   },
+   "counts": {
+    "Changed": 1
+   }
   },
   "latest": {
    "version": "0.9.0",

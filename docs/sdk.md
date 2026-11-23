@@ -19,8 +19,8 @@ It listens on loopback only, with the status page off and scores kept in memory.
 
 ## C client: build and install
 
-The client is two files, `client/psnr.c` and `client/psnr.h` (plus `psnr_app.c`/`psnr_app.h` for the local trophy
-SDK). Vendoring them is still the simplest route. For a system or project-local install, `client/Makefile` builds a
+The client is `client/psnr.c` and `client/psnr.h`; the local trophy SDK adds `client/psnr_app.c` and
+`client/psnr_app.h`. Vendoring the files you need is still the simplest route. For a system or project-local install, `client/Makefile` builds a
 static library and a pkg-config file:
 
 ```sh
@@ -70,7 +70,8 @@ on (gnu11) and links `ws2_32` on Windows; the Windows part is not tested here.
 
 `client/python/psnr_client.py` is one file with no dependencies beyond the Python 3 standard library. It covers
 HELLO, heartbeat, GET_CAPS, rooms (create, search, join, leave, room data, room messages, kick) and scores. It does
-not cover the relay, UDP probes, sign-in passes or peer keys.
+not cover the relay, UDP probes, sign-in passes or peer keys, the invite-only room requests (SET_ROOM_ACCESS,
+JOIN_BY_CODE, GET_ROOM_ACCESS) or GET_RANKING_BY_ID. The C client sends the invite-only room requests and GET_RANKING_BY_ID.
 
 ```sh
 python3 client/python/psnr_client.py 127.0.0.1 36100 demo_py
@@ -114,4 +115,4 @@ python3 client/python/test_psnr_client.py
 
 - A Go client other apps can import: the one in `app/internal/client` is internal to the desktop app module.
 - A client version number or a `psnr_error_string` function in the C client.
-- Python support for the relay, probes and passes.
+- Python support for the relay, probes, passes, invite-only room codes and ranking by id.

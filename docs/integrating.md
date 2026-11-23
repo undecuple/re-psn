@@ -168,7 +168,9 @@ API here. NP room flags/passwords do not automatically become re-psn invite code
 Vendor [psnr.c](../client/psnr.c) and [psnr.h](../client/psnr.h) from the **same reviewed commit**, preserving the
 [licence](../LICENSE) and [credits](../NOTICE.md). Compile the `.c` file as C and include the header from C++ through
 its existing `extern "C"` guards. Windows links Winsock (`ws2_32`); a MinGW-w64 build uses the same compile inputs
-with `-lws2_32` and an `.exe` output. Do not infer MSVC/MinGW runtime validation from a Linux test result.
+with `-lws2_32` and an `.exe` output. Do not infer MSVC/MinGW runtime validation from a Linux test result. The
+local trophy SDK adds `psnr_app.c` and `psnr_app.h`; the optional `make install` and CMake routes are in
+[the client quick start](sdk.md).
 
 For a CMake target, adapt the paths and existing executable target:
 

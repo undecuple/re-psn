@@ -513,7 +513,8 @@ void psnr_close(psnr_client* c);
  * @brief Why the connection was lost. PSNR_DEAD_NONE while it is up.
  *
  * Set once, at the first failure:
- *   PEER_CLOSED  the server closed the connection (a read returned end of stream)
+ *   PEER_CLOSED  the server closed the connection (a read returned end of stream); this includes a
+ *                server that ends a connection after repeated refused passes or a revoked account
  *   IO_ERROR     a read or write failed; psnr_last_os_error says why
  *   NOMEM        an allocation failed
  *   SEND_TIMEOUT one write of a request waited PSNR_SEND_TIMEOUT_MS for writability
@@ -618,6 +619,8 @@ int psnr_poll(psnr_client* c, psnr_msg* out);
  * Send, then wait up to timeout_ms for that request's reply (not a full-operation
  * deadline). Timeout does not cancel the request; a late reply can still arrive.
  * Pushes and other replies stay queued for psnr_poll. 1 / 0 (timeout) / -1.
+ * A server ERROR is a reply like any other: the return is 1 and reply->type is PSNR_ERROR, with
+ * the code in the first four bytes of reply->data. Only psnr_auth and psnr_connect decode it for you.
  *
  * @param c          The connection.
  * @param type       The request type (a PSNR_* message type).
