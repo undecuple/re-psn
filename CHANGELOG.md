@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-23
+
+Summary: Sign-in passes can now gate who connects (with C and desktop-app clients that send them) and a relay stream ends when its pass stops; a log limit keeps a flood of refused clients out of the log; new docs for hosting on the internet (a public compose file), the wire protocol, a client quick start and the exact pass format with shared test vectors.
+
 ### Added
 - **Docker:** `docker/docker-compose.public.yml`, a compose file for a host who exposes their own server to the internet, and `docs/public-compose.md`, which says why each setting is there and what the file leaves out. It runs as user 10001 with no capabilities, no new privileges, a read-only root, memory, CPU, process and file limits, a health check on `/healthz`, rotated JSON logs, the status page on localhost with a token from an env file, and the relay, discovery and Medius off. A commented block turns on sign-in passes for a host with their own login service.
 - **Clients:** a build and install path for the C client and a single-file Python client. `make -C client PREFIX=... install` installs a static `libpsnr.a`, the headers and a `psnr.pc`; `client/CMakeLists.txt` provides `psnr::psnr` and a `find_package(psnr)` config. `client/python/psnr_client.py` (standard library only) covers HELLO, heartbeat, GET_CAPS, rooms, room data and messages, kick and scores, with loopback tests run in CI. The C sources and headers are unchanged. See the [client quick start](docs/sdk.md).
