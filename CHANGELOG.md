@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- Docs: the client quick start no longer says the C client is two files (it is `psnr.c` and `psnr.h`, plus `psnr_app.c` and `psnr_app.h` for the local trophy SDK), the Python section lists what that client lacks (invite-only room requests and GET_RANKING_BY_ID, besides the relay, probes and passes), and the integration guide points to the install routes. The `psnr_call` comment in `client/psnr.h` now says that a server ERROR is a reply (the return is 1 and the type is `PSNR_ERROR`), and the `PEER_CLOSED` comment says that a server that ends a connection for repeated refused passes or a revoked account shows up as one. Comments and prose only.
+
 ## [0.9.0] - 2026-11-23
 
 Summary: Sign-in passes can now gate who connects (with C and desktop-app clients that send them) and a relay stream ends when its pass stops; a log limit keeps a flood of refused clients out of the log; new docs for hosting on the internet (a public compose file), the wire protocol, a client quick start and the exact pass format with shared test vectors.
