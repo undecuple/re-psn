@@ -99,11 +99,14 @@ func (s *Server) actionRequest(w http.ResponseWriter, r *http.Request) error {
 		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 		defer cancel()
 		snapshot, err := s.fetch.Fetch(ctx, tui.Query{Server: v.Server, StatusURL: v.StatusURL, StatusTokenFile: v.StatusTokenFile, Title: q.Title, Board: q.Board, Boards: q.Boards})
-		play := Play{Status: "reachable", CheckedAt: time.Now().UnixMilli(), Message: "Reachable at last check; the game connects independently", RoundTripMS: float64(snapshot.RTT) / float64(time.Millisecond), Rooms: []Room{}, Boards: []Board{}}
+		play := Play{Status: "reachable", CheckedAt: time.Now().UnixMilli(), Message: "Reachable at last check; the game connects independently", RoundTripMS: float64(snapshot.RTT) / float64(time.Millisecond), Rooms: []Room{}, Boards: []Board{}, Address: v.Server, Titled: q.Title != "", UsedStatusURL: v.StatusURL != "", Source: "game_connection"}
 		if err != nil {
 			play.Status = "unavailable"
 			play.Message = "Remote server unavailable; check its address and whether it is running"
+			play.Kind = failureKind(err, v.Server)
 		} else if snapshot.HTTP != nil {
+			play.Source = "status_page"
+			play.Unlisted = snapshot.HTTP.Unlisted
 			for _, room := range snapshot.HTTP.Rooms {
 				if q.Title != "" && room.Title != q.Title {
 					continue
@@ -123,6 +126,7 @@ func (s *Server) actionRequest(w http.ResponseWriter, r *http.Request) error {
 				}
 			}
 		} else {
+			play.StatusFallback = snapshot.HTTPUnavailable
 			for _, room := range snapshot.Rooms.Rooms {
 				play.Rooms = append(play.Rooms, Room{strconv.FormatUint(room.ID, 10), q.Title, int(room.Cur), int(room.Max), []string{room.Owner}})
 			}

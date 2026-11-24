@@ -19,6 +19,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 	"unicode/utf8"
 
@@ -74,6 +75,15 @@ type Play struct {
 	RoundTripMS float64 `json:"round_trip_ms"`
 	Rooms       []Room  `json:"rooms"`
 	Boards      []Board `json:"boards"`
+
+	// What the last check asked and found, so the page can say what the empty parts mean.
+	Source         string `json:"source"`          // "status_page" or "game_connection"; empty before any check
+	Address        string `json:"address"`         // the game server that was checked; empty when only a status URL was used
+	Titled         bool   `json:"titled"`          // a title ID filter was set, so the game connection asked for rooms
+	UsedStatusURL  bool   `json:"used_status_url"` // a status URL was set for this check
+	StatusFallback bool   `json:"status_fallback"` // the status URL failed and the game connection answered instead
+	Unlisted       int    `json:"unlisted"`        // unlisted rooms counted without names; only a status page reports it (see Source)
+	Kind           string `json:"kind"`            // why a failed check failed: "refused", "timeout", "status" or "other"
 }
 type Grant struct {
 	Active  bool   `json:"active"`
@@ -161,6 +171,22 @@ func setupDone(v config.Settings) bool {
 		return false
 	}
 	return true
+}
+
+// failureKind sorts a failed check by what the error shows, never by a guess about the network. "status" means no game
+// server was set, so only the status URL was tried; "refused" is a connection actively turned away; "timeout" is no
+// answer in time; anything else (including a reply that was not the game protocol) is "other".
+func failureKind(err error, server string) string {
+	var ne net.Error
+	switch {
+	case server == "":
+		return "status"
+	case errors.Is(err, syscall.ECONNREFUSED):
+		return "refused"
+	case errors.Is(err, context.DeadlineExceeded), errors.As(err, &ne) && ne.Timeout():
+		return "timeout"
+	}
+	return "other"
 }
 func (s *Server) state() State {
 	s.mu.Lock()

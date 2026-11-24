@@ -97,7 +97,7 @@ sits behind one mutex (`Server.mu`, `server/server.go:80`); the score store has 
 | Part | Files and symbols |
 | --- | --- |
 | CLI | `app/cmd/re-psn-app/main.go` `run` (dispatch: ui, tui, host, check, profile commands); `ui.go` `runUI`, `runHost`; `window.go` `delegateToWindow`; `framework.go` `runFramework` |
-| Local web controller | `app/internal/webui/server.go` (`Server`, `handle`, `setupDone`, embedded `assets/`: `index.html`, `app.js` with `setupSteps`, `ageWords` and `renderSetup`, `app.css`), `actions.go`, `serverlist.go` |
+| Local web controller | `app/internal/webui/server.go` (`Server`, `handle`, `setupDone`, embedded `assets/`: `index.html`, `app.js` with `setupSteps`, `ageWords`, `roomsNote`, `failureHints`, `copyText` and `renderSetup`, `app.css`), `actions.go`, `serverlist.go` |
 | Terminal UI and shared services | `app/internal/tui/` (`ProfileSession` in `profile.go`; `Fetcher`, `Protocol`, `NativeStatus` in `status.go` and `http_status.go`) |
 | Game-protocol client | `app/internal/client/` (`Dial`, `Hello`, `SearchRooms`, `Ranking`, LAN discovery) |
 | Owned server child | `app/internal/host/host.go` (`Manager.Start` runs the sibling `re-psn-host` with fixed hardening flags) |

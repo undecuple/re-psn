@@ -135,6 +135,8 @@ Trophies uses `g` to grant and `v` to revoke; Friends uses `e` to register, `f` 
 `d` to decline/cancel, `u` to remove and `b`/`x` to block/unblock. Friends and catalog/backup automation are also in the CLI.
 
 The Rooms/Leaderboards protocol view uses a throwaway name and closes after each fetch. It does not join a game.
+In the browser interface, a protocol check with no title ID lists no rooms (it stops after hello), and the Play page
+says so; only a status URL also reports a count of unlisted rooms.
 `f` in Settings, or Ctrl+F while entering a server, performs an explicit bounded LAN search; it does not cross subnets.
 No server is shipped as a preset. The terminal respects `NO_COLOR`; the browser supports Dark, Light and System.
 

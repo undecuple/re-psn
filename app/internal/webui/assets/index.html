@@ -88,6 +88,8 @@
             <div class="actions"><button class="primary" type="submit" data-mutates>Save &amp; check server</button><span class="muted" id="play-check-time">Nothing contacted yet.</span></div>
             <p class="muted" id="play-age">Not checked yet</p><p class="muted" id="play-next"></p><p class="muted" id="play-rooms-note" hidden></p>
           </form>
+          <div id="play-copy" class="actions" hidden><label>Game server address<input id="play-copy-text" readonly maxlength="255" autocomplete="off"></label><button type="button" id="play-copy-btn">Copy address</button><span class="muted" id="play-copy-note" role="status"></span></div>
+          <div id="play-hints" class="muted" hidden><p>This check failed. These are things to look at, not a diagnosis. It may be that:</p><ul id="play-hints-list"></ul></div>
           <div class="panel table-panel" id="servers-panel"><div class="panel-heading"><h2>Saved servers</h2><span class="muted" id="servers-count">0 of 64</span></div>
             <div class="panel-pad"><p class="section-note">A list you keep yourself, on this computer only. Nothing here is contacted until you press Check, and the app never fetches a list from anywhere.</p>
             <p class="callout" id="servers-error" role="alert" hidden></p>

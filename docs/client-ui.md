@@ -41,6 +41,15 @@ The ordinary game protocol does not report every field shown by `/api/stats`. A 
 of game reachability; a failed check retains its explanation. Invite-only room details stay private. A status-reader
 credential never grants host control. See [native status configuration](../app/README.md#optional-native-http-status).
 
+A check only shows what the server told it. Without a title ID or a status URL the game connection says hello and
+stops, so the server counts as reached but no rooms are listed; the page says so instead of showing an empty table
+as if the server were empty. A status page also reports how many unlisted rooms exist; the page shows that count
+(never their names) and nothing for it after a check that used only the game connection. After a check, **Copy address**
+copies the game server address you saved; if the browser blocks copying, the address is selected and you copy it with
+Ctrl+C. When a check fails, the page lists a few things that may be the cause (the port, a firewall or router that
+does not forward it, a server that is not running, a status page that needs a token). They are places to look, not a
+diagnosis. The app still does not join rooms or launch games.
+
 **Refresh local view** reads the local controller/profile state. It does not automatically check the remote game
 server or refresh a friend relay. Those network actions have their own explicit controls.
 
