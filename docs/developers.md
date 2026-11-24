@@ -67,7 +67,7 @@ difference; CI runs it.
 | Source | Generator | Output |
 |---|---|---|
 | `docs/features.tsv` (and `ROADMAP.md` tags) | `python3 tools/features.py` | `docs/features.md` |
-| `docs/features.tsv` | `python3 tools/badges.py` | `docs/img/badges/*.svg`, the README badges |
+| `docs/features.tsv` | `python3 tools/badges.py` | `docs/img/badges/*.svg`, status badges (the banner strip reads the same data) |
 | features, `VERSION`, the README settings table, `CHANGELOG.md`, `go.mod` | `python3 tools/site.py` | `site/index.html`, `site/action.html`, `site/discuss.html`, `site/data.json`, `site/discord-badge.svg` |
 | palette, transcripts, features | `python3 tools/art/make_art.py` | `docs/img/*.png`, `tools/art/art.json` |
 

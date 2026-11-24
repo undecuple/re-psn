@@ -6,9 +6,7 @@
 
 **re-psn // Unofficial fan work: your own matchmaking and leaderboard server for statically recompiled PS3 games. One small binary, no account of its own, no cloud service.**
 
-[![CI](https://img.shields.io/github/actions/workflow/status/undecuple/re-psn/ci.yml?branch=main&label=CI&labelColor=2b2733&style=flat-square)](https://github.com/undecuple/re-psn/actions/workflows/ci.yml) <!-- version -->![version v0.9.0](https://img.shields.io/badge/pre--release-v0.9.0-997e95?labelColor=2b2733&style=flat-square)<!-- /version --> ![status: alpha](https://img.shields.io/badge/status-alpha-ac7f7b?labelColor=2b2733&style=flat-square) [![Discord: join](https://img.shields.io/badge/Discord-join-8288a0?logo=discord&logoColor=e1ffe5&labelColor=2b2733&style=flat-square)](https://discord.gg/W8fMT78Q7k)
-<br>
-[![licence: MIT](https://img.shields.io/badge/licence-MIT-a7d8b0?labelColor=2b2733&style=flat-square)](LICENSE) [![last commit](https://img.shields.io/github/last-commit/undecuple/re-psn?color=997e95&labelColor=2b2733&style=flat-square)](https://github.com/undecuple/re-psn/commits/main) [![stars](https://img.shields.io/github/stars/undecuple/re-psn?color=a7d8b0&labelColor=2b2733&style=flat-square)](https://github.com/undecuple/re-psn/stargazers) ![platform: Linux and Windows](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-8288a0?labelColor=2b2733&style=flat-square) ![unofficial fan work](https://img.shields.io/badge/unofficial-fan%20work-997e95?labelColor=2b2733&style=flat-square) [![Ask DeepWiki](https://img.shields.io/badge/DeepWiki-Ask-8288a0?labelColor=2b2733&style=flat-square)](https://deepwiki.com/undecuple/re-psn)
+[![CI](https://img.shields.io/github/actions/workflow/status/undecuple/re-psn/ci.yml?branch=main&label=CI&labelColor=2b2733&style=flat-square)](https://github.com/undecuple/re-psn/actions/workflows/ci.yml) <!-- version -->![version v0.9.0](https://img.shields.io/badge/pre--release-v0.9.0-997e95?labelColor=2b2733&style=flat-square)<!-- /version --> [![licence: MIT](https://img.shields.io/badge/licence-MIT-a7d8b0?labelColor=2b2733&style=flat-square)](LICENSE) [![Discord: join](https://img.shields.io/badge/Discord-join-8288a0?logo=discord&logoColor=e1ffe5&labelColor=2b2733&style=flat-square)](https://discord.gg/W8fMT78Q7k)
 
 **[Download](https://github.com/undecuple/re-psn/releases)** · [Quick start](#quick-start-host-a-server) · [Features](docs/features.md) · [Install](#install) · [Configuration](#configuration) · [Documentation](#more) · [Website](https://undecuple.github.io/re-psn/) · [Report an issue](https://github.com/undecuple/re-psn/issues/new/choose)
 
@@ -18,17 +16,7 @@
 > **Bring your own game.** This repository has no game code, assets, keys, firmware or BIOS, and you need none from it. Play
 > only games you own. re-psn is not affiliated with or endorsed by Sony Interactive Entertainment.
 
-<p align="center">
-  <a href="docs/features.md#rooms-and-matchmaking"><img src="docs/img/badges/server.svg" alt="Server: available" height="20"></a>
-  <a href="docs/features.md#network"><img src="docs/img/badges/relay.svg" alt="Relay: available" height="20"></a>
-  <a href="docs/features.md#network"><img src="docs/img/badges/sign-in-passes.svg" alt="Sign-in passes: available" height="20"></a>
-  <a href="docs/features.md#client"><img src="docs/img/badges/c-client.svg" alt="C client: available" height="20"></a>
-  <a href="docs/features.md#client"><img src="docs/img/badges/desktop-app.svg" alt="Desktop app: in progress" height="20"></a>
-  <a href="docs/features.md#network"><img src="docs/img/badges/lan-discovery.svg" alt="LAN discovery: available" height="20"></a>
-  <a href="docs/features.md#status-page"><img src="docs/img/badges/admin-api.svg" alt="Admin API: partial" height="20"></a>
-</p>
-
-<p align="center"><em>Each badge shows the status word from the features list; available means merged, with a test or a recorded run. No shipped game is claimed to work. Sign-in passes have no login service yet, so nothing can mint a pass outside tests.</em></p>
+<p align="center"><sub>The strip in the banner shows each part's status word from the <a href="docs/features.md">features list</a>: available means merged, with a test or a recorded run. No shipped game is claimed to work. Sign-in passes have no login service yet, so nothing can mint a pass outside tests.</sub></p>
 
 <p align="center">
   <img src="docs/project-facts.svg" alt="Project Facts: what re-psn does, its limits and how to use it" width="624">

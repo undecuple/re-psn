@@ -69,7 +69,7 @@ class RenderTest(unittest.TestCase):
         self.assertEqual(pa, pb)
 
     def test_outputs_are_palette_pngs_within_margin(self):
-        from PIL import Image
+        from PIL import Image, ImageChops
         f = fonts()
         files, probs = make_art.render(f)
         self.assertEqual(set(files), {"banner.png", "social.png"} | {img for img, _ in make_art.TERMS.values()})
@@ -80,6 +80,15 @@ class RenderTest(unittest.TestCase):
                 self.assertEqual(im.mode, "P", name)
         with Image.open(io.BytesIO(files["banner.png"])) as im:
             self.assertEqual(im.size, make_art.BANNER)
+            # the cursor blinks: two frames of equal length, looping forever, the cursor on in the first
+            self.assertEqual((im.n_frames, im.info.get("loop"), im.info.get("duration")), (2, 0, make_art.BLINK_MS))
+            on = im.convert("RGB")
+            im.seek(1)
+            off = im.convert("RGB")
+            self.assertEqual(on.size, off.size)
+            diff = ImageChops.difference(on, off).getbbox()
+            self.assertIsNotNone(diff)
+            self.assertLess((diff[2] - diff[0]) * (diff[3] - diff[1]), 60 * 80 * 4)   # only the cursor differs
         self.assertLess(len(files["social.png"]), 1_000_000)
         with Image.open(io.BytesIO(files["social.png"])) as im:
             self.assertEqual(im.size, (1280, 640))
