@@ -546,7 +546,8 @@ the player knows which it is using.
 
 **What the relay carries.** Any payload that fits one UDP datagram: the server reads datagrams up to 65536 bytes and adds no
 size limit of its own, but an IPv4 UDP datagram holds at most 65507 bytes, and the relay header takes 17 of them, so the most one
-relayed datagram carries is 65490 bytes (the test sends 1, 1200, 1472, 9000 and 60000 bytes whole). Datagrams are not queued, resent or reordered by the server. One source address gets `-max-udp-rate`
+relayed datagram carries is 65490 bytes (`PSNR_RELAY_MAX_PAYLOAD` in the C client, whose `psnr_relay_wrap` returns 0 for a longer
+payload; the test sends 1, 1200, 1472, 9000 and 60000 bytes whole). Datagrams are not queued, resent or reordered by the server. One source address gets `-max-udp-rate`
 packets a second in total, 1000 by default, shared by its probes and relayed datagrams, and players behind one router share it,
 so a session of 60 packets a second per player is far inside it. On loopback a relayed datagram of 32 to 100 bytes arrives about
 70 microseconds after it was sent (median of three runs, a shared machine); on a real network the delay is the path to the

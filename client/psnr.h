@@ -290,6 +290,14 @@ void psnr_set_connect_policy(psnr_connect_policy_fn fn, void* user);
 #define PSNR_UDP_PROBE_LEN 17
 /** @brief Length in bytes of the UDP PUNCH packet built by psnr_punch_packet. */
 #define PSNR_UDP_PUNCH_LEN 9
+/**
+ * @brief Largest payload psnr_relay_wrap takes, in bytes.
+ *
+ * An IPv4 UDP datagram holds 65507 bytes and the relay header takes 17 of
+ * them (docs/api.md, "What the relay carries"). psnr_relay_wrap returns 0 for
+ * a longer payload.
+ */
+#define PSNR_RELAY_MAX_PAYLOAD 65490
 
 /**
  * @brief Gives the server's UDP address.
@@ -373,10 +381,12 @@ int     psnr_relay_available(const psnr_client* c);
  * @param c       The connection.
  * @param to_user The user id of the peer.
  * @param payload The payload to wrap.
- * @param len     Length of payload in bytes.
+ * @param len     Length of payload in bytes, at most PSNR_RELAY_MAX_PAYLOAD.
  * @param out     Receives the wrapped datagram.
  * @param cap     Size of out in bytes.
- * @return The length written to out, or 0 if it doesn't fit
+ * @return The length written to out (17 + len), or 0 if len is over
+ *         PSNR_RELAY_MAX_PAYLOAD or the datagram doesn't fit in cap; out is
+ *         then left as it was.
  */
 size_t  psnr_relay_wrap(const psnr_client* c, uint32_t to_user, const void* payload, size_t len,
                         uint8_t* out, size_t cap);
