@@ -3,6 +3,7 @@
     python3 -m unittest            # from the repository root
 """
 import importlib.util
+import json
 import io
 import contextlib
 import pathlib
@@ -37,7 +38,10 @@ class ProjectFactsTest(unittest.TestCase):
             for k, v in n.attrib.items():
                 self.assertNotIn("http", v.replace("http://www.w3.org/2000/svg", ""), k)
                 self.assertFalse(k.split("}")[-1].startswith("on") or k.split("}")[-1] == "href", k)
-        self.assertEqual(set(re.findall(r'(?:fill|stroke)="(#[0-9a-f]+)"', pf.render("1.2.3"))), {"#fff", "#000"})
+        self.assertEqual(set(re.findall(r'(?:fill|stroke)="(#[0-9a-f]+)"', pf.render("1.2.3"))), {pf.BG, pf.TEXT, pf.ACCENT, pf.FRAME})
+        # and every one of them is a dark token of the site palette
+        dark = set(json.loads((ROOT / "docs/art/palette.json").read_text(encoding="utf-8"))["modes"]["dark"].values())
+        self.assertLessEqual({pf.BG, pf.TEXT, pf.ACCENT, pf.FRAME}, dark)
 
     def test_every_line_fits_inside_its_box(self):
         for heading, items in pf.LABEL["boxes"]:

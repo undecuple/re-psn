@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generates docs/project-facts.svg, the "Project Facts" label on the README: what re-psn does, its limits and how to use it,
-set out like the label on a medicine box. Black on white, so it reads the same on a light or a dark page.
+set out like the label on a medicine box. It is drawn in the dark colours of the website (docs/art/palette.json), on its own
+panel, so it reads the same on a light or a dark page.
 
     python3 tools/project_facts.py            # write docs/project-facts.svg
     python3 tools/project_facts.py --check    # write nothing; exit 1 when the file is missing or differs
@@ -24,6 +25,9 @@ PAD = 5                          # text starts this far inside a box
 SIZE, LEAD = 11.5, 14.0          # body text size and line height
 WRAP = 76                        # characters per body line (about 390 of the 476 pixels inside a box in the usual fonts, 480 in the widest fallback)
 PURPOSE_X, PURPOSE_WRAP = 235, 36  # the Purpose column: its width in drawing units and its characters per line
+# The dark tokens of docs/art/palette.json (tools/test_project_facts.py checks that every colour here is one of them):
+# bg1 is the panel, fg1 the text, orange the thick rule and the bullets, grey1 the frames and thin rules.
+BG, TEXT, ACCENT, FRAME = "#161719", "#e1ffe5", "#997e95", "#787487"
 FONT = "Helvetica Neue, Helvetica, Arial, Liberation Sans, sans-serif"
 
 # Each box is (heading, items). An item is ("bullet", text), ("note", label, text) or ("plain", text).
@@ -66,7 +70,7 @@ LABEL = {
 
 
 def text(x, y, s, size=SIZE, bold=False, anchor="start"):
-    return (f'<text x="{x:g}" y="{y:g}" font-size="{size:g}" font-weight="{700 if bold else 400}" text-anchor="{anchor}" fill="#000">'
+    return (f'<text x="{x:g}" y="{y:g}" font-size="{size:g}" font-weight="{700 if bold else 400}" text-anchor="{anchor}" fill="{TEXT}">'
             f'{escape(s)}</text>')
 
 
@@ -76,12 +80,12 @@ def lines(s, width=WRAP):
 
 def render(version):
     o, y = [], 0.0
-    o.append(f'<rect width="{W}" height="@H@" fill="#fff"/>')
+    o.append(f'<rect width="{W}" height="@H@" fill="{BG}"/>')
     # title block: a thick rule under the title, the serving size, then the ingredient row inside a box
     o.append(text(X0 + PAD, 39, LABEL["title"], 30, True))
-    o.append(f'<rect x="{X0}" y="46" width="{X1 - X0}" height="4" fill="#000"/>')
+    o.append(f'<rect x="{X0}" y="46" width="{X1 - X0}" height="4" fill="{ACCENT}"/>')
     o.append(text(X0 + PAD, 64, LABEL["serving"]))
-    o.append(f'<rect x="{X0}" y="70" width="{X1 - X0}" height="1" fill="#000"/>')
+    o.append(f'<rect x="{X0}" y="70" width="{X1 - X0}" height="1" fill="{FRAME}"/>')
     head, purpose, name, what = LABEL["ingredient"]
     o.append(text(X0 + PAD, 86, head, 12, True))
     o.append(text(X1 - PAD, 86, purpose, 12, True, "end"))
@@ -91,7 +95,7 @@ def render(version):
         o.append(text(X1 - PAD - PURPOSE_X, 102 + i * 14, ln, 12))
     y = 102 + (len(what_lines) - 1) * 14 + 12
     top = 46
-    o.append(f'<rect x="{X0 + 1}" y="{top + 4 + 1}" width="{X1 - X0 - 2}" height="{y - top - 5:g}" fill="none" stroke="#000" stroke-width="2"/>')
+    o.append(f'<rect x="{X0 + 1}" y="{top + 4 + 1}" width="{X1 - X0 - 2}" height="{y - top - 5:g}" fill="none" stroke="{FRAME}" stroke-width="2"/>')
     y += 8
     for heading, items in LABEL["boxes"]:
         box_top = y
@@ -105,13 +109,13 @@ def render(version):
                 # a rule above each warning after the first, label in bold run into the text
                 y += 5
                 if not first:
-                    o.append(f'<rect x="{X0 + 1}" y="{y - 4:g}" width="{X1 - X0 - 2}" height="1" fill="#000"/>')
+                    o.append(f'<rect x="{X0 + 1}" y="{y - 4:g}" width="{X1 - X0 - 2}" height="1" fill="{FRAME}"/>')
                     y += 4
                 body = lines(item[1] + " " + item[2])
                 for i, ln in enumerate(body):
                     y += LEAD
                     if i == 0:
-                        o.append(f'<text x="{X0 + PAD + 1}" y="{y:g}" font-size="{SIZE:g}" fill="#000"><tspan font-weight="700">{escape(item[1])}</tspan>'
+                        o.append(f'<text x="{X0 + PAD + 1}" y="{y:g}" font-size="{SIZE:g}" fill="{TEXT}"><tspan font-weight="700">{escape(item[1])}</tspan>'
                                  f'<tspan font-weight="400">{escape(ln[len(item[1]):])}</tspan></text>')
                     else:
                         o.append(text(X0 + PAD + 1, y, ln))
@@ -121,7 +125,7 @@ def render(version):
                 for i, ln in enumerate(body):
                     y += LEAD
                     if i == 0:
-                        o.append(f'<rect x="{X0 + PAD + 1}" y="{y - 7:g}" width="4" height="4" fill="#000"/>')
+                        o.append(f'<rect x="{X0 + PAD + 1}" y="{y - 7:g}" width="4" height="4" fill="{ACCENT}"/>')
                     o.append(text(X0 + PAD + 12, y, ln))
             else:
                 for ln in lines(item[1]):
@@ -129,7 +133,7 @@ def render(version):
                     o.append(text(X0 + PAD + 1, y, ln))
             first = False
         y += 7
-        o.append(f'<rect x="{X0 + 1}" y="{box_top + 1:g}" width="{X1 - X0 - 2}" height="{y - box_top - 1:g}" fill="none" stroke="#000" stroke-width="2"/>')
+        o.append(f'<rect x="{X0 + 1}" y="{box_top + 1:g}" width="{X1 - X0 - 2}" height="{y - box_top - 1:g}" fill="none" stroke="{FRAME}" stroke-width="2"/>')
         y += 6
     h = int(y - 4)
     svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {h}" width="{W * SCALE:g}" height="{round(h * SCALE)}" role="img" '
