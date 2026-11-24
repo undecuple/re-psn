@@ -105,7 +105,7 @@ sits behind one mutex (`Server.mu`, `server/server.go:80`); the score store has 
 | Settings, server list | `app/internal/config/` (`re-psn.ini`), `app/internal/servers/` (`servers.json`) |
 | Browser fallback | `app/internal/desktop/browser.go` (`OpenBrowser`) |
 | Framework | `app/framework/`: `store.go` (profiles, trophies), `broker.go` (loopback `RPT1` broker), `archive.go` (encrypted export), `social_client.go` and `social.go` (HTTPS mutual-TLS friends) |
-| Native window | `app/shell/` (Rust, Tauri 2; `src/main.rs`); shipped as `re-psn-window` per `scripts/release-build.sh` |
+| Native window | `app/shell/` (Rust, Tauri 2; `src/main.rs`); shipped as `re-psn-window` per `scripts/release-build.sh`, with `THIRD-PARTY-WINDOW.txt` written by `tools/third_party.py` (tested by `tools/test_third_party.py`) |
 | Packaging | `app/share/applications/re-psn.desktop` |
 | Integration test | `app/integration/framework_test.go` |
 
@@ -147,7 +147,7 @@ sits behind one mutex (`Server.mu`, `server/server.go:80`); the score store has 
 | Native window | `app/shell/src/main.rs` `main` |
 | C API | `client/psnr.h`, `client/psnr_app.h` |
 | Python client | `client/python/psnr_client.py` `Client` and its `__main__` block |
-| Generators and checks | `tools/site.py`, `tools/features.py`, `tools/badges.py`, `tools/project_facts.py`, `tools/art/make_art.py`, `tools/repo_check.py`, `tools/loopback.py` |
+| Generators and checks | `tools/site.py`, `tools/features.py`, `tools/badges.py`, `tools/project_facts.py`, `tools/art/make_art.py`, `tools/repo_check.py`, `tools/loopback.py`, `tools/third_party.py` (`THIRD-PARTY-WINDOW.txt` for the release) |
 | Release | `scripts/release-build.sh`, `scripts/check-release.sh`, `.github/workflows/release.yml` |
 | NAT lab | `lab/run.sh` |
 
@@ -246,6 +246,8 @@ explicit actions such as `/api/play`, `/api/servers/check`, the `check` command,
 ```mermaid
 flowchart LR
   tag["tag vX.Y.Z pushed"] --> win["release.yml: window job<br/>cargo build x3"]
+  tag --> lic["release.yml: licences job<br/>tools/third_party.py"]
+  lic --> bld
   win --> bld["build job<br/>check-release.sh --tag, vet, tests,<br/>release-build.sh"]
   bld --> dr["draft job<br/>gh release create --draft --prerelease"]
   dr --> man["maintainer publishes by hand"]
@@ -299,6 +301,7 @@ Commands run from the repository root. [BUILDING.md](../BUILDING.md) and [testin
 | NAT scenarios (cone, symmetric, symmetric-norelay, samelan) | `sh lab/run.sh` | `ci.yml` job `nat-lab` |
 | Static analysis | CodeQL for Go and workflow files | `codeql.yml` |
 | Release assembly | `scripts/check-release.sh --tag`, `go vet`, `go test -race -count=1 ./...` (root module), `scripts/release-build.sh` | `release.yml` job `build` |
+| Window crate licences | `tools/third_party.py` on `cargo metadata --locked`; its own tests are `python3 -m unittest` (`tools/test_third_party.py`) | `release.yml` job `licences` |
 | Published release | tag shape, asset list, `sha256sum -c`, installer scripts equal the tag | `release-check.yml` |
 | Container image | amd64 smoke test (version in log, uid 10001), then push | `container.yml` |
 | fail2ban filter | `python3 tools/check_fail2ban.py --out FRESHDIR` (needs `fail2ban-regex` and `fail2ban-client`) | by hand; not seen in the CI file |

@@ -9,6 +9,7 @@
 # Network fetch: appimagetool and the type-2 AppImage runtime, from their GitHub releases at fixed tags, checked against
 # the SHA-256 pins below before use (scripts/build-appimage.sh checks the same pins again before running anything).
 # The notes are scripts/release-notes.sh for VERSION: the CHANGELOG.md entries under that version's heading.
+# The window's Rust crate licences: job `licences` writes THIRD-PARTY-WINDOW.txt (tools/third_party.py) for the app archives.
 # Not checked here: that the binaries run on Windows or arm64 (they are cross-built), signing (the exe and the AppImage
 # are unsigned).
 name: release
@@ -67,8 +68,41 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
+  # The licence texts of the Rust crates compiled into re-psn-window: tools/third_party.py reads `cargo metadata` of
+  # app/shell after the sources are fetched (--locked) and writes THIRD-PARTY-WINDOW.txt. It fails when a crate has no
+  # licence, a crate's sources are missing or a licence is not on the script's allow-list, so no archive ships without it.
+  licences:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Rust toolchain
+        shell: bash
+        run: |
+          rustup toolchain install 1.99.1 --profile minimal
+          rustup default 1.99.1
+          rustc --version
+      - name: Fetch the crates and list their licences
+        working-directory: app/shell
+        run: |
+          cargo fetch --locked
+          cargo metadata --locked --format-version 1 > "$RUNNER_TEMP/metadata.json"
+      - name: Write the licence file
+        run: |
+          python3 tools/third_party.py --metadata "$RUNNER_TEMP/metadata.json" --out "$RUNNER_TEMP/licences/THIRD-PARTY-WINDOW.txt"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: window-licences
+          path: ${{ runner.temp }}/licences/
+          if-no-files-found: error
+          retention-days: 3
+
   build:
-    needs: window
+    needs: [window, licences]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -82,9 +116,13 @@ jobs:
           go-version: stable
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
         with:
-          pattern: window-*
+          pattern: window-*-*
           path: ${{ runner.temp }}/window
           merge-multiple: true
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: window-licences
+          path: ${{ runner.temp }}/window-licences
       - name: Tag is v + VERSION
         if: github.ref_type == 'tag'
         run: scripts/check-release.sh --tag "$TAG"
@@ -105,14 +143,15 @@ jobs:
           printf '%s  %s\n' "$APPIMAGETOOL_SHA256" "$d/appimagetool-x86_64.AppImage" "$RUNTIME_SHA256" "$d/runtime-x86_64" \
             | sha256sum -c - || { echo "::error::a pinned AppImage tool does not match its SHA-256"; rm -rf "$d"; exit 1; }
       - name: Build archives, the AppImage (with its smoke test), the install scripts and checksums
-        run: scripts/release-build.sh "$TAG" --appimage-tools "$RUNNER_TEMP/appimage-tools" --shell-dir "$RUNNER_TEMP/window"
+        run: scripts/release-build.sh "$TAG" --appimage-tools "$RUNNER_TEMP/appimage-tools" --shell-dir "$RUNNER_TEMP/window" \
+          --licence-file "$RUNNER_TEMP/window-licences/THIRD-PARTY-WINDOW.txt"
       - name: Release notes
         run: |
           {
             echo "### Files"
             echo
             echo "Each archive holds one self-contained server binary (no installer, no runtime needed), LICENSE, NOTICE.md and an examples folder (settings file, systemd unit, proxy configs)."
-            echo "The \`re-psn-app\` archives hold the desktop app (one static binary), the matching \`re-psn-host\` server binary the app starts for local hosting, \`re-psn-window\` (the same app in a window of its own: on Linux it needs WebKitGTK 4.1 installed, on Windows the WebView2 runtime that ships with Windows 10 and 11, and without it the app still opens in your browser), LICENSE, NOTICE.md and its README, for the same three platforms. \`install.sh --app\` and \`install.ps1 -App\` install the app and its host from a release instead of the server; or unpack one by hand."
+            echo "The \`re-psn-app\` archives hold the desktop app (one static binary), the matching \`re-psn-host\` server binary the app starts for local hosting, \`re-psn-window\` (the same app in a window of its own: on Linux it needs WebKitGTK 4.1 installed, on Windows the WebView2 runtime that ships with Windows 10 and 11, and without it the app still opens in your browser), LICENSE, NOTICE.md, THIRD-PARTY-WINDOW.txt (the licence texts of the Rust crates in the window) and its README, for the same three platforms. \`install.sh --app\` and \`install.ps1 -App\` install the app and its host from a release instead of the server; or unpack one by hand."
             echo "The x86_64 AppImage holds the same Linux binary and examples as one runnable file; it needs FUSE to mount, or run it with \`--appimage-extract-and-run\`. It is not signed."
             echo "\`install.sh\` (Linux) and \`install.ps1\` (Windows) are the install scripts from this tag, listed in SHA256SUMS too: download one with SHA256SUMS, check it, read it, then run it (see docs/installing.md)."
             echo "Check a download with \`sha256sum -c SHA256SUMS --ignore-missing\`."

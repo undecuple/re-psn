@@ -21,6 +21,8 @@ Light colours of the desktop app and the status page from gruvbox-material (http
 | [appimagetool](https://github.com/AppImage/appimagetool) 1.9.1, `appimagetool-x86_64.AppImage` from its [GitHub release](https://github.com/AppImage/appimagetool/releases/tag/1.9.1), SHA-256 `ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0` | packs the AppImage in the release workflow; downloaded at build time and checked against that hash, never committed, not shipped | MIT; the helper programs it carries have their own licences (mksquashfs and desktop-file-validate: GPL-2.0-or-later) |
 | [AppImage type-2 runtime](https://github.com/AppImage/type2-runtime) 20251108, `runtime-x86_64` from its [GitHub release](https://github.com/AppImage/type2-runtime/releases/tag/20251108), SHA-256 `2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d` | the start of every re-psn AppImage (it mounts or extracts the rest); downloaded at build time and checked against that hash, never committed | MIT; statically linked with libfuse 3 (LGPL-2.1), squashfuse (BSD-2-Clause), zstd (BSD-3-Clause), zlib (Zlib), mimalloc (MIT) and musl (MIT) |
 
+The app archives that hold `re-psn-window` also hold `THIRD-PARTY-WINDOW.txt`, which holds the licence texts of the Rust crates compiled into the window (`app/shell/`), each with its declared licence. Where a crate ships no licence file, the standard text of the licence it declares is used, with the authors from its Cargo.toml as the copyright holder.
+
 PlayStation, PS3 and PSN are trademarks of Sony Interactive Entertainment. This project is not affiliated with or endorsed by
 Sony or any game publisher. The names are used only to say what the server stands in for; no logos or other marks are used.
 

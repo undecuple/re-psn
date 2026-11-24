@@ -76,8 +76,13 @@ checked on the way. Pre-releases come often and on no schedule, whenever there i
    version checks pass; nothing is built after a failure. Then vet and tests, the server archives for windows/amd64, linux/amd64
    and linux/arm64, the same three archives for the desktop app (`re-psn-app-vX.Y.Z-<os>-<arch>`, built from `app/`),
    (each also holds `re-psn-window`, the native window program from `app/shell/`: three `window` jobs build it, one per
-   system, on native runners with the runner's rustup at Rust 1.99.1 and `Cargo.lock` enforced, and `scripts/release-build.sh
-   --shell-dir` checks that every app archive holds it), and the x86_64 [AppImage](#the-appimage), copies of `scripts/install.sh` and `scripts/install.ps1`
+   system, on native runners with the runner's rustup at Rust 1.99.1 and `Cargo.lock` enforced; a `licences` job runs
+   `cargo fetch --locked` and `cargo metadata --locked` in `app/shell` and `tools/third_party.py` turns the result into
+   `THIRD-PARTY-WINDOW.txt`, the licence texts of the Rust crates in the window (where a crate ships no licence file, the
+   standard text of its declared licence is used, MIT or BSD-3-Clause, with the authors from its Cargo.toml as the copyright
+   holder), failing if a crate has no licence, its sources are missing, a licence is not on the script's allow-list or a
+   declared licence has neither a file nor such a standard text; `scripts/release-build.sh --shell-dir`, which needs
+   `--licence-file` with that file, checks that every app archive holds both the window and that file), and the x86_64 [AppImage](#the-appimage), copies of `scripts/install.sh` and `scripts/install.ps1`
    (byte for byte, as `install.sh` and `install.ps1`; see [installing.md](installing.md)), and one `SHA256SUMS` listing
    those nine files (LF, no BOM); `scripts/check-release.sh --assets` then checks that exactly the ten assets are there.
    Then the notes, and a **draft** pre-release
@@ -211,7 +216,7 @@ How it is built ([`scripts/build-appimage.sh`](../scripts/build-appimage.sh), ru
 
 ## Not checked yet
 
-- The window program (`re-psn-window`): the app archives have carried it since v0.8.0. It is built per system with a
+- The window program (`re-psn-window`): the app archives have carried it since v0.8.0 (`THIRD-PARTY-WINDOW.txt`, the licence texts of its Rust crates, came later; the list names every platform's crates, so it is a superset of one binary). It is built per system with a
   Rust toolchain that the runner downloads at the pinned version, and `install.sh --app` /
   `install.ps1 -App` install it when the release has it. The Windows window has not been run at all. The binaries are
   unsigned.
