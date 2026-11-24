@@ -122,7 +122,56 @@ test('the setup checklist makes no request before its button is pressed', async 
 test('setup_done has no form control but the settings draft carries it', () => {
   const root = path.join(__dirname, '../app/internal/webui/assets'), html = fs.readFileSync(path.join(root, 'index.html'), 'utf8'), js = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
   assert.doesNotMatch(js, /settingFields = \{[^}]*setup_done/); assert.match(js, /out\.setup_done = !!state\.settings\.setup_done/); assert.match(js, /mode: b\.dataset\.role, \.\.\.\(state\.settings\.mode \? \{\} : \{setup_done: false\}\)/);
-  for (const id of ['setup', 'setup-list', 'setup-count', 'setup-skip', 'play-age', 'play-next', 'play-rooms-note']) assert.match(html, new RegExp('id="' + id + '"'));
+  for (const id of ['setup', 'setup-list', 'setup-count', 'setup-skip', 'play-age', 'play-next', 'play-rooms-note', 'play-copy', 'play-copy-text', 'play-copy-btn', 'play-copy-note', 'play-hints', 'play-hints-list']) assert.match(html, new RegExp('id="' + id + '"'));
+});
+test('roomsNote says what an empty or partial room list means', () => {
+  const ok = {status: 'reachable', rooms: [], unlisted: 0};
+  assert.equal(ui.roomsNote({status: 'unchecked'}), '');
+  assert.equal(ui.roomsNote({status: 'unavailable', source: 'game_connection'}), '');
+  assert.match(ui.roomsNote({...ok, source: 'game_connection', titled: false}), /reached, but no rooms are listed because no title ID or status URL was set/);
+  assert.match(ui.roomsNote({...ok, source: 'game_connection', titled: false, status_fallback: true}), /status URL could not be read.*no title ID or status URL/);
+  assert.match(ui.roomsNote({...ok, source: 'game_connection', titled: true}), /lists no rooms for this title ID/);
+  assert.equal(ui.roomsNote({...ok, source: 'game_connection', titled: true, rooms: [{id: '1'}]}), '');
+  assert.match(ui.roomsNote({...ok, source: 'status_page'}), /status page lists no public rooms/);
+  assert.match(ui.roomsNote({...ok, source: 'status_page', unlisted: 1}), /counts 1 unlisted room on this server, without names/);
+  assert.match(ui.roomsNote({...ok, source: 'status_page', unlisted: 4, rooms: [{id: '1'}]}), /counts 4 unlisted rooms on this server/);
+  assert.doesNotMatch(ui.roomsNote({...ok, source: 'game_connection', titled: true}), /unlisted/);
+  assert.match(ui.roomsNote({...ok, source: 'status_page', titled: true}), /no public rooms for this title ID/);
+  assert.match(ui.roomsNote({...ok, source: 'status_page', titled: true, unlisted: 3, rooms: [{id: '1'}]}), /3 unlisted rooms on this server, for any title/);
+  assert.match(ui.roomsNote({...ok, source: 'game_connection', titled: true, status_fallback: true}), /status URL could not be read.*no rooms for this title ID/);
+});
+test('failureHints picks "may" hints by failure kind and never claims a cause', () => {
+  assert.deepEqual(ui.failureHints({status: 'reachable'}), []);
+  assert.deepEqual(ui.failureHints(null), []);
+  const of = p => ui.failureHints({status: 'unavailable', ...p});
+  assert.match(of({kind: 'refused'}).join(' '), /port may be wrong.*may not be running/);
+  assert.doesNotMatch(of({kind: 'refused'}).join(' '), /firewall|token/);
+  assert.match(of({kind: 'timeout'}).join(' '), /firewall or router may be blocking/);
+  assert.match(of({kind: 'status'}).join(' '), /status URL may be mistyped/);
+  assert.match(of({kind: 'status'}).join(' '), /may need an access token/);
+  assert.match(of({kind: 'timeout', used_status_url: true}).join(' '), /may need an access token/);
+  assert.deepEqual(of({kind: 'surprise'}), of({kind: 'other'}));
+  assert.deepEqual(of({}), of({kind: 'other'}));
+  for (const kind of ['refused', 'timeout', 'status', 'other', '']) for (const h of of({kind, used_status_url: true})) assert.match(h, /\bmay\b/, h);
+});
+test('copyText reports copied or manual and never throws', async () => {
+  const written = [];
+  assert.equal(await ui.copyText('play.example.org:36100', {writeText: async v => {written.push(v);}}), 'copied');
+  assert.deepEqual(written, ['play.example.org:36100']);
+  assert.equal(await ui.copyText('play.example.org:36100', {writeText: async () => {throw new Error('blocked');}}), 'manual');
+  assert.equal(await ui.copyText('play.example.org:36100', {writeText: () => {throw new Error('blocked');}}), 'manual');
+  assert.equal(await ui.copyText('play.example.org:36100', undefined), 'manual');
+  assert.equal(await ui.copyText('play.example.org:36100', {}), 'manual');
+  assert.equal(await ui.copyText('', {writeText: async () => {throw new Error('must not be called');}}), 'manual');
+});
+test('the Play helpers and the copy decision make no request', async () => {
+  const calls = [], real = globalThis.fetch;
+  globalThis.fetch = async url => {calls.push(url); return json({});};
+  try {
+    ui.roomsNote({status: 'reachable', source: 'status_page', rooms: [], unlisted: 2}); ui.failureHints({status: 'unavailable', kind: 'timeout'});
+    await ui.copyText('play.example.org:36100', {}); await ui.copyText('play.example.org:36100', {writeText: async () => {}});
+  } finally {globalThis.fetch = real;}
+  assert.deepEqual(calls, []);
 });
 test('a local GET begun before an action cannot overwrite that action with an old role', async () => {
   const guard = ui.readGuard(), renders = []; let release;

@@ -137,7 +137,7 @@
     }
     return {state: () => request('/api/state'), post: (path, body = {}) => request(path, body), export: passphrase => request('/api/profile/export', {passphrase}, true)};
   }
-  const exported = {MAX_ARCHIVE, SESSION_KEY, personal, hosting, ageWords, setupSteps, readGuard, clean, fragmentToken, takeToken, openSession, catalogBody, base64, clientAddress, localBind, selectedRelay, responseBytes, makeAPI};
+  const exported = {MAX_ARCHIVE, SESSION_KEY, personal, hosting, ageWords, setupSteps, roomsNote, failureHints, copyText, readGuard, clean, fragmentToken, takeToken, openSession, catalogBody, base64, clientAddress, localBind, selectedRelay, responseBytes, makeAPI};
   if (typeof module !== 'undefined' && module.exports) module.exports = exported;
   if (typeof document === 'undefined') return;
 
@@ -222,6 +222,44 @@
     if (discard) settingsDirty = playDirty = hostDirty = false;
     return result;
   }
+  // What the last check found, in plain words, so an empty list is not mistaken for an empty server. Pure: reads the
+  // play snapshot only. Returns '' when there is nothing to add.
+  function roomsNote(p) {
+    if (!p || p.status !== 'reachable') return '';
+    const lines = [];
+    if (p.source === 'status_page') {
+      if (!(p.rooms || []).length) lines.push(p.titled ? 'The status page lists no public rooms for this title ID.' : 'The status page lists no public rooms.');
+      if (p.unlisted > 0) lines.push('The status page counts ' + p.unlisted + (p.unlisted === 1 ? ' unlisted room' : ' unlisted rooms') + ' on this server' + (p.titled ? ', for any title' : '') + ', without names.');
+    } else if (!p.titled) {
+      lines.push((p.status_fallback ? 'The status URL could not be read, so only the game connection was used. ' : '') + 'The server was reached, but no rooms are listed because no title ID or status URL was set. Set one and check again.');
+    } else if (!(p.rooms || []).length) {
+      lines.push((p.status_fallback ? 'The status URL could not be read, so only the game connection was used. ' : '') + 'The server was reached and lists no rooms for this title ID.');
+    } else if (p.status_fallback) {
+      lines.push('The status URL could not be read, so these rooms come from the game connection.');
+    }
+    return lines.join(' ');
+  }
+  // Things that may explain a failed check, chosen by the failure kind the backend reports. Wording says "may": the app
+  // cannot see why a connection failed, so this is a list of places to look, not a diagnosis.
+  function failureHints(p) {
+    if (!p || p.status !== 'unavailable') return [];
+    const hints = [], kind = ['refused', 'timeout', 'status'].includes(p.kind) ? p.kind : 'other';
+    if (kind === 'refused') hints.push('The port may be wrong.', 'The server may not be running.');
+    else if (kind === 'timeout') hints.push('A firewall or router may be blocking the port, or not forwarding it to the server.', 'The address may be wrong, or the computer may be off or on another network.');
+    else if (kind === 'status') hints.push('The status URL may be mistyped or may not point at a status page.', 'The server may not be running.');
+    else hints.push('The port may be wrong, or the address may not be a re-psn server.', 'The server may not be running.');
+    if (p.used_status_url || kind === 'status') hints.push('The status page may need an access token. A token file can be named in the settings file; see the app README.');
+    return hints;
+  }
+  // Copies text with the clipboard object it is given (the browser's, or a stand-in in tests). Browsers and webviews may
+  // refuse, so the answer is 'copied' or 'manual'; on 'manual' the caller selects the text and asks the person to copy it.
+  async function copyText(value, clipboard) {
+    if (!value) return 'manual';
+    try {
+      if (clipboard && typeof clipboard.writeText === 'function') { await clipboard.writeText(value); return 'copied'; }
+    } catch {}
+    return 'manual';
+  }
   function tableRows(id, rows, count, empty, cells) {
     const target = $(id), fragment = document.createDocumentFragment();
     for (const row of rows || []) { const tr = node('tr'); for (const value of cells(row)) { const td = node('td'); if (value instanceof Node) td.append(value); else td.textContent = clean(value); tr.append(td); } fragment.append(tr); }
@@ -236,6 +274,8 @@
     text('play-check-time', p.checked_at ? 'Checked ' + stamp(p.checked_at) + (p.round_trip_ms ? ' · ' + p.round_trip_ms + ' ms' : '') : 'Nothing contacted yet.');
     text('play-message', p.message || 'This is a snapshot check. Your game connects directly.');
     tableRows('rooms-body', p.rooms, 4, 'No room snapshot. Check a server to load its public rooms.', r => [r.id, r.title, r.current + '/' + r.max, (r.members || []).join(', ')]);
+    const hints = failureHints(p), list = $('play-hints-list'); list.replaceChildren(...hints.map(h => node('li', h))); show('play-hints', hints.length > 0);
+    const target = $('play-copy-text'); if (target.value !== clean(p.address)) target.value = clean(p.address); text('play-copy-note', ''); show('play-copy', !!p.address);
     tableRows('boards-body', p.boards, 4, 'No leaderboard snapshot available.', b => [b.title + ' / ' + b.id, b.entries, b.leader || '—', b.best || '—']);
   }
   const NEXT_STEP = {
@@ -249,7 +289,8 @@
     text('play-age', p.checked_at ? 'Checked ' + ageWords(p.checked_at, Date.now()) : 'Not checked yet');
     text('play-next', NEXT_STEP[status]);
     const noRooms = !s.status_url && !$('play-title-id').value.trim();
-    text('play-rooms-note', noRooms ? 'Set a title ID or status URL to list rooms.' : ''); show('play-rooms-note', noRooms);
+    const note = p.checked_at ? roomsNote(p) : noRooms ? 'Set a title ID or status URL to list rooms.' : '';
+    text('play-rooms-note', note); show('play-rooms-note', !!note);
   }
   function renderSetup() {
     const showing = !!state.settings.mode && !state.settings.setup_done && !setupLeft;
@@ -398,6 +439,11 @@
   for (const b of document.querySelectorAll('[data-role]')) b.addEventListener('click', () => action(async () => { if (settingsDirty && !await confirm('Discard unsaved settings?', 'Switching workspace keeps the saved settings and discards these unsaved edits.', 'Discard & switch')) return null; return saveSettings({...state.settings, mode: b.dataset.role, ...(state.settings.mode ? {} : {setup_done: false})}, true); }));
   $('setup-skip').addEventListener('click', () => action(() => saveSettings({...state.settings, setup_done: true}, false), 'Setup finished. You can change everything in Settings.'));
   $('settings-form').addEventListener('input', () => { settingsDirty = true; text('settings-dirty', 'Unsaved edits'); });
+  $('play-copy-btn').addEventListener('click', async () => {
+    const field = $('play-copy-text'), result = await copyText(field.value, navigator.clipboard);
+    if (result === 'copied') { text('play-copy-note', 'Address copied.'); return; }
+    field.focus(); field.select(); text('play-copy-note', 'Copying was blocked here. The address is selected: press Ctrl+C (Cmd+C on a Mac) to copy it.');
+  });
   $('play-form').addEventListener('input', () => { playDirty = true; });
   $('host-form').addEventListener('input', () => { hostDirty = true; });
   submit('settings-form', async () => { const result = await saveSettings(draftSettings(), true); if (result) message('Settings saved. Services start only when you choose their action.'); return result; });
