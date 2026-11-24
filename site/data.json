@@ -1384,6 +1384,7 @@
    "sections": {
     "Added": [
      "App: while the app's own host runs, the Host page has a What to give friends panel with the listen address as configured and, for a host listening on every interface, this computer's addresses with the port, each ...",
+     "Release: the desktop app archives that hold `re-psn-window` now also hold `THIRD-PARTY-WINDOW.txt`, which holds the licence texts of the Rust crates compiled into the window.",
      "App: the Play page has a \"Fill from a saved server\" drop-down above the Game server box.",
      "App: the Play page says what a check found and did not find: a server reached with no title ID or status URL set lists no rooms and now says why, a status page's count of unlisted rooms is shown, a Copy address button ...",
      "App: a first-run Getting started checklist in the browser interface, shown after the first workspace choice until you skip or finish it (the `[app] setup_done` key; an existing settings file without the key is treated ...",
@@ -1409,7 +1410,7 @@
     ]
    },
    "counts": {
-    "Added": 6,
+    "Added": 7,
     "Changed": 11,
     "Fixed": 2
    }

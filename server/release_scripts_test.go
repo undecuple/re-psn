@@ -785,3 +785,95 @@ func TestReleaseBuildShellDir(t *testing.T) {
 		}
 	}
 }
+
+// --shell-dir and --licence-file go together: each one alone stops with the script's message, an empty licence file
+// stops, and with both every app archive holds THIRD-PARTY-WINDOW.txt next to the window program.
+func TestReleaseBuildLicenceFile(t *testing.T) {
+	needShell(t, "bash", "zip", "unzip", "tar", "sha256sum")
+	root := newTree(t, nil)
+	shells := t.TempDir()
+	for _, n := range []string{"re-psn-window-windows-amd64.exe", "re-psn-window-linux-amd64", "re-psn-window-linux-arm64"} {
+		if err := os.WriteFile(filepath.Join(shells, n), []byte("bin"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	licence := filepath.Join(t.TempDir(), "THIRD-PARTY-WINDOW.txt")
+	if err := os.WriteFile(licence, []byte("licence texts\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	empty := filepath.Join(t.TempDir(), "empty.txt")
+	if err := os.WriteFile(empty, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dist := filepath.Join(root, "dist")
+	if err := os.MkdirAll(dist, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	keep := filepath.Join(dist, "keep.txt")
+	if err := os.WriteFile(keep, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"shell-dir without licence file", []string{"--shell-dir", shells}, "--shell-dir needs --licence-file"},
+		{"licence file without shell-dir", []string{"--licence-file", licence}, "--licence-file is only used with --shell-dir"},
+		{"empty licence file", []string{"--shell-dir", shells, "--licence-file", empty}, "is missing or empty"},
+		{"missing licence file", []string{"--shell-dir", shells, "--licence-file", filepath.Join(shells, "nope.txt")}, "is missing or empty"},
+	} {
+		_, errout, err := run(t, root, "bash", append([]string{"scripts/release-build.sh", "v0.3.1"}, c.args...)...)
+		if err == nil || !strings.Contains(errout, c.want) {
+			t.Fatalf("%s: want %q, got %v %q", c.name, c.want, err, errout)
+		}
+		if _, e := os.Stat(keep); e != nil {
+			t.Fatalf("%s: dist/ was cleared before the arguments were checked", c.name)
+		}
+	}
+
+	// Success: stand-ins for go and the two check scripts, so that only the archive handling runs.
+	for rel, body := range map[string]string{
+		"scripts/check-deploy.sh":  "#!/bin/sh\nexit 0\n",
+		"scripts/check-release.sh": "#!/bin/sh\nexit 0\n",
+		"LICENSE":                  "licence\n",
+		"NOTICE.md":                "notice\n",
+		"deploy/example.txt":       "x\n",
+		"app/README.md":            "app\n",
+	} {
+		p := filepath.Join(root, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	bin := t.TempDir()
+	fakeGo := "#!/bin/sh\nout=''\nwhile [ \"$#\" -gt 0 ]; do\n  if [ \"$1\" = -o ]; then out=\"$2\"; fi\n  shift\ndone\nprintf 'built\\n' > \"$out\"\n"
+	if err := os.WriteFile(filepath.Join(bin, "go"), []byte(fakeGo), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("bash", "scripts/release-build.sh", "v0.3.1", "--shell-dir", shells, "--licence-file", licence)
+	cmd.Dir = root
+	cmd.Env = append(append([]string{}, gitEnv...), "PATH="+bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("release-build with both options: %v\n%s", err, out)
+	}
+	for _, c := range []struct{ archive, member string }{
+		{"re-psn-app-v0.3.1-windows-amd64.zip", "re-psn-app-v0.3.1-windows-amd64/THIRD-PARTY-WINDOW.txt"},
+		{"re-psn-app-v0.3.1-linux-amd64.tar.gz", "re-psn-app-v0.3.1-linux-amd64/THIRD-PARTY-WINDOW.txt"},
+		{"re-psn-app-v0.3.1-linux-arm64.tar.gz", "re-psn-app-v0.3.1-linux-arm64/THIRD-PARTY-WINDOW.txt"},
+	} {
+		var out string
+		var err error
+		if strings.HasSuffix(c.archive, ".zip") {
+			out, _, err = run(t, dist, "unzip", "-p", c.archive, c.member)
+		} else {
+			out, _, err = run(t, dist, "tar", "-xzOf", c.archive, c.member)
+		}
+		if err != nil || out != "licence texts\n" {
+			t.Fatalf("%s: want THIRD-PARTY-WINDOW.txt with the licence text, got %v %q", c.archive, err, out)
+		}
+	}
+}

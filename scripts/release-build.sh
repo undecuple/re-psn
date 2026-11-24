@@ -5,23 +5,31 @@
 # them. With --shell-dir DIR the app archives also hold the native window program re-psn-window (re-psn-window.exe on
 # Windows): DIR holds re-psn-window-windows-amd64.exe, re-psn-window-linux-amd64 and re-psn-window-linux-arm64, each built
 # natively by release.yml, since the window needs a native toolchain and cannot be cross-built from here; all three must be
-# there. Without it the app archives are as before. With --appimage-tools DIR it also builds re-psn-vX.Y.Z-x86_64.AppImage with scripts/build-appimage.sh (DIR holds
+# there. With --shell-dir, --licence-file FILE is required: FILE (THIRD-PARTY-WINDOW.txt, written by tools/third_party.py in
+# release.yml) is copied into each app archive beside re-psn-window, so no archive ships the window without the licence
+# texts of its Rust crates. Without --shell-dir the app archives are as before. With --appimage-tools DIR it also builds re-psn-vX.Y.Z-x86_64.AppImage with scripts/build-appimage.sh (DIR holds
 # the pinned files from `scripts/build-appimage.sh fetch DIR`), SHA256SUMS lists it too, and
 # `scripts/check-release.sh --assets` then checks that dist/ holds exactly the ten release assets.
 # Used by .github/workflows/release.yml and runnable locally.
-# usage: scripts/release-build.sh vX.Y.Z [--appimage-tools DIR] [--shell-dir DIR]
+# usage: scripts/release-build.sh vX.Y.Z [--appimage-tools DIR] [--shell-dir DIR --licence-file FILE]
 set -euo pipefail
-usage="usage: scripts/release-build.sh vX.Y.Z [--appimage-tools DIR] [--shell-dir DIR]"
+usage="usage: scripts/release-build.sh vX.Y.Z [--appimage-tools DIR] [--shell-dir DIR --licence-file FILE]"
 tag="${1:?$usage}"
 shift
 tools=''
 shells=''
+licence=''
 while [ "$#" -gt 0 ]; do
   [ "$#" -ge 2 ] && [ -n "$2" ] || { echo "$usage" >&2; exit 2; }
-  [ -d "$2" ] || { echo "$2 is not a directory" >&2; exit 2; }
+  if [ "$1" = --licence-file ]; then
+    [ -s "$2" ] || { echo "release-build: $2 is missing or empty" >&2; exit 2; }
+  else
+    [ -d "$2" ] || { echo "$2 is not a directory" >&2; exit 2; }
+  fi
   case "$1" in
     --appimage-tools) tools="$(cd "$2" && pwd)" ;;
     --shell-dir) shells="$(cd "$2" && pwd)" ;;
+    --licence-file) licence="$(cd "$(dirname "$2")" && pwd)/$(basename "$2")" ;;
     *) echo "$usage" >&2; exit 2 ;;
   esac
   shift 2
@@ -35,6 +43,9 @@ if [ -n "$shells" ]; then
   for f in re-psn-window-windows-amd64.exe re-psn-window-linux-amd64 re-psn-window-linux-arm64; do
     [ -s "$shells/$f" ] || { echo "release-build: $shells/$f is missing or empty" >&2; exit 1; }
   done
+  [ -n "$licence" ] || { echo "release-build: --shell-dir needs --licence-file (THIRD-PARTY-WINDOW.txt)" >&2; exit 2; }
+elif [ -n "$licence" ]; then
+  echo "release-build: --licence-file is only used with --shell-dir" >&2; exit 2
 fi
 rm -rf "$dist" && mkdir -p "$dist"
 stage="$(mktemp -d)"
@@ -87,6 +98,7 @@ for target in windows/amd64 linux/amd64 linux/arm64; do
       cp "$shells/re-psn-window-$os-$arch" "$d/re-psn-window"
       chmod 0755 "$d/re-psn-window"
     fi
+    cp "$licence" "$d/THIRD-PARTY-WINDOW.txt"
   fi
   if [ "$os" = windows ]; then
     (cd "$stage" && zip -qrX "$dist/$name.zip" "$name")
@@ -95,15 +107,17 @@ for target in windows/amd64 linux/amd64 linux/arm64; do
   fi
 done
 
-# With --shell-dir, every app archive must hold the window program next to the app.
+# With --shell-dir, every app archive must hold the window program and its licence texts next to the app.
 if [ -n "$shells" ]; then
   for target in windows/amd64 linux/amd64 linux/arm64; do
     os="${target%/*}"; arch="${target#*/}"
     name="re-psn-app-$tag-$os-$arch"
     if [ "$os" = windows ]; then
       unzip -Z1 "$dist/$name.zip" | grep -qx "$name/re-psn-window.exe" || { echo "release-build: $name.zip lacks re-psn-window.exe" >&2; exit 1; }
+      unzip -Z1 "$dist/$name.zip" | grep -qx "$name/THIRD-PARTY-WINDOW.txt" || { echo "release-build: $name.zip lacks THIRD-PARTY-WINDOW.txt" >&2; exit 1; }
     else
       tar -tzf "$dist/$name.tar.gz" | grep -qx "$name/re-psn-window" || { echo "release-build: $name.tar.gz lacks re-psn-window" >&2; exit 1; }
+      tar -tzf "$dist/$name.tar.gz" | grep -qx "$name/THIRD-PARTY-WINDOW.txt" || { echo "release-build: $name.tar.gz lacks THIRD-PARTY-WINDOW.txt" >&2; exit 1; }
     fi
   done
 fi
