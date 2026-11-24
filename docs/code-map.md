@@ -131,7 +131,7 @@ sits behind one mutex (`Server.mu`, `server/server.go:80`); the score store has 
 | Static analysis | `.github/workflows/codeql.yml` |
 | Release draft | `.github/workflows/release.yml` (tag push; creates a draft pre-release, never publishes; a manual run is a build-only dry run) |
 | After publish | `.github/workflows/release-check.yml`, `release-notify.yml`, `container.yml` |
-| Pages | `.github/workflows/pages.yml` (only when the repository variable `PAGES_ENABLED` is `true`) |
+| Pages | `.github/workflows/pages.yml`: a build job that uploads `site/` and a separate deploy job (only when the repository variable `PAGES_ENABLED` is `true`) |
 | Container | `docker/Dockerfile` (two-stage, non-root uid 10001); compose variants in `docker/` |
 | Examples | `deploy/` (env file, systemd unit, proxy configs, fail2ban); nothing there runs by itself |
 | NAT lab | `lab/run.sh`, `lab/docker-compose.yml`, `lab/router.sh`, `lab/natcheck.c` |
