@@ -42,7 +42,7 @@ and still unknown.
 
 ## Done
 
-Merged into main. Items are in v0.2.0, v0.3.0, v0.4.0 or v0.5.0 unless a line says it is on main only.
+Merged into main. Releases v0.2.0 to v0.9.0 are tagged. Some lines name the release they first appear in; a line that says it is on main only is not in a tagged release.
 
 [Rooms and matchmaking](docs/features.md#rooms-and-matchmaking)
 - [rooms-basic] Create, search, join and leave rooms, with room messages, owner kicks and owner handoff.
@@ -58,6 +58,11 @@ Merged into main. Items are in v0.2.0, v0.3.0, v0.4.0 or v0.5.0 unless a line sa
 - [limits-requests] Limits on rooms, connections, request rate and room data size, each refusal logged.
 - [logs-levels] Log levels, text or JSON output, and an optional log file.
 - [status-page] A terminal-style status page and `/api/stats`, off unless `-http` is set, with an optional token. Main adds Rooms/Leaderboards tabs, System/Light/Dark and browser-local text size, spacing and custom colours; see docs/running.md.
+- [status-games] `/api/stats` and the status page label rooms and leaderboards with the game's name and serials, from a small table embedded in the server; a game the table does not know keeps its communication ID. In v0.5.0.
+- [status-verified] Each public room reports how many members have a verified UDP probe, shown as `(N verified)`; this counts accepted probes, not who the players are. In v0.5.0.
+- [status-server-state] `/api/stats` reports the version, relay state, relay payload carried, limits in force and refused TCP connections, as aggregate counts with no address or player. In v0.5.0.
+- [status-latency] The server shows each member's own reported round trip, sent in HEARTBEAT once a title opts in; it is reported by the player, not verified, and for display only. In v0.5.0.
+- [admin-api] Partial: an experimental opt-in read-only admin listener with one route, `GET /admin/v1/state`, for a read token, first in v0.6.0; it has no action, ban or limit change, and no app view yet.
 
 [Reverse proxy](docs/features.md#reverse-proxy), [deployment](docs/features.md#deployment) and [settings](docs/features.md#settings)
 - [proxy-support] PROXY protocol v1 and v2 and trusted proxies, so the real client address counts.
@@ -74,8 +79,19 @@ Merged into main. Items are in v0.2.0, v0.3.0, v0.4.0 or v0.5.0 unless a line sa
 - [net-relay] An optional relay for players who cannot reach each other directly.
 - [net-udp-guard] UDP packets accepted only from the address of the player's TCP connection.
 - [net-guardrails] Partial: bounded per-source UDP rate limits and aggregate drop counters, in v0.4.0. Per-player relay byte/stream budgets, failed-token blocking and UDP fuzz coverage remain planned.
+- [net-relay-force] `-relay-force`, off by default and needing `-relay`, sends every stream through the relay for testing from one network, using the host's bandwidth. In v0.5.0.
+- [net-no-peer-titles] `-no-peer-titles` lists titles that use no peer traffic: their players get no UDP probe reply or relay but still use rooms and scores. In v0.6.0.
+- [net-caps] `GET_CAPS` after HELLO returns a bit set of what the server offers that player, plus the server version; the C client can parse it. In v0.6.0.
+- [net-peer-keys] Partial: opt-in `PEER_AUTH` gives each pair of members who asked a random key in a `PEER_KEY` push; no client uses the keys yet and they travel over plain TCP, so they give no confidentiality. In v0.5.0.
+- [net-lan-discover] `-discover`, off by default, answers a LAN discovery request on the game UDP port from private, link-local and loopback senders; server side only. In v0.5.0.
+- [net-lan-public-addr] `-lan-public-addr IP`, off by default, gives players on public addresses the host's address and P2P port for a player who connected from a private address. In v0.5.0.
+- [client-lan-discover] `psnr_discover` in the C client broadcasts one UDP request and returns the LAN servers that answer; it finds only servers started with `-discover`. In v0.5.0.
+- [client-connect-policy] `psnr_set_connect_policy` in the C client registers one callback asked before each TCP connection the client opens, including relay legs; a refusal skips that address. In v0.6.0.
 - [client-c] A one-file C client with no dependencies.
 - [app-tui] The released terminal app provides a first-run choice, Rooms/Leaderboards, Settings and dark/light themes. An optional HTTP status source adds version, totals, public room members/age and board summaries, with game-protocol fallback. Since v0.7.0 it is the advanced `re-psn-app tui`, with an owned Host pane; see the client work below. It does not launch or join a game.
+- [app-client] Partial: a Go client package for the TCP protocol, used by the desktop app and `re-psn-app check`; room data and messages, kicks, invite-only rooms, relay streams and UDP are not in it yet. In v0.3.0.
+- [app-lan-discover] Find on LAN in the desktop app lists servers started with `-discover` and fills the server field with the chosen address; typing host:port still works. In v0.5.0.
+- [app-server-view] With a status URL set, the desktop app's Status screen has a read-only Server tab showing version, uptime, relay, limits, refusals and relay payload; fields an older server omits are shown as not reported. In v0.5.0.
 
 [Testing and CI](docs/features.md#testing-and-ci), [release](docs/features.md#release) and [documentation](docs/features.md#documentation)
 - [test-fuzz] Fuzz tests for the frame parser, the request handlers and the PROXY header.
@@ -83,6 +99,7 @@ Merged into main. Items are in v0.2.0, v0.3.0, v0.4.0 or v0.5.0 unless a line sa
 - [release-archives] Release archives with checksums, built by a workflow; partial: published in the v0.2.0 pre-release; the Windows and arm64 binaries are cross-built and not run.
 - [release-process] Written release steps and a dry run, then the first tag (v0.2.0, a pre-release); further pre-releases come with no fixed release day.
 - [release-appimage] A Linux x86_64 AppImage beside the archives; partial: published in the v0.2.0 pre-release, unsigned, and run on one machine.
+- [app-archives] Release builds make desktop app archives for linux/amd64, linux/arm64 and windows/amd64 with checksums; from v0.7.0 each app archive also holds the matching `re-psn-host`, and from v0.8.0 `re-psn-window`. First in v0.5.0.
 - [install-script] Install scripts for Linux and Windows that check SHA256SUMS; partial: release assets since v0.4.0 (the published v0.4.0 `install.sh` ran on Linux amd64 into a temporary directory), PowerShell fake-release tests passed on Linux and Windows CI under PowerShell 7, and PowerShell 5.1 remains untested.
 - [docs-features] This features list, generated from one data file and checked in CI.
 - [docs-diagrams] Architecture and NAT lab diagrams in Mermaid.
@@ -103,9 +120,14 @@ On the ps3recomp side (upstream's work):
   to Stage 1 in sync, and later across two machines, with either player behind a NAT
   ([ps3recomp#202](https://github.com/sp00nznet/ps3recomp/pull/202)).
 
-## Now
+[Sign-in passes](docs/features.md#network)
+- [net-pass-relay] Optional `-require-pass relay` makes the relay carry traffic only for players holding a short-lived signed pass checked offline; off by default. No login service exists yet, so nothing can mint a pass outside tests. In v0.9.0.
+- [net-pass-connect] Optional `-require-pass connect` makes a connection a player only after AUTH accepts a pass, with a 30 s sign-in deadline; off by default. No login service exists yet, and names are still not authenticated. In v0.9.0.
+- [client-pass-auth] The C client's `psnr_auth` and the desktop app's `Conn.Auth` send AUTH with an opaque pass and return the server's answer. No login service and no app sign-in screen exist yet, so nothing outside tests holds a pass. In v0.9.0.
 
-These features have shipped (v0.7.0 and v0.8.0) and work in synthetic local checks:
+### Desktop app, trophies and friends (v0.3.0 to v0.8.0)
+
+These have shipped (v0.3.0 to v0.8.0) and work in synthetic local checks:
 
 - [client-desktop] Optional Windows/Linux client with independent Play/Host/Both workspaces, owned host start/stop,
   authenticated reopen and paired app/host archives. Ordinary gameplay and standalone hosting remain independent.
@@ -124,6 +146,10 @@ Windows/Linux binaries are built. Linux synthetic browser/owned-host/SDK runs an
 checks under Wine are separately labeled. Wine rejects the server UDP setup with WSAIoctl error 10045; those runs do
 not establish native Windows hosting. Native physical Windows/ARM64 execution and real-title support remain unverified.
 App installers refuse archives without `re-psn-host` (before v0.7.0); paired replacements are not crash-atomic.
+
+## Now
+
+Nothing is in progress right now; no feature is tagged in-progress.
 
 ## Next
 

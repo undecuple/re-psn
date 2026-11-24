@@ -6,8 +6,8 @@
  "status_counts": {
   "available": 46,
   "unverified": 3,
-  "partial": 9,
-  "in-progress": 6,
+  "partial": 15,
+  "in-progress": 0,
   "planned": 11,
   "later": 8,
   "declined": 1
@@ -90,24 +90,24 @@
    "area": "Players",
    "feature": "Friends, presence and invites",
    "detail": "Current source has authenticated per-relay friend requests, mutual acceptance, decline/cancel/remove and blocks through the optional client and TLS companion. Game-facing sceNpBasic friends, online/title/room presence, invitations and join-a-friend remain planned.",
-   "status": "in-progress",
-   "since": "",
+   "status": "partial",
+   "since": "0.7.0",
    "evidence": "app/framework/social.go, app/internal/webui, docs/client-ui.md, docs/app-framework.md",
    "note": "Client consent lists work independently of game-protocol names. No public directory, automatic acceptance, live presence or invites. A cached snapshot is not a live online list.",
-   "status_label": "in progress",
-   "status_class": "info"
+   "status_label": "partial",
+   "status_class": "warn"
   },
   {
    "id": "players-accounts",
    "area": "Players",
    "feature": "Portable identities and per-host friend accounts",
    "detail": "App-owned Ed25519 identity with encrypted portable backup, explicit per-host mTLS registration and mutually accepted friend lists.",
-   "status": "in-progress",
-   "since": "",
+   "status": "partial",
+   "since": "0.7.0",
    "evidence": "app/framework, app/integration/framework_test.go, docs/app-framework.md",
-   "note": "Working synthetic key-control/restore and independent-host friendship scenarios; current source is not a release claim. Separate opt-in companion. No provider badge, authenticated gameplay admission, federation, live presence, invites or trophy upload.",
-   "status_label": "in progress",
-   "status_class": "info"
+   "note": "Working synthetic key-control/restore and independent-host friendship scenarios; Separate opt-in companion. No provider badge, authenticated gameplay admission, federation, live presence, invites or trophy upload.",
+   "status_label": "partial",
+   "status_class": "warn"
   },
   {
    "id": "limits-requests",
@@ -522,24 +522,24 @@
    "area": "Client",
    "feature": "Optional Windows/Linux client",
    "detail": "Current source has independent Play target and local Host configuration, explicit owned start/stop, authenticated reopen, local trophy/friend extras and encrypted recovery. Ordinary game networking and standalone hosting do not need the app, a profile or an account.",
-   "status": "in-progress",
-   "since": "",
+   "status": "partial",
+   "since": "0.5.0",
    "evidence": "app/cmd/re-psn-app/ui.go, app/internal/host, app/internal/appinstance, docs/client-ui.md",
    "note": "No per-game launch profiles or game joining/configuration adapter. Archives pair the app with re-psn-host; no additional UI toolkit/runtime is required beyond a browser. Closing a tab keeps its controller/host alive; Stop app ends what it owns. Linux synthetic runtime and Windows PE/Wine controller evidence are distinct; Wine UDP setup fails and does not establish native Windows hosting.",
-   "status_label": "in progress",
-   "status_class": "info"
+   "status_label": "partial",
+   "status_class": "warn"
   },
   {
    "id": "client-gui",
    "area": "Client",
    "feature": "Local browser interface",
    "detail": "The optional app serves embedded HTML/CSS/JavaScript on literal loopback; no arguments or `ui` opens it. First-run Play/Host/Both cards lead to real host, check, profile, trophy, friend, backup and settings actions. Colors, local monospace fonts and double frames follow undecuple/me.",
-   "status": "in-progress",
-   "since": "",
+   "status": "partial",
+   "since": "0.7.0",
    "evidence": "app/internal/webui, app/internal/desktop/browser.go, tools/client_ui.test.js, tools/client_browser_check.mjs, docs/client-ui.md",
    "note": "No frontend dependencies, external assets or native webview. One-use launch bootstrap is exchanged for a separate session API capability; private HTML dispatch avoids credential-bearing process arguments. This local control surface is separate from the read-only status page and static website. Browser and physical/native platform accessibility/runtime evidence remain distinct.",
-   "status_label": "in progress",
-   "status_class": "info"
+   "status_label": "partial",
+   "status_class": "warn"
   },
   {
    "id": "app-lan-discover",
@@ -570,12 +570,12 @@
    "area": "Client",
    "feature": "Appearance mode",
    "detail": "Current browser client supports Dark, Light and System (follow browser/OS preference); its default is Dark. The advanced terminal supports dark/light. Extra presets and terminal system-following are not implemented.",
-   "status": "in-progress",
-   "since": "",
+   "status": "partial",
+   "since": "0.3.0",
    "evidence": "app/internal/webui/assets/app.css, app/internal/webui/assets/app.js, app/internal/config/config.go, docs/client-ui.md",
    "note": "The read-only server status page has its own System/Light/Dark and browser-local controls. The static project website has one dark theme. Presets and custom app colors remain separate planned features.",
-   "status_label": "in progress",
-   "status_class": "info"
+   "status_label": "partial",
+   "status_class": "warn"
   },
   {
    "id": "app-colours",
@@ -1014,12 +1014,12 @@
    "area": "Client",
    "feature": "Offline trophy framework and recomp SDK",
    "detail": "Desktop-managed local trophy catalogs and monotonic reports, private title-scoped local broker, dependency-free C/C++ SDK and encrypted profile recovery.",
-   "status": "in-progress",
-   "since": "",
+   "status": "partial",
+   "since": "0.7.0",
    "evidence": "app/framework, client/psnr_app.c, client/psnr_app.h, docs/app-framework.md",
-   "note": "Working synthetic local/native-SDK and two-TLS-host scenarios; current source includes browser/advanced-terminal controls. No real-title adapter, Sony trophy-save parser, automatic platinum, earned-trophy verification or remote trophy synchronization. Local trophies need no relay registration; game grants expose neither identity keys nor friend administration.",
-   "status_label": "in progress",
-   "status_class": "info"
+   "note": "Working synthetic local/native-SDK and two-TLS-host scenarios; includes browser and advanced-terminal controls. No real-title adapter, Sony trophy-save parser, automatic platinum, earned-trophy verification or remote trophy synchronization. Local trophies need no relay registration; game grants expose neither identity keys nor friend administration.",
+   "status_label": "partial",
+   "status_class": "warn"
   }
  ],
  "roadmap": {
@@ -1029,6 +1029,8 @@
    "rooms-codes",
    "scores-boards",
    "players-names",
+   "players-friends",
+   "players-accounts",
    "limits-requests",
    "logs-levels",
    "status-page",
@@ -1048,7 +1050,10 @@
    "client-c",
    "app-client",
    "app-tui",
+   "client-desktop",
+   "client-gui",
    "app-lan-discover",
+   "app-appearance",
    "test-fuzz",
    "ci-checks",
    "release-archives",
@@ -1081,16 +1086,10 @@
    "client-connect-policy",
    "app-server-view",
    "admin-api",
-   "app-archives"
-  ],
-  "Now": [
-   "players-friends",
-   "players-accounts",
-   "client-desktop",
-   "client-gui",
-   "app-appearance",
+   "app-archives",
    "app-framework"
   ],
+  "Now": [],
   "Next": [
    "rooms-private",
    "store-sqlite",
@@ -1388,6 +1387,7 @@
      "Docs: `docs/code-map.md`, a maintainer's map of the repository with diagrams: the layers and modules of the server, the C and Python clients, the desktop app, the site and tools, and CI and deploy; the main request, ..."
     ],
     "Changed": [
+     "Docs: six shipped features (the desktop app, its local browser interface, appearance mode, the app framework, portable identities and friends) were marked in progress; they are now `partial` with the release that first ...",
      "Docs: the README is drawn in the website's dark palette throughout.",
      "Docs: corrections to the SDK and app pages.",
      "Docs: corrections to the entry pages.",
@@ -1404,7 +1404,7 @@
    },
    "counts": {
     "Added": 2,
-    "Changed": 8,
+    "Changed": 9,
     "Fixed": 2
    }
   },
