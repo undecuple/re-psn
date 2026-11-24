@@ -211,10 +211,10 @@ How it is built ([`scripts/build-appimage.sh`](../scripts/build-appimage.sh), ru
 
 ## Not checked yet
 
-- The window program (`re-psn-window`): no release has carried it yet. It is built per system with a Rust toolchain that
-  the runner downloads from the official server at the pinned version. The release `window` jobs have not run, the
-  Windows window has not been run at all, and `install.sh --app` / `install.ps1 -App` do not install it yet (unpack the
-  archive to use it). The binaries are unsigned.
+- The window program (`re-psn-window`): the app archives have carried it since v0.8.0. It is built per system with a
+  Rust toolchain that the runner downloads at the pinned version, and `install.sh --app` /
+  `install.ps1 -App` install it when the release has it. The Windows window has not been run at all. The binaries are
+  unsigned.
 - That the Windows and arm64 binaries run; they are cross-built. The exe, the AppImage and `SHA256SUMS` are unsigned.
 - The AppImage on other distributions: it was built and run (with FUSE and with `--appimage-extract-and-run`) on one
   x86_64 Linux machine only.
@@ -222,4 +222,4 @@ How it is built ([`scripts/build-appimage.sh`](../scripts/build-appimage.sh), ru
   workflow built the three app archives and drafted ten assets, and `release-check.yml` passed on it (the asset names equal
   the expected ten, the scripts equal the tag's). v0.4.0 carries seven assets, v0.3.0 five and v0.2.0 nine. A manual run of
   the release workflow builds and checks the ten files but creates no draft.
-- Sample log output in the README and `docs/running.md` (`version=0.1.0`) is an example and is not changed by the bump.
+- Sample log output in `docs/running.md` (`version=0.1.0`) and the README (`version=0.2.0`) is an example and is not changed by the bump.

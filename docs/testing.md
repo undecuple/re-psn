@@ -1,7 +1,7 @@
 # Local loopback checks
 
 Run a focused check of the native C client and Go app client against temporary servers built from this repository.
-The traffic and test identities are synthetic. The command reports success only when all four named tests pass;
+The traffic and test identities are synthetic. The command reports success only when every test named in the table below passes;
 missing tests, skips, failed builds and timeouts fail the command.
 
 ## Contents
@@ -33,7 +33,7 @@ build may need more time. The command can be invoked by its absolute path from a
 
 | Phase | Existing tests | Coverage |
 |---|---|---|
-| Native client | `TestCClient`, `TestCClientReportsRTT` | Builds/runs `client/test_psnr.c` and `client/examples/minimal.c` against the in-process TCP/UDP server, including example argument validation and empty/populated searches; the second checks the round trip a client reports in HEARTBEAT reaches the server |
+| Native client | `TestCClient` | Builds/runs `client/test_psnr.c` and `client/examples/minimal.c` against the in-process TCP/UDP server, including example argument validation and empty/populated searches. `TestCClientReportsRTT` (the round trip a client reports in HEARTBEAT reaches the server) runs in the full Go suite, not under this command |
 | Go app client | `TestConformanceRoomsAndScores`, `TestConformanceRelayRoute`, `TestConformanceErrors`, `TestConformanceHeartbeatReportsRTT` | Builds the server, starts it on free loopback ports, and exercises two-client room/score operations, route notifications and protocol errors; the last test checks that a connection that opted in reports its round trip in HEARTBEAT and one that did not sends an empty one |
 
 CI also requires `TestCheckReleaseAssets`, `TestReleaseAssetListsAgree` and `TestReleaseCheckWorkflow` to run on Linux, so a
