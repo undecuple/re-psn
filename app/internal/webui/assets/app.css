@@ -1008,3 +1008,12 @@ th,td,.friend-item,.friend-group>h2 {
 .words dl{margin:0;padding:0 1.2rem 1rem}
 .words dt{margin-top:.8rem}
 .words dd{margin:.15rem 0 0;color:var(--muted);font-size:.9rem}
+.saved-pick{
+  margin-bottom:1rem
+}
+.saved-pick .muted{
+  margin:0 0 .75rem
+}
+.saved-pick .muted:empty{
+  display:none
+}
