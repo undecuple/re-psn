@@ -16,7 +16,7 @@ reporting there too.
 ## Making a change
 
 - One focused change per pull request, with tests in the same commit. Say what you ran and what you did not.
-- A change to the wire format bumps the protocol version and updates [docs/api.md](docs/api.md) in the same commit.
+- A change to the wire format updates [docs/api.md](docs/api.md) and [docs/protocol.md](docs/protocol.md) in the same commit, keeps old clients working where it can ([docs/protocol.md](docs/protocol.md) section 13), and says so in `CHANGELOG.md`.
 - Commits: a plain subject line, then a short body saying what and why.
 - The [pull request template](.github/pull_request_template.md) asks for Why, Change, Tests, Evidence and Overlap.
 - Using an AI coding agent is fine; you remain responsible for what it submits, and the pull request should say so. [AGENTS.md](AGENTS.md) has the commands and rules for agents.
@@ -31,6 +31,8 @@ go vet ./...
 go test -race ./...
 python3 tools/repo_check.py
 ```
+
+For changes under `app/`, also run `(cd app && gofmt -l . && go vet ./... && go test -race ./...)`, and `cargo test --locked` in `app/shell/` for the window.
 
 The repository check is offline and uses Python's standard library plus Git. It checks tracked root filenames and
 top-level directories against `tools/repo_layout.json`, local Markdown links and heading/explicit anchors, and static
@@ -51,8 +53,8 @@ For a focused native C-client and Go app-client check against temporary loopback
 `python3 tools/loopback.py` (optionally `--race`). It fails if a required test skips and cleans up its owned phase
 processes. See [docs/testing.md](docs/testing.md) for prerequisites, deadlines and coverage limits.
 
-CI uses `tools/check_conformance.py` with Go's JSON test output to require the native C-client test on Linux and the three
-app client conformance tests on Linux and Windows to pass. A missing, skipped or failed required test fails that job,
+CI uses `tools/check_conformance.py` with Go's JSON test output to require the native C-client test on Linux and the four
+app client conformance tests, and the app's other required tests, on Linux and Windows to pass. A missing, skipped or failed required test fails that job,
 even if the Go command otherwise succeeds. Unrelated platform-specific skips remain allowed. Local `go test` commands
 keep their existing skip behavior when optional tooling or server source is unavailable. The wrapper forwards test
 output and also fails if the Go command fails or its JSON output is invalid; run it from the same directory as `go test`:

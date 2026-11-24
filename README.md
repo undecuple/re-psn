@@ -40,7 +40,7 @@
 | **1** port | TCP and UDP 36100 for players ([ports](docs/running.md#ports)) |
 | **1** C file | the client: no third-party libraries and no threads ([client/psnr.c](client/psnr.c)) |
 | **Linux and Windows** | amd64 and arm64 on Linux, amd64 on Windows ([releases](https://github.com/undecuple/re-psn/releases)) |
-| **1** optional desktop app | current source opens a local browser UI for Play, Host or Both, offline trophies and authenticated friends; advanced terminal controls remain available ([client guide](docs/client-ui.md)) |
+| **1** optional desktop app | a local browser UI opens for Play, Host or Both, offline trophies and authenticated friends; advanced terminal controls remain available ([client guide](docs/client-ui.md)) |
 
 ## Quick start: host a server
 
@@ -85,8 +85,8 @@ More ways to install (container, install script, from source) are under [Install
 ## Coming soon
 
 Still planned: live friend presence and invites, private rooms, opt-in SQLite storage, deeper connection diagnostics,
-launch profiles, extra app themes, a metrics endpoint and signed releases. Current source already has the optional
-[graphical client](docs/client-ui.md), local trophy SDK and per-relay authenticated friend lists; these do not
+launch profiles, extra app themes, a metrics endpoint and signed releases. The optional
+[graphical client](docs/client-ui.md) (since v0.7.0), local trophy SDK and per-relay authenticated friend lists exist; these do not
 authenticate gameplay names. The [features list](docs/features.md) and [roadmap](ROADMAP.md) distinguish source work
 from released features.
 
@@ -292,8 +292,8 @@ presence, invitation, automatic game configuration or trophy upload. Ordinary ga
 server without this client, profile or account. See the [client guide](docs/client-ui.md) and
 [recomp SDK guide](docs/app-framework.md).
 
-This describes **current source**, not every published archive. App archives built from it include a matching
-`re-psn-host` component beside the app; the current installers require both and preserve a separate `re-psn` server.
+App archives from v0.7.0 on include a matching
+`re-psn-host` component beside the app (v0.8.0 on add `re-psn-window`); the current installers require both and preserve a separate `re-psn` server.
 Two-file updates are not crash-atomic; stop the app/host first and read the [update limits](docs/client-ui.md#install-and-update).
 Linux synthetic browser/host/SDK workflows and Windows PE controller/SDK checks under Wine are separate evidence.
 The tested Wine environment rejects the server's UDP setup; native Windows hosting is not established by those runs.
@@ -404,10 +404,9 @@ Each release carries `re-psn-vX.Y.Z-windows-amd64.zip`, `re-psn-vX.Y.Z-linux-amd
 (`re-psn.exe` on Windows), `LICENSE`, `NOTICE.md` and the deployment examples in `examples/`. From v0.4.0 it also carries the
 install scripts `install.sh` and `install.ps1` ([docs/installing.md](docs/installing.md)), seven assets in all (v0.3.0 has
 five, without the scripts). From v0.5.0 a release adds three archives of the desktop app, `re-psn-app-vX.Y.Z-<os>-<arch>` (same
-three platforms: the `re-psn-app` binary, `LICENSE`, `NOTICE.md` and the app's README), ten assets in all; the install scripts
-install the app only when asked (`install.sh --app`, `install.ps1 -App`). Current source app archives additionally carry the
-matching `re-psn-host` component, and its installers refuse older archives without it; these source changes do not
-retrofit published releases. See [paired update limits](docs/client-ui.md#install-and-update). `SHA256SUMS` lists the archives and the AppImage, and from v0.4.0 the scripts. Check a download with `sha256sum -c SHA256SUMS --ignore-missing` on Linux, or compare the output of
+three platforms: the `re-psn-app` binary, the matching `re-psn-host` server binary (from v0.7.0), `re-psn-window` (from v0.8.0), `LICENSE`, `NOTICE.md` and the app's README), ten assets in all; the install scripts
+install the app only when asked (`install.sh --app`, `install.ps1 -App`). App archives from v0.7.0 on also carry the
+matching `re-psn-host` component, and the installers refuse older archives without it. See [paired update limits](docs/client-ui.md#install-and-update). `SHA256SUMS` lists the archives and the AppImage, and from v0.4.0 the scripts. Check a download with `sha256sum -c SHA256SUMS --ignore-missing` on Linux, or compare the output of
 `Get-FileHash <archive>` with the line in `SHA256SUMS` on Windows.
 
 Linux x86_64 also gets `re-psn-vX.Y.Z-x86_64.AppImage`, the same binary as one runnable file (unsigned): check it with
@@ -544,7 +543,7 @@ What to set before the server goes behind a proxy or on the internet.
 - **What other players learn:** everyone in a room receives the other members' IP addresses and P2P ports, because that is how they
   connect. The status page lists every connected online ID. That is why it is off unless `-http` is set, and then
   stays on localhost or behind a token.
-- **Game-protocol names:** a name is not authenticated; anyone who can reach TCP 36100 can join. Run it for people you would let onto your
+- **Game-protocol names:** a name is not authenticated; by default anyone who can reach TCP 36100 can join; only a host that sets `-require-pass connect` with its own login service (none exists yet) can change that. Run it for people you would let onto your
   network.
 
 The optional app separately stores its local identity/trophy profile; the opt-in friend companion stores registrations

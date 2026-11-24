@@ -75,7 +75,7 @@ Merged into main. Items are in v0.2.0, v0.3.0, v0.4.0 or v0.5.0 unless a line sa
 - [net-udp-guard] UDP packets accepted only from the address of the player's TCP connection.
 - [net-guardrails] Partial: bounded per-source UDP rate limits and aggregate drop counters, in v0.4.0. Per-player relay byte/stream budgets, failed-token blocking and UDP fuzz coverage remain planned.
 - [client-c] A one-file C client with no dependencies.
-- [app-tui] The released terminal app provides a first-run choice, Rooms/Leaderboards, Settings and dark/light themes. An optional HTTP status source adds version, totals, public room members/age and board summaries, with game-protocol fallback. Current source keeps it as advanced `re-psn-app tui` and adds an owned Host pane; see the client work below. It does not launch or join a game.
+- [app-tui] The released terminal app provides a first-run choice, Rooms/Leaderboards, Settings and dark/light themes. An optional HTTP status source adds version, totals, public room members/age and board summaries, with game-protocol fallback. Since v0.7.0 it is the advanced `re-psn-app tui`, with an owned Host pane; see the client work below. It does not launch or join a game.
 
 [Testing and CI](docs/features.md#testing-and-ci), [release](docs/features.md#release) and [documentation](docs/features.md#documentation)
 - [test-fuzz] Fuzz tests for the frame parser, the request handlers and the PROXY header.
@@ -105,7 +105,7 @@ On the ps3recomp side (upstream's work):
 
 ## Now
 
-These source changes work in synthetic local checks and remain distinct from published releases:
+These features have shipped (v0.7.0 and v0.8.0) and work in synthetic local checks:
 
 - [client-desktop] Optional Windows/Linux client with independent Play/Host/Both workspaces, owned host start/stop,
   authenticated reopen and paired app/host archives. Ordinary gameplay and standalone hosting remain independent.
@@ -123,7 +123,7 @@ These source changes work in synthetic local checks and remain distinct from pub
 Windows/Linux binaries are built. Linux synthetic browser/owned-host/SDK runs and Windows controller/profile/SDK/reopen
 checks under Wine are separately labeled. Wine rejects the server UDP setup with WSAIoctl error 10045; those runs do
 not establish native Windows hosting. Native physical Windows/ARM64 execution and real-title support remain unverified.
-Current app installers refuse old archives without `re-psn-host`; paired replacements are not crash-atomic.
+App installers refuse archives without `re-psn-host` (before v0.7.0); paired replacements are not crash-atomic.
 
 ## Next
 

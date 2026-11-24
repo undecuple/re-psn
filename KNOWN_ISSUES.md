@@ -8,7 +8,7 @@ the [features list](docs/features.md) gives every feature's status and evidence.
 
 - re-psn is an alpha pre-release. No shipped game is claimed to work with it yet: a game has to be recompiled to use the
   [client](client/psnr.c) first ([README](README.md#quick-start-host-a-server)).
-- The server has no accounts. A name is not authenticated, and anyone who can reach TCP 36100 can join ([README](README.md#security-and-privacy)).
+- The server has no accounts. By default a name is not authenticated, and anyone who can reach TCP 36100 can join; only a host that sets `-require-pass connect` with its own login service (none exists yet) can change that ([README](README.md#security-and-privacy)).
 
 ## Not run or not checked
 
@@ -17,7 +17,7 @@ the [features list](docs/features.md) gives every feature's status and evidence.
 - **`install.ps1`** has been tested on PowerShell 7 only, not on Windows PowerShell 5.1 ([installing.md](docs/installing.md#windows)).
 - **The AppImage** is x86_64 only and unsigned.
 - **The desktop app:** the terminal interface has synthetic startup tests; physical desktops and emulators have not been
-  checked. It has no Host screen, no room joining and no launch profiles yet ([app/README.md](app/README.md)).
+  checked. It does not join rooms or launch a game, and has no launch profiles yet ([app/README.md](app/README.md)).
 - **Reverse-proxy examples** for nginx, HAProxy and Caddy, and the **fail2ban** jail, have not been run against a live
   setup ([running.md](docs/running.md#behind-a-reverse-proxy), [fail2ban.md](docs/fail2ban.md)).
 - **The admin API** is experimental and read-only. It has not been run behind a reverse proxy, on Windows or with a container

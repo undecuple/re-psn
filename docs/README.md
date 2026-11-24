@@ -13,7 +13,7 @@ instance and there are no accounts: you run your own server. The [project README
 ## Host a server
 
 - [Running the server](running.md): how to build and run it, its flags and environment variables, ports, logging and state.
-- [Installing with the scripts](installing.md): two optional scripts that install the server from a GitHub release.
+- [Installing with the scripts](installing.md): two optional scripts that install the server, or with `--app` / `-App` the desktop app, from a GitHub release.
 - [Running in a container](../docker/README.md): build the image and run it with Docker or Podman.
 - [Deployment examples](../deploy/README.md): a settings file, a systemd unit, and Traefik, nginx, HAProxy and Caddy configs.
 - [Running a server that the internet can reach](public-server.md): recommended settings for a server open to the internet.
