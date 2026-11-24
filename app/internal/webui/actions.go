@@ -169,6 +169,25 @@ func (s *Server) actionRequest(w http.ResponseWriter, r *http.Request) error {
 		if err := s.host.Stop(r.Context()); err != nil {
 			return err
 		}
+	case "/api/host/invite":
+		// Read-only: lists this computer's addresses for the running owned host. Never polled; the page asks when the
+		// Host page is shown with a running host, and when the person presses Refresh addresses.
+		if err := s.role(true); err != nil {
+			return err
+		}
+		if err := decode(r, &struct{}{}); err != nil {
+			return err
+		}
+		v := s.host.View()
+		if !v.Running {
+			return errors.New("Start the owned host before listing addresses for friends")
+		}
+		invite, err := buildInvite(v.Address, s.addrs)
+		if err != nil {
+			return err
+		}
+		writeJSON(w, invite)
+		return nil
 	case "/api/shutdown":
 		if err := decode(r, &struct{}{}); err != nil {
 			return err

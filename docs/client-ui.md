@@ -98,6 +98,17 @@ Keep the app's matching `re-psn-host` component beside it (`re-psn-host.exe` on 
 IP and port, such as `127.0.0.1:36100`, optionally enable relay traffic and choose **Save & start host**. A LAN/public
 bind asks for confirmation; the app makes no firewall or router changes.
 
+While the app's own host is running, the Host page has a **What to give friends** panel. It shows the listen address as
+configured and, when the host listens on every interface (`0.0.0.0` or `[::]`), a short list of this computer's
+addresses with the port, each labelled loopback, link-local, private network or "may be reachable from outside", with a
+**Copy** button (if the browser blocks copying, the address is selected for Ctrl+C). Loopback and link-local addresses
+cannot be reached by other computers; a private-network address works only on the same network (or a VPN); people
+outside your network need your router to forward the port, as [Connecting](connecting.md) describes. The list is a
+guess read from this computer's network interfaces: the app contacts nothing to find a public address and never says
+which address friends should use. It is read once for each host start, the first time you open the Host page, and again only
+when you press **Refresh addresses**. If the host listens on a loopback address, the panel says that only this computer can
+connect and friends cannot reach it.
+
 The controller starts its trusted component with bounded, fixed settings and checks its private authenticated status
 source. Port conflicts and startup failures are errors, not permission to replace another server. The browser cannot
 select arbitrary executables/arguments or control a remote server. Advanced source setups can explicitly select a
