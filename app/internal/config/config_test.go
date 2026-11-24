@@ -100,6 +100,7 @@ func TestParseErrors(t *testing.T) {
 	cases := []struct{ name, in, want string }{
 		{"bad mode", "[app]\nmode = spectate\n", "[app] mode"},
 		{"bad theme", "[app]\ntheme = blue\n", "[app] theme"},
+		{"bad setup_done", "[app]\nsetup_done = yes\n", "[app] setup_done"},
 		{"short name", "[player]\nname = ab\n", "[player] name"},
 		{"name with a space", "[player]\nname = a b c\n", "[player] name"},
 		{"server without port", "[server]\nserver = example.org\n", "[server] server"},
@@ -201,5 +202,25 @@ func TestSaveRefusesInvalid(t *testing.T) {
 	}
 	if _, err := os.Stat(path); !errors.Is(err, fs.ErrNotExist) {
 		t.Fatal("an invalid save wrote a file")
+	}
+}
+
+func TestSetupDoneKeepsUnknownLines(t *testing.T) {
+	in := "# mine\n[app]\nmode = play\nsetup_done = false\nfuture = 1\n\n[later]\nanything = goes here\n"
+	f, err := Parse(strings.NewReader(in))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.SetupDone != "false" {
+		t.Fatalf("SetupDone = %q, want false", f.SetupDone)
+	}
+	f.SetupDone = "true"
+	b, err := f.Bytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "# mine\n[app]\nmode = play\nsetup_done = true\nfuture = 1\n\n[later]\nanything = goes here\n"
+	if string(b) != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", b, want)
 	}
 }

@@ -7,6 +7,7 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- App: a first-run Getting started checklist in the browser interface, shown after the first workspace choice until you skip or finish it (the `[app] setup_done` key; an existing settings file without the key is treated as done, so nobody who already uses the app sees it). Its buttons only open pages and contact nothing, and it returns on reload until you skip or finish it. The Play page also shows when the last check finished and a fixed next step.
 - Docs: `docs/sdk-guide.md`, a developer guide to the SDK in three parts: how the pieces fit, building and the connection lifecycle, blocking and threads, errors and capabilities; rooms, pushes, leaderboards, a mapping from sceNpMatching2-style calls and the Python client; then NAT traversal, the relay, LAN discovery, sign-in passes, the local trophy SDK, testing and troubleshooting. Its C and Python examples were compiled, and the small ones run against a loopback server.
 - Docs: `docs/code-map.md`, a maintainer's map of the repository with diagrams: the layers and modules of the server, the C and Python clients, the desktop app, the site and tools, and CI and deploy; the main request, relay, sign-in pass and release flows; the entry points; and a table of which test runs where. It also lists what it does not cover.
 

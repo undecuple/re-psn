@@ -39,7 +39,7 @@ func (s *Server) actionRequest(w http.ResponseWriter, r *http.Request) error {
 		next := *s.file
 		old := s.file.Settings
 		s.mu.Unlock()
-		next.Settings = config.Settings{Mode: config.Mode(q.Mode), Theme: config.Theme(q.Theme), Name: q.Name, Server: q.Server, StatusURL: q.StatusURL, StatusTokenFile: old.StatusTokenFile, HostAddress: q.HostAddress, HostRelay: strconv.FormatBool(q.HostRelay), SocialOrigin: q.SocialOrigin, SocialCAFile: q.SocialCAFile}
+		next.Settings = config.Settings{Mode: config.Mode(q.Mode), Theme: config.Theme(q.Theme), Name: q.Name, Server: q.Server, StatusURL: q.StatusURL, StatusTokenFile: old.StatusTokenFile, HostAddress: q.HostAddress, HostRelay: strconv.FormatBool(q.HostRelay), SocialOrigin: q.SocialOrigin, SocialCAFile: q.SocialCAFile, SetupDone: strconv.FormatBool(q.SetupDone)}
 		// Reader trust must not silently follow a newly selected endpoint.
 		if old.StatusURL != next.StatusURL {
 			next.StatusTokenFile = ""

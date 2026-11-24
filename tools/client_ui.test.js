@@ -86,6 +86,44 @@ test('role and target policies keep player and operator contexts separate', () =
   const state = {settings: {social_origin: 'https://one.example.invalid/'}, profile: {relays: [{origin: 'https://two.example.invalid', state: {friends: ['other']}}, {origin: 'https://one.example.invalid', state: {friends: ['selected']}}]}};
   assert.deepEqual(ui.selectedRelay(state).state.friends, ['selected']); state.settings.social_origin = 'https://unknown.example.invalid'; assert.equal(ui.selectedRelay(state), undefined);
 });
+test('ageWords gives plain elapsed time', () => {
+  const now = 1_000_000_000;
+  assert.equal(ui.ageWords(0, now), 'not checked');
+  assert.equal(ui.ageWords(now - 12000, now), '12 s ago');
+  assert.equal(ui.ageWords(now + 5000, now), '0 s ago');
+  assert.equal(ui.ageWords(now - 59000, now), '59 s ago');
+  assert.equal(ui.ageWords(now - 180000, now), '3 min ago');
+  assert.equal(ui.ageWords(now - 3600000, now), 'over an hour ago');
+});
+test('setupSteps computes rows from state alone for each role', () => {
+  const play = {settings: {mode: 'play', server: '', status_url: '', name: ''}, host: {running: false, address: ''}, play: {checked_at: 0}};
+  assert.deepEqual(ui.setupSteps(play).map(s => [s.id, s.done]), [['server', false], ['name', false], ['check', false]]);
+  play.settings.server = 'play.example.org:36100'; play.settings.name = 'player1'; play.play.checked_at = 5;
+  assert.deepEqual(ui.setupSteps(play).map(s => s.done), [true, true, true]);
+  assert.match(ui.setupSteps(play)[1].detail, /Not checked, not protected by a password/);
+  const host = {settings: {mode: 'host', host_address: '127.0.0.1:36100'}, host: {running: false, address: ''}, play: {checked_at: 0}};
+  let rows = ui.setupSteps(host);
+  assert.deepEqual(rows.map(s => [s.id, s.done]), [['listen', true], ['running', false], ['share', false]]);
+  assert.match(rows[0].detail, /Friends cannot reach it/);
+  host.host = {running: true, address: '127.0.0.1:36100'}; assert.equal(ui.setupSteps(host)[2].done, false);
+  host.host = {running: true, address: '192.0.2.2:36100'}; assert.equal(ui.setupSteps(host)[2].done, true);
+  assert.equal(ui.setupSteps({...host, settings: {mode: 'both', host_address: '192.0.2.2:36100'}}).length, 6);
+  assert.ok(ui.setupSteps(play).every(s => ['play', 'settings', 'host'].includes(s.page)));
+});
+test('the setup checklist makes no request before its button is pressed', async () => {
+  const calls = [];
+  const api = ui.makeAPI(token, async (url, options) => {calls.push(url); return json({settings: {mode: 'play'}});});
+  const state = {settings: {mode: 'play', server: 'play.example.org:36100'}, host: {}, play: {}};
+  ui.setupSteps(state); ui.ageWords(0, Date.now());
+  assert.equal(calls.length, 0);
+  await api.post('/api/settings', {...state.settings, setup_done: true});
+  assert.deepEqual(calls, ['/api/settings']);
+});
+test('setup_done has no form control but the settings draft carries it', () => {
+  const root = path.join(__dirname, '../app/internal/webui/assets'), html = fs.readFileSync(path.join(root, 'index.html'), 'utf8'), js = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  assert.doesNotMatch(js, /settingFields = \{[^}]*setup_done/); assert.match(js, /out\.setup_done = !!state\.settings\.setup_done/); assert.match(js, /mode: b\.dataset\.role, \.\.\.\(state\.settings\.mode \? \{\} : \{setup_done: false\}\)/);
+  for (const id of ['setup', 'setup-list', 'setup-count', 'setup-skip', 'play-age', 'play-next', 'play-rooms-note']) assert.match(html, new RegExp('id="' + id + '"'));
+});
 test('a local GET begun before an action cannot overwrite that action with an old role', async () => {
   const guard = ui.readGuard(), renders = []; let release;
   const old = new Promise(resolve => {release = resolve;}), generation = guard.capture();

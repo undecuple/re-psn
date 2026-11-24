@@ -34,6 +34,9 @@ var assets embed.FS
 
 const maxInput = 8 << 20
 
+// defaultHostAddress is the host bind shown when none is saved.
+const defaultHostAddress = "127.0.0.1:36100"
+
 // uiWriteTimeout bounds writing any answer, except where a route that is slow by design extends its own (Check all).
 var uiWriteTimeout = 20 * time.Second
 
@@ -48,6 +51,7 @@ type Settings struct {
 	SocialCAFile string `json:"social_ca_file"`
 	HostAddress  string `json:"host_address"`
 	HostRelay    bool   `json:"host_relay"`
+	SetupDone    bool   `json:"setup_done"`
 }
 type Room struct {
 	ID      string   `json:"id"`
@@ -141,9 +145,22 @@ func (s *Server) settings() Settings {
 	}
 	address := v.HostAddress
 	if address == "" {
-		address = "127.0.0.1:36100"
+		address = defaultHostAddress
 	}
-	return Settings{string(v.Mode), theme, v.Name, v.Server, v.StatusURL, v.SocialOrigin, v.SocialCAFile, address, v.HostRelay == "true"}
+	return Settings{string(v.Mode), theme, v.Name, v.Server, v.StatusURL, v.SocialOrigin, v.SocialCAFile, address, v.HostRelay == "true", setupDone(v)}
+}
+
+// setupDone reports whether the first-run checklist is finished. A stored true or false wins. With no stored value (a
+// settings file from before the checklist existed, or none yet) it counts as done: only the first workspace choice in
+// the interface stores false, so nobody who already uses the app is sent back through it.
+func setupDone(v config.Settings) bool {
+	switch v.SetupDone {
+	case "true":
+		return true
+	case "false":
+		return false
+	}
+	return true
 }
 func (s *Server) state() State {
 	s.mu.Lock()
