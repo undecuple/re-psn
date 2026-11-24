@@ -96,6 +96,13 @@ int main(int argc, char** argv)
         assert(psnr_pass_hint(c) == 1);
         assert(udp_token(c) == 0);                         /* HELLO is parked: no token yet */
         assert((caps_bits(c) & ~PSNR_CAP_PASS_RELAY) == 0);   /* before AUTH only bit 7 may show */
+        {   /* not a player yet: a room request is answered with ERROR 10, not served and not left hanging */
+            uint8_t search[4] = {0, 0, 0, 10};
+            psnr_msg m;
+            assert(psnr_call(c, PSNR_SEARCH_ROOMS, search, 4, &m, 2000) == 1);
+            assert(m.type == PSNR_ERROR && m.len == 4 && psnr_get32(m.data) == PSNR_E_PASS);
+            psnr_msg_free(&m);
+        }
         arguments(c, good, n);
         assert(psnr_auth(c, bad, nb, 2000) == PSNR_E_PASS);
         memset(big, 'x', sizeof(big));                     /* exactly 2048 bytes is sent, and refused */
