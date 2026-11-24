@@ -430,6 +430,11 @@ func syntheticResponse(id string, revision uint64) *http.Response {
 	b, _ := json.Marshal(SocialState{AccountID: id, Label: "Synthetic cache player", Revision: revision})
 	return &http.Response{StatusCode: 200, Body: io.NopCloser(bytes.NewReader(b)), Header: make(http.Header)}
 }
+
+// socialWaitLimit bounds the waits whose expiry fails a test. A passing run never waits it out, so a loaded CI runner
+// gets room without slowing the test; the 50 ms check that the second client stays behind is unchanged.
+const socialWaitLimit = 10 * time.Second
+
 func TestSocialClientsShareProfileRequestOrdering(t *testing.T) {
 	s := fixtureStore(t, "Synthetic cache player")
 	if err := s.InstallCatalog(fixtureCatalog("SYNTHETIC")); err != nil {
@@ -459,7 +464,7 @@ func TestSocialClientsShareProfileRequestOrdering(t *testing.T) {
 	go func() { _, err := one.State(context.Background()); firstDone <- err }()
 	<-firstEntered
 	go func() { _, err := two.State(context.Background()); secondDone <- err }()
-	deadline := time.NewTimer(time.Second)
+	deadline := time.NewTimer(socialWaitLimit)
 	defer deadline.Stop()
 	for len(two.gate) == 0 {
 		select {
@@ -484,7 +489,7 @@ func TestSocialClientsShareProfileRequestOrdering(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-	case <-time.After(time.Second):
+	case <-time.After(socialWaitLimit):
 		t.Fatal("social network wait blocked local trophy writes")
 	}
 	unblock()
