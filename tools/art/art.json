@@ -1,7 +1,7 @@
 {
  "format": 1,
  "generator": "tools/art/make_art.py",
- "generator_sha256": "854ff460a9130b6baeda04e4b8f2875b8fb3c59055435a552aab5797a321474d",
+ "generator_sha256": "14a48017da9417a57a9f31bcdceb4120a1436ec4f2f20d2f1249ef90178ea7e3",
  "pillow": "12.3.0",
  "freetype": "2.14.3",
  "zlib": "1.3",
@@ -42,8 +42,8 @@
     1280,
     320
    ],
-   "bytes": 16884,
-   "sha256": "2eb6ffbfe09d5c45bda8f167d04290c7956c7c78b2d2fbad898f4f5b9c08bfcf"
+   "bytes": 18081,
+   "sha256": "f0f85709227e24c04cfd1303c13c18d16ed0b819c07579aed2c19549e2f5a676"
   },
   "docs/img/social.png": {
    "size": [

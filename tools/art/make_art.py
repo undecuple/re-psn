@@ -14,8 +14,9 @@ from the tagged release of the official repository and pinned by SHA-256. The fo
 The banner's status strip shows, for each component of tools/badges.py, the status word that module derives from
 docs/features.tsv (weakest row wins), so the image cannot say more than the list; both are inputs below.
 
-Outputs: docs/img/banner.png (1280x320: the name, a one-line description, a status strip and the palette; an opaque panel with
-rounded, transparent corners, so it reads on light and dark pages), docs/img/social.png and one docs/img/term-*.png per
+Outputs: docs/img/banner.png (1280x320: the name with a cursor that blinks like a terminal's, a one-line description, a status
+strip and the palette; an opaque panel with rounded, transparent corners, so it reads on light and dark pages; an animated PNG
+of two frames, cursor on and off, whose first frame is the still image where animation is not shown), docs/img/social.png and one docs/img/term-*.png per
 transcript. social.png (1280x640, larger type, fewer words, everything inside SOCIAL_SAFE because sites crop the edges)
 is for the repository's social preview. It is uploaded by hand in the repository settings (Settings, General, Social
 preview) and is not used by any page.
@@ -215,6 +216,30 @@ def png_bytes(img):
     return buf.getvalue()
 
 
+# The banner's cursor blinks like a terminal's: on for BLINK_MS, off for BLINK_MS, forever (BLINK_PLAYS 0). The file is an
+# animated PNG, which GitHub shows moving and every other viewer shows as its first frame (the cursor on).
+BLINK_MS = 530
+BLINK_PLAYS = 0
+
+
+def cursor_off(img):
+    """The blink's second frame: img with the cursor painted over in the colour of the panel beside it (a palette index of
+    img, so both frames share one palette)."""
+    from PIL import ImageDraw
+    x0, y0, x1, y1 = img.cursor_box
+    bg = img.getpixel((int(x1) + 14, int((y0 + y1) / 2)))
+    off = img.copy()
+    ImageDraw.Draw(off).rectangle((int(x0) - 3, int(y0) - 3, int(x1) + 3, int(y1) + 3), fill=bg)
+    return off
+
+
+def apng_bytes(frames, duration_ms, plays):
+    buf = io.BytesIO()
+    frames[0].save(buf, format="PNG", save_all=True, append_images=frames[1:], duration=duration_ms, loop=plays,
+                   default_image=False)
+    return buf.getvalue()
+
+
 def hex_rgb(h):
     return tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
 
@@ -232,7 +257,8 @@ def strip_cells(root=ROOT):
 
 def banner(fonts, pal, cells):
     """The README banner: the name with a cursor, the description, the traits, the repository, a status strip (one
-    two-band cell per component: its label, then its status word in the badge colour) and a palette strip."""
+    two-band cell per component: its label, then its status word in the badge colour) and a palette strip. The result
+    has a cursor_box attribute, the cursor's rectangle in output pixels, which the blink's "off" frame paints over."""
     from PIL import Image, ImageDraw
     w, h = BANNER
     W, H = w * SS, h * SS
@@ -249,7 +275,8 @@ def banner(fonts, pal, cells):
     ink.text((x, y - top), NAME[1], f, pal["fg1"])
     x += f.getlength(NAME[1]) + 10 * SS
     capb = f.getbbox("H")
-    ink.rect((x, y, x + f.getlength("_") * 0.8, y + capb[3] - capb[1]), pal["green"])
+    cur = (x, y, x + f.getlength("_") * 0.8, y + capb[3] - capb[1])
+    ink.rect(cur, pal["green"])
     y += capb[3] - capb[1] + 28 * SS
     # the description
     ft = fit(fonts, "regular", TAGLINE, W - 2 * m, 22 * SS)
@@ -290,7 +317,9 @@ def banner(fonts, pal, cells):
         x0 = m + i * (sw + gap)
         ink.rect((x0, by, x0 + sw, by + 8 * SS), pal[k], radius=4 * SS)
     out = img.resize((w, h), Image.Resampling.LANCZOS)
-    return quantise(out, BANNER_COLOURS), ink.box
+    res = quantise(out, BANNER_COLOURS)
+    res.cursor_box = tuple(v / SS for v in cur)
+    return res, ink.box
 
 
 def social(fonts, pal):
@@ -412,8 +441,10 @@ def render(fonts, root=ROOT):
     """-> ({image name: PNG bytes}, problems). Nothing is written."""
     pal = load_palette(root)
     files, probs = {}, []
-    img, box = banner(fonts, pal, strip_cells(root))
-    files["banner.png"] = png_bytes(img)
+    cells = strip_cells(root)
+    img, box = banner(fonts, pal, cells)
+    off = cursor_off(img)
+    files["banner.png"] = apng_bytes([img, off], BLINK_MS, BLINK_PLAYS)
     probs += margin_problems("banner.png", img.size, box)
     img, box = social(fonts, pal)
     files["social.png"] = png_bytes(img)

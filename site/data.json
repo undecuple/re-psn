@@ -1388,6 +1388,7 @@
     ],
     "Changed": [
      "Docs: the project text now says the server has no account of its own, instead of \"no accounts\", because a host may optionally require a sign-in pass from a login service it runs itself; the README tagline, the known ...",
+     "Docs: the README header is quieter.",
      "Docs: six shipped features (the desktop app, its local browser interface, appearance mode, the app framework, portable identities and friends) were marked in progress; they are now `partial` with the release that first ...",
      "Docs: the README is drawn in the website's dark palette throughout.",
      "Docs: corrections to the SDK and app pages.",
@@ -1405,7 +1406,7 @@
    },
    "counts": {
     "Added": 2,
-    "Changed": 10,
+    "Changed": 11,
     "Fixed": 2
    }
   },

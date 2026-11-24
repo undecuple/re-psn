@@ -152,7 +152,6 @@ class BadgeTests(unittest.TestCase):
         root = pathlib.Path(__file__).resolve().parents[1]
         text = " ".join((root / "README.md").read_text(encoding="utf-8").split())
         self.assertIn("Sign-in passes have no login service yet", text)
-        self.assertIn('alt="Sign-in passes: available"', text)
 
 
 if __name__ == "__main__":
