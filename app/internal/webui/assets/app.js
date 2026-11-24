@@ -6,7 +6,7 @@
   // Check all runs 4 servers at a time with 5 s each; 64 unreachable ones take 80 s.
   const CHECK_ALL_MS = 100000;
   const SESSION_KEY = 're-psn-ui-token-v1';
-  const ROUTES = new Set(['/api/settings', '/api/play', '/api/host/start', '/api/host/stop', '/api/profile/create', '/api/catalog', '/api/grant', '/api/revoke', '/api/friends', '/api/profile/export', '/api/profile/restore', '/api/shutdown', '/api/servers/add', '/api/servers/remove', '/api/servers/check', '/api/servers/check-all', '/api/servers/use', '/api/servers/export', '/api/servers/preview', '/api/servers/import']);
+  const ROUTES = new Set(['/api/settings', '/api/play', '/api/host/start', '/api/host/stop', '/api/host/invite', '/api/profile/create', '/api/catalog', '/api/grant', '/api/revoke', '/api/friends', '/api/profile/export', '/api/profile/restore', '/api/shutdown', '/api/servers/add', '/api/servers/remove', '/api/servers/check', '/api/servers/check-all', '/api/servers/use', '/api/servers/export', '/api/servers/preview', '/api/servers/import']);
   const personal = mode => mode === 'play' || mode === 'both';
   const hosting = mode => mode === 'host' || mode === 'both';
   function readGuard() { let generation = 0; return {capture: () => generation, invalidate: () => {generation++;}, current: value => value === generation}; }
@@ -67,6 +67,28 @@
     return address;
   }
   function localBind(address) { return /^(127\.0\.0\.1|localhost|\[::1\]):\d+$/.test(address); }
+  // What each kind of candidate address means for friends. The words are plain and say only what the kind implies.
+  const INVITE_KINDS = {
+    loopback: {label: 'Loopback', note: 'Only this computer can use it. Other computers cannot reach a loopback address.'},
+    'link-local': {label: 'Link-local', note: 'Other computers cannot reach it: it is only for a direct cable or one network segment.'},
+    private: {label: 'Private network', note: 'Works only for computers on the same network, or on the same VPN.'},
+    shared: {label: 'Shared or overlay network', note: 'Works only for computers on the same overlay network or provider network, such as a VPN or a carrier-grade NAT. It is not reachable from the internet.'},
+    unknown: {label: 'Address not recognised', note: 'This address could not be read as an IP address, so nothing is known about who can reach it.'},
+    other: {label: 'May be reachable from outside', note: 'It may be reachable from outside, depending on your router and firewall. Nothing here has checked.'}
+  };
+  function inviteKind(kind) { return Object.prototype.hasOwnProperty.call(INVITE_KINDS, kind) ? INVITE_KINDS[kind] : INVITE_KINDS.other; }
+  const INVITE_LOOPBACK_WARNING = 'Warning: only this computer can connect. Friends cannot reach this host while it listens on a loopback address. To let friends in, stop it and choose another listen address.';
+  // True when the running host accepts only this computer. The server's answer wins; before it arrives the bind text decides.
+  function inviteLoopbackOnly(state, invite) {
+    if (invite && typeof invite.loopback_only === 'boolean') return invite.loopback_only;
+    return !!state.host && !!state.host.running && localBind(state.host.address || '');
+  }
+  // The key to fetch the address list for, or '' when it must not be fetched: only while the Host page is showing a host this app runs.
+  function inviteWanted(state, page) {
+    const host = state && state.host;
+    if (page !== 'host' || !host || !host.running || !host.address || !hosting(state.settings && state.settings.mode)) return '';
+    return host.address + '|' + (host.started_at || 0);
+  }
   function selectedRelay(state) {
     const relays = (state.profile && state.profile.relays) || [];
     const origin = (state.settings.social_origin || '').replace(/\/$/, '');
@@ -137,7 +159,7 @@
     }
     return {state: () => request('/api/state'), post: (path, body = {}) => request(path, body), export: passphrase => request('/api/profile/export', {passphrase}, true)};
   }
-  const exported = {MAX_ARCHIVE, SESSION_KEY, personal, hosting, ageWords, setupSteps, roomsNote, failureHints, copyText, readGuard, clean, fragmentToken, takeToken, openSession, catalogBody, base64, clientAddress, localBind, selectedRelay, responseBytes, makeAPI};
+  const exported = {MAX_ARCHIVE, SESSION_KEY, personal, hosting, ageWords, setupSteps, roomsNote, failureHints, copyText, inviteKind, inviteLoopbackOnly, inviteWanted, readGuard, clean, fragmentToken, takeToken, openSession, catalogBody, base64, clientAddress, localBind, selectedRelay, responseBytes, makeAPI};
   if (typeof module !== 'undefined' && module.exports) module.exports = exported;
   if (typeof document === 'undefined') return;
 
@@ -204,6 +226,7 @@
     currentPage = page;
     for (const section of document.querySelectorAll('.page')) section.hidden = section.id !== 'page-' + page;
     for (const button of document.querySelectorAll('.navigation [data-page]')) { if (button.dataset.page === page) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current'); }
+    renderInvite();
     if (focus) { const title = $('page-' + page).querySelector('h1'); title.tabIndex = -1; title.focus(); }
   }
   const settingFields = {mode: 'setting-mode', theme: 'setting-theme', name: 'setting-name', server: 'setting-server', status_url: 'setting-status-url', social_origin: 'setting-social-origin', social_ca_file: 'setting-social-ca', host_address: 'setting-host-address', host_relay: 'setting-host-relay'};
@@ -278,6 +301,43 @@
     const hints = failureHints(p), list = $('play-hints-list'); list.replaceChildren(...hints.map(h => node('li', h))); show('play-hints', hints.length > 0);
     const target = $('play-copy-text'); if (target.value !== clean(p.address)) target.value = clean(p.address); text('play-copy-note', ''); show('play-copy', !!p.address);
     tableRows('boards-body', p.boards, 4, 'No leaderboard snapshot available.', b => [b.title + ' / ' + b.id, b.entries, b.leader || '—', b.best || '—']);
+  }
+  // The address list is asked for once per running host and page visit, and again only when the person presses Refresh addresses.
+  // It is never polled, and a failed read is kept (not retried) until the person asks again.
+  let invite = null, inviteKey = '', inviteBusy = false, inviteShown = '';
+  async function loadInvite(key) {
+    inviteBusy = true; inviteKey = key;
+    try { const result = await api.post('/api/host/invite'); if (inviteKey === key && !stopped) invite = result; }
+    catch (error) { if (inviteKey === key && !stopped) invite = {failed: true}; }
+    finally { inviteBusy = false; }
+    renderInvite();
+  }
+  function renderInvite() {
+    if (!state) return;
+    const running = !!state.host.running && hosting(state.settings.mode);
+    show('host-invite', running);
+    if (!running) { invite = null; inviteKey = ''; inviteShown = ''; return; }
+    const key = inviteWanted(state, currentPage);
+    if (key && key !== inviteKey && !inviteBusy && authenticated && !stopped) { invite = null; loadInvite(key); }
+    const shown = JSON.stringify([state.host.address, invite, inviteBusy]);
+    if (shown === inviteShown) return; inviteShown = shown;
+    const loopback = inviteLoopbackOnly(state, invite), ok = invite && !invite.failed;
+    text('host-invite-bind', 'Listening on ' + (ok ? invite.bind : state.host.address) + ' (as configured).');
+    text('host-invite-warning', loopback ? INVITE_LOOPBACK_WARNING : '');
+    const list = $('host-invite-list'), rows = ok ? invite.addresses || [] : [];
+    list.replaceChildren(...rows.map(a => {
+      const info = inviteKind(a.kind), li = node('li', undefined, 'invite-row'), code = node('code', a.address, 'break'), button = node('button', 'Copy');
+      button.type = 'button'; button.dataset.inviteCopy = a.address; button.setAttribute('aria-label', 'Copy ' + a.address);
+      li.append(code, node('span', info.label, 'tag'), node('span', info.note, 'muted'), button); return li;
+    }));
+    let note = '';
+    if (!invite || inviteBusy) note = 'Looking at this computer\u2019s network interfaces.';
+    else if (invite.failed) note = 'The address list could not be read. Press Refresh addresses to try again.';
+    else if (invite.list_failed) note = 'This computer\u2019s network interfaces could not be read, so no addresses are listed.';
+    else if (!rows.length) note = 'No other addresses were found for this computer.';
+    else note = (invite.all_interfaces ? 'The host listens on every network interface, so these are this computer\u2019s addresses. ' : '') + 'This list is a guess made from this computer\u2019s network interfaces' + (invite.truncated ? ' (only the first ' + rows.length + ' are shown)' : '') + '. The app asks nothing outside this computer, so it cannot tell which address friends should use.';
+    text('host-invite-list-note', note);
+    $('host-invite-refresh').setAttribute('aria-disabled', String(inviteBusy));
   }
   const NEXT_STEP = {
     unchecked: 'Next: save a server and press Save & check server. Nothing is contacted until you do.',
@@ -484,6 +544,15 @@
     text('play-saved-note', 'Filled in ' + e.name + (e.status_url ? ' with its status URL' : ', and cleared the status URL') + '. Nothing was contacted. Press Save & check server when you are ready.');
   });
   $('play-saved-manage').addEventListener('click', () => { const title = $('servers-title'); title.tabIndex = -1; title.focus(); });
+  $('host-invite-refresh').addEventListener('click', () => { if (inviteBusy || !state || !inviteWanted(state, 'host')) return; text('host-invite-copy-note', ''); invite = null; inviteShown = ''; loadInvite(inviteKey || inviteWanted(state, 'host')); renderInvite(); });
+  $('host-invite-list').addEventListener('click', async event => {
+    const button = event.target.closest && event.target.closest('button[data-invite-copy]'); if (!button) return;
+    const value = button.dataset.inviteCopy, result = await copyText(value, navigator.clipboard);
+    if (result === 'copied') { text('host-invite-copy-note', value + ' copied.'); return; }
+    const code = button.parentNode.querySelector('code'), selection = getSelection(), range = document.createRange();
+    range.selectNodeContents(code); selection.removeAllRanges(); selection.addRange(range);
+    text('host-invite-copy-note', 'Copying was blocked here. The address is selected: press Ctrl+C (Cmd+C on a Mac) to copy it.');
+  });
   $('host-form').addEventListener('input', () => { hostDirty = true; });
   submit('settings-form', async () => { const result = await saveSettings(draftSettings(), true); if (result) message('Settings saved. Services start only when you choose their action.'); return result; });
   $('settings-reset').addEventListener('click', () => { settingsDirty = playDirty = hostDirty = false; fillSettings(true); });

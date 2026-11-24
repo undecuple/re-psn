@@ -115,6 +115,7 @@ type Server struct {
 	reopenKey        string
 	servers          *serverStore
 	fetch            tui.Fetcher
+	addrs            addrLister
 	ctx              context.Context
 	cancel           context.CancelFunc
 	closed           bool
@@ -138,7 +139,7 @@ func New(opts Options) (*Server, error) {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Server{servers: newServerStore(opts.ConfigPath), fetch: tui.NativeStatus{}, opts: opts, file: f, profile: tui.NewProfileSession(opts.ProfileDir), host: host.New(opts.ServerBinary), action: make(chan struct{}, 1), play: Play{Status: "unchecked", Rooms: []Room{}, Boards: []Board{}}, token: hex.EncodeToString(token[:]), bootstrap: hex.EncodeToString(bootstrap[:]), bootstrapExpires: time.Now().Add(time.Minute), reopenKey: hex.EncodeToString(reopen[:]), ctx: ctx, cancel: cancel}, nil
+	return &Server{servers: newServerStore(opts.ConfigPath), fetch: tui.NativeStatus{}, addrs: interfaceAddresses, opts: opts, file: f, profile: tui.NewProfileSession(opts.ProfileDir), host: host.New(opts.ServerBinary), action: make(chan struct{}, 1), play: Play{Status: "unchecked", Rooms: []Room{}, Boards: []Board{}}, token: hex.EncodeToString(token[:]), bootstrap: hex.EncodeToString(bootstrap[:]), bootstrapExpires: time.Now().Add(time.Minute), reopenKey: hex.EncodeToString(reopen[:]), ctx: ctx, cancel: cancel}, nil
 }
 
 // Locator is passed only to the native per-user controller; HTTP never returns its key.

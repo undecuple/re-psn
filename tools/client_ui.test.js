@@ -333,3 +333,49 @@ test('the picker markup sits in the Play form, starts empty and hidden-safe, and
   assert.match(html, /id="play-saved-empty" hidden>/); assert.match(html, /<button type="button" id="play-saved-manage">/);
   assert.match(html, /<h2 id="servers-title">Saved servers<\/h2>/);
 });
+test('inviteKind words each kind plainly and falls back to the cautious one', () => {
+  assert.match(ui.inviteKind('loopback').note, /Only this computer/);
+  assert.match(ui.inviteKind('link-local').note, /Other computers cannot reach it/);
+  assert.match(ui.inviteKind('private').note, /same network, or on the same VPN/);
+  assert.equal(ui.inviteKind('other').label, 'May be reachable from outside');
+  assert.doesNotMatch(ui.inviteKind('other').note, /public address|your address is/i);
+  for (const unknown of ['', 'weird', undefined, 'constructor', '__proto__']) assert.equal(ui.inviteKind(unknown), ui.inviteKind('other'));
+});
+test('inviteLoopbackOnly trusts the server answer and otherwise reads the bind', () => {
+  const run = address => ({host: {running: true, address}});
+  assert.equal(ui.inviteLoopbackOnly(run('127.0.0.1:36100'), null), true);
+  assert.equal(ui.inviteLoopbackOnly(run('[::1]:36100'), {failed: true}), true);
+  assert.equal(ui.inviteLoopbackOnly(run('0.0.0.0:36100'), null), false);
+  assert.equal(ui.inviteLoopbackOnly(run('192.0.2.2:36100'), null), false);
+  assert.equal(ui.inviteLoopbackOnly(run('127.0.0.2:36100'), {loopback_only: true}), true);
+  assert.equal(ui.inviteLoopbackOnly(run('127.0.0.1:36100'), {loopback_only: false}), false);
+  assert.equal(ui.inviteLoopbackOnly({host: {running: false, address: '127.0.0.1:36100'}}, null), false);
+});
+test('inviteWanted asks for addresses only on the Host page with a running host', () => {
+  const state = {settings: {mode: 'host'}, host: {running: true, address: '0.0.0.0:36100', started_at: 7}};
+  assert.equal(ui.inviteWanted(state, 'host'), '0.0.0.0:36100|7');
+  for (const page of ['overview', 'play', 'settings']) assert.equal(ui.inviteWanted(state, page), '');
+  assert.equal(ui.inviteWanted({...state, host: {...state.host, running: false}}, 'host'), '');
+  assert.equal(ui.inviteWanted({...state, settings: {mode: 'play'}}, 'host'), '');
+  assert.equal(ui.inviteWanted({settings: {}, host: {running: true, address: 'x:1'}}, 'host'), '');
+  assert.equal(ui.inviteWanted(null, 'host'), '');
+  assert.notEqual(ui.inviteWanted({...state, host: {...state.host, started_at: 8}}, 'host'), ui.inviteWanted(state, 'host'));
+});
+test('the address list route is a known action, and the page never polls or fetches it from the state read', async () => {
+  const calls = [];
+  const api = ui.makeAPI(token, async (url, options) => {calls.push([url, options.method]); return json({addresses: []});});
+  await api.post('/api/host/invite'); assert.deepEqual(calls, [['/api/host/invite', 'POST']]);
+  const js = fs.readFileSync(path.join(__dirname, '../app/internal/webui/assets/app.js'), 'utf8');
+  assert.equal([...js.matchAll(/api\.post\('\/api\/host\/invite'/g)].length, 1);
+  assert.doesNotMatch(js, /setInterval\([^)]*[iI]nvite/);
+  const read = js.slice(js.indexOf('async function readState'), js.indexOf('function friendAction'));
+  assert.doesNotMatch(read, /[iI]nvite/);
+});
+test('the host invite markup has the ids the script uses, a status role for the warning, and no external address lookup', () => {
+  const root = path.join(__dirname, '../app/internal/webui/assets'), html = fs.readFileSync(path.join(root, 'index.html'), 'utf8'), js = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  for (const id of ['host-invite', 'host-invite-bind', 'host-invite-warning', 'host-invite-list', 'host-invite-list-note', 'host-invite-copy-note', 'host-invite-refresh']) assert.match(html, new RegExp('id="' + id + '"'));
+  assert.match(html, /id="host-invite-warning" role="status"/); assert.match(html, /id="host-invite-copy-note" role="status"/);
+  assert.match(html, /id="host-invite" hidden/);
+  assert.match(js, /Warning: only this computer can connect/);
+  assert.doesNotMatch(js, /https?:\/\/(?!www\.w3\.org)/);
+});
