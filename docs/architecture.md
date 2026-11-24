@@ -61,7 +61,7 @@ flowchart LR
   never stalls another client's request.
 - Keeps state in memory only (see [running.md](running.md)).
 
-**`client/`** (C, one `.c` and one `.h`)
+**`client/`** (C: `psnr.c` and `psnr.h` for the game client, plus the separate `psnr_app.c` and `psnr_app.h` trophy SDK; a single-file Python client is in `client/python/`)
 - Written in C because ps3recomp's HLE libraries are C17 and will vendor it.
 - **Has no threads.** `psnr_send` returns a request id, and replies and pushes
   come out of `psnr_poll`. Receiving does not wait for new data, but sends and
@@ -81,6 +81,8 @@ behavior. A separate, explicitly enabled Medius-compatible frontend would handle
 then translate only evidenced operations into domain operations. The domain boundary would own session, membership and
 authorization invariants rather than exposing psnr handlers as a presumed Medius protocol. This is a design direction,
 not a claim that the current server is already split into independent layers.
+
+The server has an off-by-default `-medius` switch (with `-medius-port` and `-medius-addr`). It only opens a listener that closes every connection; no Medius protocol is implemented. See [Medius scope and profile](medius-scope.md).
 
 Profiles are selected explicitly for a particular title and build; the frontend is off by default. Unknown or
 unsupported profiles, versions, application IDs and messages must cause explicit failure, not a generic success or

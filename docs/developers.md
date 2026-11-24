@@ -38,11 +38,11 @@ is nothing to download for it. The desktop app in `app/` has a few; `go test` fe
 | Path | What is there |
 |---|---|
 | `server/` | The Go server (`package main`): protocol, rooms, scores, relay, status page. `server/store/` holds storage backends |
-| `client/` | The C client (`psnr.c`, `psnr.h`), its tests and `examples/minimal.c` |
+| `client/` | The C client (`psnr.c`, `psnr.h`), the app trophy SDK (`psnr_app.c`, `psnr_app.h`), the single-file Python client in `python/`, their tests and the examples in `examples/` |
 | `app/` | The desktop app, a Go module of its own |
 | `docs/` | Documentation. `features.tsv` is the data behind `features.md` |
-| `tools/` | Checks and generators, each with a test: `repo_check.py`, `features.py`, `site.py`, `badges.py`, `loopback.py`, `art/` |
-| `site/` | The project website; `index.html` and `data.json` are generated |
+| `tools/` | Checks and generators, each with a test: `repo_check.py`, `features.py`, `site.py`, `site_action.py`, `badges.py`, `project_facts.py`, `loopback.py`, `check_conformance.py`, `check_fail2ban.py`, `art/`, plus Node tests (`*.test.js`) and optional browser checks (`*_browser_check.mjs`) |
+| `site/` | The project website; `index.html`, `action.html`, `discuss.html`, `data.json` and `discord-badge.svg` are generated |
 | `deploy/`, `docker/`, `lab/` | Example settings and proxy configs; container files; the NAT lab |
 | `scripts/` | Install, release and deploy-check scripts |
 
@@ -68,7 +68,7 @@ difference; CI runs it.
 |---|---|---|
 | `docs/features.tsv` (and `ROADMAP.md` tags) | `python3 tools/features.py` | `docs/features.md` |
 | `docs/features.tsv` | `python3 tools/badges.py` | `docs/img/badges/*.svg`, the README badges |
-| features, `VERSION`, the README settings table, `CHANGELOG.md`, `go.mod` | `python3 tools/site.py` | `site/index.html`, `site/data.json` |
+| features, `VERSION`, the README settings table, `CHANGELOG.md`, `go.mod` | `python3 tools/site.py` | `site/index.html`, `site/action.html`, `site/discuss.html`, `site/data.json`, `site/discord-badge.svg` |
 | palette, transcripts, features | `python3 tools/art/make_art.py` | `docs/img/*.png`, `tools/art/art.json` |
 
 Do not edit an output by hand. `site/style.css` and `site/terminal.js` are written by hand. The art script needs Pillow

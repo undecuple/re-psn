@@ -14,21 +14,21 @@ Type `help` for commands. While typing, Tab or Right accepts a suggestion, Up/Do
 With no suggestion open, Up/Down recalls command history. Commands and settings are read from the site's data; the site
 does not connect to a game server or change its configuration.
 
-The theme choice is stored in this browser when local storage is available; it is the only saved choice. Storage
-failures leave the interface usable.
+The site has one dark theme and stores nothing in the browser; a theme choice saved by an earlier version of the page is
+removed.
 
 ## Contributor checks
 
-`tools/site.py` generates `site/index.html` and `site/data.json`, and the footer's Discord badge, `site/discord-badge.svg`
+`tools/site.py` generates `site/index.html`, `site/action.html`, `site/discuss.html`, `site/data.json` and the footer's Discord badge, `site/discord-badge.svg`
 (drawn from the dark palette; the invite address is `DISCORD_URL` in the script). Edit their repository sources, then regenerate;
-`site/style.css` and `site/terminal.js` are maintained directly. The deployed page uses one script with no dependencies
+`site/style.css`, `site/terminal.js`, `site/action.js`, `site/discuss.js`, `site/nav.js` and `site/favicon.svg` are maintained directly. Each page loads its own script, with no dependencies,
 and loads its data from the same origin.
 
 ```sh
 python3 tools/features.py --check
 python3 tools/site.py --check
 python3 -m unittest
-node --test tools/terminal.test.js tools/status.test.js tools/action.test.js
+node --test tools/terminal.test.js tools/status.test.js tools/status_role.test.js tools/action.test.js tools/discuss.test.js tools/nav.test.js
 ```
 
 The optional browser check requires Node 22 or newer and a locally installed Chromium-compatible browser. It adds no
