@@ -21,8 +21,9 @@ on 2026-11-07. The C example is compiled and run by this repository's required n
 below are source inspection at that pin, not an executed game-compatibility claim. Record your exact server, client,
 runtime and title-build revisions when testing; later versions can differ.
 
-The pin is older than `main`. Later changes (player-reported latency, the lobby view, `-relay-force` and server-side peer keys) are not
-covered by this guide's source inspection and are in v0.5.0, not v0.4.0; see the [CHANGELOG](../CHANGELOG.md).
+The pin is older than `main`. Later changes (player-reported latency, the lobby view, `-relay-force` and server-side peer keys, then the connect policy,
+`-no-peer-titles` and sign-in passes) are not
+covered by this guide's source inspection and are in v0.5.0 or later, not v0.4.0; see the [CHANGELOG](../CHANGELOG.md).
 
 ```mermaid
 flowchart LR
@@ -36,8 +37,10 @@ flowchart LR
 ```
 
 The desktop app is not currently a game-control proxy or automatic launcher. Games connect to the server directly.
-The app's `re-psn.ini` is not automatically loaded by the C client or the inspected runtime. Discovery, game-launch
-profiles, provider verification and Anonymous/Verified/Both relay admission remain separate planned work.
+The app's `re-psn.ini` is not automatically loaded by the C client or the inspected runtime. LAN discovery exists (`psnr_discover`; the app's LAN search),
+but the app has no wide-area server discovery, no game-launch profiles and no provider verification, and the
+Anonymous/Verified/Both relay admission modes remain planned. Relay sign-in passes (`-require-pass relay`) are a separate,
+server-side feature.
 
 ## First: test the server and C client without a game
 
@@ -295,7 +298,8 @@ service or stay offline for them.
 
 - **Friends, presence, invites, join-a-friend, player history and block list** (the sceNpBasic family): planned, not in the
   server. [features.md](features.md) `players-friends`; [ROADMAP.md](../ROADMAP.md).
-- **Optional accounts and sign-in**: later. The default is still one name per player. [features.md](features.md) `players-accounts`.
+- **Optional accounts and sign-in**: the server can check optional sign-in passes (`-require-pass`), but there is no login
+  service and names are still unauthenticated; the default is one name per player. [features.md](features.md) `players-accounts`, `net-pass-connect`.
 - **Tickets and real PSN authentication**: HELLO grants no identity proof or PSN ticket, and the server issues none.
   this file, Direct C/C++ integration; [architecture.md](architecture.md), Medius.
 - **Lobbies and profile-specific sessions, transport and data paths** (`medius-*`): planned or later, not implemented.

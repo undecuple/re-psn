@@ -198,13 +198,13 @@ uses the selected settings location; reopening uses the existing controller for 
 
 ## Install and update
 
-App archives built from this source contain both the app and its matching host component. Keep them together; do
+App archives built from this source contain the app, its matching host component and (from v0.8.0) `re-psn-window`. Keep them together; do
 not rename the component to overwrite an independent standalone server. The current `--app`/`-App` installers check
-the archive against SHA256SUMS and require both members. Older app archives without `re-psn-host` are refused.
+the archive against SHA256SUMS and require the app and host members (the window is optional). Older app archives without `re-psn-host` are refused.
 The historical pinned installer examples for older releases describe those older scripts, not this paired update path.
 
-Stop the app and its host before updating. Both executables are staged first; reported replacement failures trigger
-best-effort rollback. **Two flat files are not a crash-atomic update.** If rollback fails, the installer preserves
+Stop the app and its host before updating. All executables are staged first; reported replacement failures trigger
+best-effort rollback. **Several flat files are not a crash-atomic update.** If rollback fails, the installer preserves
 recovery files and a lock and reports their location. Inspect/recover manually; do not blindly remove a stale lock.
 Metadata and optional PATH changes are separate, so the entire installer is not transactional. It never starts,
 stops or kills a process for you. A separately installed `re-psn` is preserved.

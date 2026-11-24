@@ -21,6 +21,7 @@ host component. See the [client guide](../docs/client-ui.md) for normal operatio
 - [Optional native HTTP status](#optional-native-http-status)
 - [Starting from the desktop](#starting-from-the-desktop)
 - [The check command](#the-check-command)
+- [Saved servers file](#saved-servers-file)
 - [Settings file](#settings-file)
 - [Dependencies](#dependencies)
 - [What the client does not do yet](#what-the-client-does-not-do-yet)
@@ -40,6 +41,9 @@ The app is its own Go 1.26 module, `github.com/undecuple/re-psn/app`. The game s
 | `internal/tui/` | Bubble Tea terminal views and shared profile session |
 | `framework/` | Exported profile/trophy store, scoped local game broker, encrypted backups and mTLS friend service/client |
 | `integration/` | Generated-data native SDK and two-host authenticated friendship scenarios |
+| `shell/` | Tauri window program (`re-psn-window`) |
+| `share/` | Desktop entry and icons |
+| `internal/servers/` | Saved-servers list (`servers.json`) |
 | `cmd/re-psn-app/` | Browser app, terminal interface and CLI commands |
 
 ## Play, Host and Both
@@ -57,7 +61,7 @@ Switching from active hosting to Play requires confirmation to stop the owned ho
 
 App archives built from this source include `re-psn-host` (`.exe` on Windows) beside the app. Keep them together.
 App installation preserves a separately installed `re-psn` server. New app installers refuse incomplete/older app
-archives without the host member. Stop the app and host before updating: two executable replacements are not
+archives without the host member. Stop the app and host before updating: two or three executable replacements (app, host, optional window) are not
 crash-atomic, although reported replacement failures trigger best-effort rollback. See [client updates](../docs/client-ui.md#install-and-update).
 
 ## Profiles, trophies and friends
@@ -73,11 +77,11 @@ Snapshots are labeled cached with a timestamp; online presence is not provided. 
 registration and friendship consent. Reusing a public identity at multiple hosts makes those registrations linkable.
 
 The browser also downloads encrypted backups and restores an encrypted backup only when no profile exists at the
-selected location. CLI commands remain available for automation and a different private profile directory:
+selected location. CLI commands remain available for automation and a different private profile directory. From the repository root:
 
 ```sh
 re-psn-app profile create --dir /private/player-profile --name 'Player'
-re-psn-app trophies install --dir /private/player-profile --input ../client/examples/app_trophies.json
+re-psn-app trophies install --dir /private/player-profile --input client/examples/app_trophies.json
 re-psn-app ui --profile-dir /private/player-profile
 ```
 

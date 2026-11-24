@@ -38,7 +38,7 @@ closes and joins connections. Stop the broker before closing the store. `Serve` 
 Grants expire after 15 minutes. A host may call `Renew(token)` before expiry, typically every five minutes while
 the explicit game session remains active. Renewal preserves rate counters and cannot resurrect expired/revoked
 tokens. The SDK has no renewal operation. Broker connections have two-second deadlines; connections/grants are
-bounded to16/128 with per-grant rate limits.
+bounded to 16/128 with per-grant rate limits.
 
 Vendor [psnr_app.h](../client/psnr_app.h) and [psnr_app.c](../client/psnr_app.c) for dependency-free C99/C++ calls.
 Pass a private descriptor path to `psnr_app_load_grant`, then call `psnr_app_unlock` / `psnr_app_status` from your
@@ -47,16 +47,16 @@ Failure never implies an unlock. The SDK does not implement Sony trophy containe
 award platinum. The [synthetic example](../client/examples/app_trophy.c) and [catalog](../client/examples/app_trophies.json)
 contain no extracted game metadata. Windows links `ws2_32`.
 
-The descriptor is at most512bytes: `re-psn-app-grant-v1`, `port=DECIMAL`, `token=HEX64`, each newline terminated.
+The descriptor is at most 512 bytes: `re-psn-app-grant-v1`, `port=DECIMAL`, `token=HEX64`, each newline terminated.
 Keep it private, remove it at session shutdown and never log its contents or put tokens in arguments. It contains
 no identity key and is invalid after broker restart. A same-user descriptor thief can report that title's trophies.
 
-Local wire v1 is one request per TCP connection: `RPT1`, opcode byte (1 unlock,2 status), three zero bytes,
-uint32 body length36, token32, uint32 trophy ID. Integers are big-endian. Half-close the write side after exactly
-48bytes: the broker requires EOF before mutation. Response: `RPR1`, status byte, three zero bytes, uint32 body
-length; success0 has unlocked byte0/1 and uint64 Unix milliseconds (zero if locked), length9. Errors have no body:
-1 unauthorized/expired,2 unknown trophy,3 busy,4 malformed,5 storage,6 rate limited. Successful native calls require
-response EOF. `timeout_ms` is an absolute connect/send/receive deadline (default2000, range1–60000); file open is
+Local wire v1 is one request per TCP connection: `RPT1`, opcode byte (1 unlock, 2 status), three zero bytes,
+uint32 body length 36, token 32, uint32 trophy ID. Integers are big-endian. Half-close the write side after exactly
+48 bytes: the broker requires EOF before mutation. Response: `RPR1`, status byte, three zero bytes, uint32 body
+length; success 0 has unlocked byte 0/1 and uint64 Unix milliseconds (zero if locked), length 9. Errors have no body:
+1 unauthorized/expired, 2 unknown trophy, 3 busy, 4 malformed, 5 storage, 6 rate limited. Successful native calls require
+response EOF. `timeout_ms` is an absolute connect/send/receive deadline (default 2000, range 1–60000); file open is
 separate. Neither this framing nor the HTTPS API changes the legacy game protocol version.
 
 ## Optional authenticated social API
@@ -77,7 +77,7 @@ accepted edges in both directions; unblocking restores neither. Unknown/blocked 
 Only own-state snapshots are returned, timestamped as cached data. A `CacheError` means the remote action succeeded
 but local persistence failed; refresh rather than assuming rollback. An interrupted response can leave outcome unknown.
 
-The companion caps256accounts,64contacts per set,4MiB state,32connections and bounded request/rate budgets. Host-only
+The companion caps 256 accounts, 64 contacts per set, 4 MiB state, 32 connections and bounded request/rate budgets. Host-only
 `RevokeAccount` persists denial and removes pending/accepted edges. Eligibility is checked on every request, including
 existing/resumed TLS sessions. Allowlist changes require restart; no remote administration, unban or live reload.
 No public directory, federation, live presence, invitations, trophy uploads or gameplay-identity binding is supplied.
