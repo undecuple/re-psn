@@ -9,7 +9,7 @@ no macOS builds, and the Linux script says so and stops.
 > [!NOTE]
 > Releases from v0.5.0 on also carry the desktop app as separate archives (`re-psn-app-vX.Y.Z-linux-amd64.tar.gz`,
 > `-linux-arm64.tar.gz` and `-windows-amd64.zip`, listed in `SHA256SUMS`). The scripts install the server unless asked: add
-> `--app` (Linux) or `-App` (Windows) to install the app instead. Neither works on v0.4.0 or earlier, which have no app archives.
+> `--app` (Linux) or `-App` (Windows) to install the app instead. Neither works on v0.6.0 or earlier: v0.4.0 and earlier have no app archives, and the v0.5.0 and v0.6.0 app archives have no `re-psn-host`, which the scripts require.
 
 ## Contents
 
@@ -104,7 +104,7 @@ sh install.sh                     # the newest release, pre-releases included, i
 sh install.sh --version v0.4.0    # a pinned release (or RE_PSN_VERSION=v0.4.0)
 sh install.sh --dir ~/bin         # another folder (or RE_PSN_INSTALL_DIR)
 sh install.sh --appimage          # re-psn.AppImage instead of the binary (x86_64 only)
-sh install.sh --app               # the desktop app (re-psn-app) instead of the server; v0.5.0 or later
+sh install.sh --app               # the desktop app (re-psn-app) instead of the server; v0.7.0 or later
 sh install.sh --dry-run           # print the steps; download and write nothing
 ```
 
@@ -133,8 +133,7 @@ It installs the app *instead of* the server (run it twice for both), and cannot 
 `re-psn-window` (v0.8.0 and later do), it is installed beside the app and its host, and the three files are replaced, and restored if a
 replacement fails, together; an older release without it leaves an installed `re-psn-window` alone and the script says so. Start the app
 with `re-psn-app`: it opens in the window when `re-psn-window` is beside it (needs WebKitGTK 4.1 on Linux, see
-[client-ui.md](client-ui.md#the-native-window)), and in your browser otherwise (`re-psn-app --browser` forces a browser tab). If the release has no app archive the download fails and the script says the app
-archives start with v0.5.0; nothing is installed.
+[client-ui.md](client-ui.md#the-native-window)), and in your browser otherwise (`re-psn-app --browser` forces a browser tab). If the release has no app archive the download fails and the script says so, and an archive without `re-psn-host` stops with "the app archive has no matching re-psn-host component"; nothing is installed. `--app` installs `re-psn-app` and `re-psn-host` (and `re-psn-window` when present) together.
 
 ## Windows
 
@@ -154,7 +153,7 @@ command that would add the folder to the user PATH. `-AddToPath` rewrites the us
 
 With `-App` the script installs `re-psn-app.exe` (from `re-psn-app-vX.Y.Z-windows-amd64.zip`) the same way, into the same folder,
 and copies `LICENSE`, `NOTICE.md` and `README.md` to `%LOCALAPPDATA%\re-psn-app\vX.Y.Z\`. It installs the app instead of the server and
-needs v0.5.0 or later. If the zip also holds `re-psn-window.exe` (v0.8.0 and later do), it is installed beside the app and its host and
+needs v0.7.0 or later. If the zip also holds `re-psn-window.exe` (v0.8.0 and later do), it is installed beside the app and its host and
 the three files are replaced, and restored if a replacement fails, together; an older release without it leaves an installed one alone and the
 script says so. Run `re-psn-app.exe`: it opens in the window when `re-psn-window.exe` is beside it, and in your browser otherwise
 (`re-psn-app --browser` forces a browser tab). The app is not code-signed,

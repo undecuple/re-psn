@@ -8,7 +8,7 @@ this page only points to them.
 | The server (`re-psn`) | [README, From source](README.md#from-source); `Setup.cmd` (Windows) or `./setup.sh` (Linux, macOS) do it for you | Go 1.22 or newer (`go.mod`); a C compiler only for the C client and its tests |
 | The desktop app (`re-psn-app`) | [app/README.md, Build and test](app/README.md#build-and-test) | Go 1.26 or newer (`app/go.mod`); the app is a separate Go module |
 | The window (`re-psn-window`) | [docs/client-ui.md, The native window](docs/client-ui.md#the-native-window) | Rust 1.99.1 and `cargo build --locked` in `app/shell/`; Linux also needs the WebKitGTK 4.1 and GTK 3 development packages; Windows needs the WebView2 runtime (part of Windows 10 and 11) |
-| The C client | [client/psnr.c](client/psnr.c), built and tested with the server's tests: [README, From source](README.md#from-source) | a C compiler |
+| The C client | [client/psnr.c](client/psnr.c), built and tested with the server's tests: [README, From source](README.md#from-source) | a C compiler; to install it as a library see [docs/sdk.md](docs/sdk.md) (`make -C client install` or CMake; `pkg-config` or `cmake` needed for those steps) |
 | The container image | [docker/README.md, Build and run](docker/README.md#build-and-run) | Docker or Podman |
 | Release archives and the AppImage | [docs/releasing.md](docs/releasing.md) (`scripts/release-build.sh`, `scripts/build-appimage.sh`) | for maintainers; see that page |
 
