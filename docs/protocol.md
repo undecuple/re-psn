@@ -30,7 +30,7 @@ here is a Sony protocol, and the protocol is not related to any title's own onli
 
 ## 1. Status and scope
 
-This page describes the server in this repository at version 0.8.0 (`VERSION`, `server/main.go`). It covers the game
+This page describes the server in this repository at version 0.9.0 (`VERSION`, `server/main.go`). It covers the game
 protocol: TCP frames, the UDP control packets that share the game port, and the relay. It does not cover the HTTP
 status page, `/api/stats` or the [admin API](admin-api.md), the PROXY protocol header, the desktop app's local broker
 ([app-framework-api.md](app-framework-api.md)), or the command-line flags except where a flag changes what is on the
@@ -264,7 +264,7 @@ Before HELLO, HEARTBEAT gets ERROR 7 like any other request (in connect mode too
 ### 6.3 GET_CAPS (0x04)
 
 Allowed after HELLO, and in connect mode before AUTH. Reply CAPS: `bits u32`, `version blob`. `version` is the server's
-software version text (here `0.8.0`).
+software version text (here `0.9.0`).
 
 | Bit | Value | Name | Set when |
 |---|---|---|---|
@@ -450,7 +450,8 @@ P2P socket so the server sees that socket's public mapping.
    (unless `-udp-any-source`). It then records the probe's source address and port and `local_ip` for the player and
    answers PROBE_REPLY with the source address and port it saw.
 3. Anything else is dropped without a reply and counted under a reason (`unauthorized`, `source_mismatch`,
-   `malformed`, and so on). A PROBE from an IPv6 source is counted `malformed`.
+   `malformed`, and so on). A PROBE from an IPv6 source is counted `malformed`. Except that a probe from a player of a
+   title in `-no-peer-titles` is dropped silently and counted under no reason.
 4. The server does not expire the record.
 
 A PUNCH sent to the server is counted `malformed` and not answered. PUNCH is for peers: a few of them sent to the address
@@ -615,7 +616,7 @@ being exactly these.
    bytes) and on `/api/stats`.
 2. **Capabilities are the feature handshake.** A client SHOULD send GET_CAPS after HELLO, use the bits it knows, and
    ignore the rest. A clear bit means the server does not offer it.
-3. **A server from before GET_CAPS answers ERROR 1 to it.** This is how api.md describes servers before 0.5.0; no server
+3. **A server from before GET_CAPS answers ERROR 1 to it.** This is how api.md describes servers from 0.5.0 or before; no server
    from that time was run for this page (untested). A client MAY send a new request type to an older server and read
    ERROR 1 as "not supported". The server never closes the connection for an unknown type.
 4. **A server MAY add push types in 0xA0 to 0xAF, and new reply types, without a version change.** A client MUST ignore
@@ -813,7 +814,7 @@ These are stated above from the source. A client or server MAY rely on them, but
 
 ### 15.4 Not checked
 
-Not run for this page: a server older than 0.5.0 (the ERROR 1 statements about it are api.md's); any non-loopback network
+Not run for this page: a server from 0.5.0 or before (the ERROR 1 statements about it are api.md's); any non-loopback network
 (the member-endpoint and ROUTE cases for different public addresses were read from the source and checked with synthetic
 records); the idle, sign-in, stream-accept and write-stall timeouts as wall-clock waits; outbound-queue overflow close;
 the PROXY header; the HTTP and admin endpoints; Windows. See also [testing.md](testing.md).
