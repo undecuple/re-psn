@@ -1395,11 +1395,15 @@
      "Docs: corrections to the protocol pages.",
      "Docs: corrections to the developer pages.",
      "Docs: the client quick start no longer says the C client is two files (it is `psnr.c` and `psnr.h`, plus `psnr_app.c` and `psnr_app.h` for the local trophy SDK), the Python section lists what that client lacks ..."
+    ],
+    "Fixed": [
+     "Server: a room's member IDs no longer repeat."
     ]
    },
    "counts": {
     "Added": 1,
-    "Changed": 8
+    "Changed": 8,
+    "Fixed": 1
    }
   },
   "latest": {

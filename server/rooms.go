@@ -225,9 +225,30 @@ func (s *Server) codeMiss(c *client) {
 	s.log.Warn("room code refused", "client", c.id, "online_id", c.onlineID)
 }
 
+// nextMemberID returns a member ID no current member of r has. The counter wraps after 65535 joins; 0 is never used and an ID
+// in use is skipped, so two members never share one and the owner's ID cannot be handed to anyone else. A room holds at most
+// 255 members, so a free ID always exists.
+func (r *room) nextMemberID() uint16 {
+	for {
+		r.nextMember++
+		if r.nextMember == 0 {
+			continue
+		}
+		used := false
+		for _, m := range r.members {
+			if m.id == r.nextMember {
+				used = true
+				break
+			}
+		}
+		if !used {
+			return r.nextMember
+		}
+	}
+}
+
 func (s *Server) addMember(r *room, c *client, data []byte) *member {
-	r.nextMember++
-	m := &member{id: r.nextMember, c: c, data: data}
+	m := &member{id: r.nextMemberID(), c: c, data: data}
 	r.members = append(r.members, m)
 	c.rooms[r.id] = r
 	return m
