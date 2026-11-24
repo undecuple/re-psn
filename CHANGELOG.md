@@ -21,6 +21,7 @@ All notable changes to this project are documented here. The format follows
 - Docs: the client quick start no longer says the C client is two files (it is `psnr.c` and `psnr.h`, plus `psnr_app.c` and `psnr_app.h` for the local trophy SDK), the Python section lists what that client lacks (invite-only room requests and GET_RANKING_BY_ID, besides the relay, probes and passes), and the integration guide points to the install routes. The `psnr_call` comment in `client/psnr.h` now says that a server ERROR is a reply (the return is 1 and the type is `PSNR_ERROR`), and the `PEER_CLOSED` comment says that a server that ends a connection for repeated refused passes or a revoked account shows up as one. Comments and prose only.
 
 ### Fixed
+- Client: `psnr_relay_wrap` returns 0 for a payload over `PSNR_RELAY_MAX_PAYLOAD` (65490 bytes, the most a relayed datagram carries) and checks the length before adding the 17-byte header, so a length near `SIZE_MAX` can no longer wrap the size check and overrun the output buffer. Before, it accepted any length that fit the buffer. `test_relay_wrap.c` covers 0, the maximum, one more and `SIZE_MAX`.
 - Server: a room's member IDs no longer repeat. The ID counter wrapped after 65535 joins to a room and could give a new member the ID of a current member, such as the owner, whose ID decides who may change or kick. A new member now gets an ID no current member holds, and 0 stays unused.
 
 ## [0.9.0] - 2026-11-23

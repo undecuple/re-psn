@@ -509,11 +509,12 @@ int psnr_relay_available(const psnr_client* c)
     return c->relay;
 }
 
-/* "PSNR" 03 | from u32 | token u32 | to u32 | payload */
+/* "PSNR" 03 | from u32 | token u32 | to u32 | payload. The len bound comes
+ * first, so 17 + len cannot wrap around. */
 size_t psnr_relay_wrap(const psnr_client* c, uint32_t to_user, const void* payload, size_t len,
                        uint8_t* out, size_t cap)
 {
-    if (cap < 17 + len) return 0;
+    if (len > PSNR_RELAY_MAX_PAYLOAD || cap < 17 + len) return 0;
     memcpy(out, "PSNR", 4);
     out[4] = 0x03;
     psnr_put32(out + 5, c->user_id);
