@@ -19,8 +19,10 @@ behind a reverse proxy, logging, ports, firewall rules, and what state it keeps.
 - [Slow clients and event delivery](#slow-clients-and-event-delivery)
 - [Ports](#ports)
 - [Firewall](#firewall)
+- [Storage](#storage)
 - [Stopping and replacing](#stopping-and-replacing)
 - [State, backup, upgrade](#state-backup-upgrade)
+- [Status-page views](#status-page-views)
 
 ## Run it
 
@@ -46,7 +48,7 @@ docker compose -f docker/docker-compose.yml up -d
 |---|---|---|
 | `-addr` | `:36100` | TCP and UDP address for game clients |
 | `-tcp-addr`, `-udp-addr` | `-addr` | Give TCP or UDP its own address (a different port, or one interface). Unset, each takes `-addr`. |
-| `-http` | none (off) | Status page and `/api/stats` on this address, for example `127.0.0.1:36101`. Unset or empty, neither is served. |
+| `-http` | none (off) | Status page, `/api/stats` and `/healthz` on this address, for example `127.0.0.1:36101`. Unset or empty, none of them is served. |
 | `-http-token` | none | Require this token on the status page, as `Authorization: Bearer <token>` or `?token=<token>`. Set it whenever `-http` is not on localhost; the server logs a warning if it is not. |
 | `-trusted-proxies` | none | Reverse proxies allowed to name the real client: CIDRs or addresses, comma-separated. See [Behind a reverse proxy](#behind-a-reverse-proxy). |
 | `-proxy-protocol` | off | Require a PROXY protocol v1 or v2 header on the game TCP port from a trusted proxy. Needs `-trusted-proxies`. |
@@ -72,7 +74,7 @@ docker compose -f docker/docker-compose.yml up -d
 | `-pass-key-file` | none | File of public keys (`RE_PSN_PASS_KEY_FILE`) that sign-in passes are checked against: one `<kid> <base64url key>` per line, at most 16, blank and `#` lines ignored, no access for group or others (0600, or 0400 on a container mount). Read again on SIGHUP; a bad file at reload keeps the old keys, and a key taken out of the file ends the passes it signed and the relay streams they cover (their holders need a new one). Needs `-pass-issuer` and `-pass-audience`. See [Sign-in passes](api.md#sign-in-passes). Not in v0.8.0. |
 | `-pass-issuer`, `-pass-audience` | none | The issuer and audience a pass must carry exactly (`RE_PSN_PASS_ISSUER`, `RE_PSN_PASS_AUDIENCE`), so a pass from another service or made for another server is refused. Both are required with `-pass-key-file`. |
 | `-require-pass` | none | What needs a pass (`RE_PSN_REQUIRE_PASS`): a comma-separated list of `relay` and `connect`. With `relay`, the relay carries streams and datagrams only between players who both hold a pass with the `relay` scope; everything else works as before (it does nothing without `-relay`). With `connect`, a connection is not a player until it has sent HELLO and then AUTH with a pass that has the `connect` scope: before that only AUTH, HEARTBEAT and GET_CAPS (the pass bit only) are answered, every other request gets ERROR 10, HELLO reserves no name, and the connection is closed 30 seconds after it was accepted if it has not signed in (a HEARTBEAT does not extend this). A client that predates AUTH is refused on purpose. See [Connect mode](api.md#connect-mode). Needs `-pass-key-file`. |
-| `-pass-revoked-file` | none | File of accounts to refuse (`RE_PSN_PASS_REVOKED_FILE`), one `github:<number>` or `discord:<number>` per line, at most 1 MiB, no access for group or others. Read again on SIGHUP: a listed account is refused at sign-in and its live control connections and open relay streams are closed. A file that is not mode 0600 fails the reload with a warning and the old list stays. |
+| `-pass-revoked-file` | none | File of accounts to refuse (`RE_PSN_PASS_REVOKED_FILE`), one `github:<number>` or `discord:<number>` per line, at most 1 MiB, no access for group or others. Read again on SIGHUP: a listed account is refused at sign-in and its live control connections and open relay streams are closed. A file that group or others can access (anything but 0600 or 0400) fails the reload with a warning and the old list stays. |
 | `-pass-max-conns-per-sub` | 2 | Connections one signed-in account may hold (`RE_PSN_PASS_MAX_CONNS_PER_SUB`; 0 for no limit). |
 | `-pass-max-unauth-conns` | 64 | With `-require-pass connect`: connections that have not signed in yet, in total (`RE_PSN_PASS_MAX_UNAUTH_CONNS`; 0 for no limit, a negative value stops the server at start). A connection over the limit is closed when it is accepted. These connections also count against `-max-conns` and `-max-conns-per-addr`. Has no effect without `-require-pass connect`. |
 | `-pass-max-unauth-per-addr` | 4 | The same per remote address (`RE_PSN_PASS_MAX_UNAUTH_PER_ADDR`; an IPv6 address counts as its /64, behind a trusted proxy the address in the PROXY header). Players who share one public address (a LAN event, carrier NAT) share this allowance while they connect; raise it if that is a problem. A relay stream connection counts until its first frame arrives. |

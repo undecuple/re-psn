@@ -104,7 +104,7 @@ for a server you cannot afford to carry traffic for.
 ## Watch it
 
 - `/api/stats` (needs `-http` and the token) reports the version, the limits in force, `relay_bytes`, TCP refusals and the
-  `udp_drops` counters (`rate_limit`, `source_capacity`, `malformed`, `relay_disabled`, `unauthorized`). A steady rise in
+  `udp_drops` counters (`rate_limit`, `source_capacity`, `malformed`, `unauthorized`, `source_mismatch`, `relay_disabled`, `write_error`, `discover_refused`, `relay_no_pass`; see [udp-guardrails.md](udp-guardrails.md#drop-counters)). A steady rise in
   `rate_limit` from real players behind one NAT means the UDP allowance is too low; a spike of `malformed` or `unauthorized`
   from nowhere you know is scanning.
 - `GET /healthz` on the status listener, with the token, reports whether both serving loops are active; use it with a

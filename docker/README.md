@@ -26,7 +26,7 @@ to set it up. The current image is `ghcr.io/undecuple/re-psn:0.8.0` (0.7.0, 0.6.
 | `docker-compose.host.yml` | Opt-in, Linux only: the same server on the host's network, with no published ports. |
 | `docker-compose.public.yml` | For a host who exposes their own server to the internet: hardened, with the recommended settings. [Why each setting](../docs/public-compose.md). |
 | `docker-compose.test.yml` | Opt-in, Linux only: the host-network server with a hardened container, for a shared test host. |
-| `Dockerfile.dockerignore` | Keeps everything but `go.mod` and `server/` out of the build context. |
+| `Dockerfile.dockerignore` | Keeps the docs, deploy, lab, client and scripts folders, Markdown files, logs and the usual settings files out of the build context (the image build copies only `go.mod` and `server/`). |
 
 ## Build and run
 
@@ -164,8 +164,9 @@ address was accepted, a client sending them from two different addresses was ref
 ## The image
 
 The server runs as a non-root user, `re-psn`, uid and gid 10001 (no home, no shell). The game port is above 1024, so it needs no capability.
-Compose files can say `user: "10001:10001"`. There is no `HEALTHCHECK`: the image has no tool to probe a port, and the status page is
-off by default, so a check would need a new package or a wider status page.
+Compose files can say `user: "10001:10001"`. There is no `HEALTHCHECK` instruction in the image. The base image has busybox `wget` and no `curl`;
+[docker-compose.public.yml](docker-compose.public.yml) uses it to call `/healthz` on the status listener with the token (so it needs the
+status listener and `RE_PSN_HTTP_TOKEN`). The other compose files define no health check.
 
 Both base images are pinned by digest (`FROM image:tag@sha256:...`, the multi-arch index digest): `golang:1.26-alpine3.24` (Go 1.26.10 when
 this was written; `go.mod` says `go 1.22`, a minimum) and `alpine:3.24`. Dependabot's docker ecosystem updates the tag and the digest
