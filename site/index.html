@@ -45,7 +45,7 @@
 <section id="overview">
 <h2>Overview</h2>
 <p>re-psn answers the matchmaking and leaderboard calls of a statically recompiled PS3 game, for a group running its own server: a LAN, a VPN, or friends connecting to one person&#x27;s machine. The server keeps rooms and leaderboards and tells each player where the others are. Game traffic goes directly between players, and through the server only when two players cannot reach each other and the host has turned the relay on.</p>
-<p>It began as a fork of <a href="https://github.com/sp00nznet/psnr">psnr</a> by sp00nz: a Go server and a one-file C client, with no accounts and no public instance.</p>
+<p>It began as a fork of <a href="https://github.com/sp00nznet/psnr">psnr</a> by sp00nz: a Go server and a one-file C client, with no account of its own and no public instance.</p>
 <p class="status-line">Version 0.9.0 (pre-release). 84 features: 46 available, 3 not yet verified, 15 partial, 11 planned, 8 later, 1 declined.</p>
 <p class="notice">Unofficial; not affiliated with Sony. No game files, keys or firmware are in the repository or needed from it. Play only games you own.</p>
 </section>
@@ -363,6 +363,7 @@
 </ul>
 <h4>Changed</h4>
 <ul>
+<li>Docs: the project text now says the server has no account of its own, instead of &quot;no accounts&quot;, because a host may optionally require a sign-in pass from a login service it runs itself; the README tagline, the known ...</li>
 <li>Docs: six shipped features (the desktop app, its local browser interface, appearance mode, the app framework, portable identities and friends) were marked in progress; they are now <code>partial</code> with the release that first ...</li>
 <li>Docs: the README is drawn in the website&#x27;s dark palette throughout.</li>
 <li>Docs: corrections to the SDK and app pages.</li>

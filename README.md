@@ -4,7 +4,7 @@
 
 # re-psn
 
-**re-psn // Unofficial fan work: your own matchmaking and leaderboard server for statically recompiled PS3 games. One small binary, no accounts, no cloud.**
+**re-psn // Unofficial fan work: your own matchmaking and leaderboard server for statically recompiled PS3 games. One small binary, no account of its own, no cloud service.**
 
 [![CI](https://img.shields.io/github/actions/workflow/status/undecuple/re-psn/ci.yml?branch=main&label=CI&labelColor=2b2733&style=flat-square)](https://github.com/undecuple/re-psn/actions/workflows/ci.yml) <!-- version -->![version v0.9.0](https://img.shields.io/badge/pre--release-v0.9.0-997e95?labelColor=2b2733&style=flat-square)<!-- /version --> ![status: alpha](https://img.shields.io/badge/status-alpha-ac7f7b?labelColor=2b2733&style=flat-square) [![Discord: join](https://img.shields.io/badge/Discord-join-8288a0?logo=discord&logoColor=e1ffe5&labelColor=2b2733&style=flat-square)](https://discord.gg/W8fMT78Q7k)
 <br>

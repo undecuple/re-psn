@@ -1,7 +1,7 @@
 # Client quick start
 
 How to build the C client, or use the single-file Python client, against a re-psn server. This is unofficial fan
-work. There is no public instance and there are no accounts: run your own server on loopback while you develop.
+work. There is no public instance and the server has no account of its own: run your own server on loopback while you develop.
 For what the messages mean see [Protocol](api.md); for wiring a client into a recompiled game see
 [Integrating re-psn into a recompiled game](integrating.md).
 

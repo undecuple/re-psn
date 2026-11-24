@@ -5,7 +5,7 @@ client or server from it. [api.md](api.md) is the guide to the same protocol: it
 is the reference: byte layouts, the order things happen in, what is refused and with which code. The two are meant to
 agree. If either disagrees with what the server in `server/` does, that is a defect in the page: please open an issue.
 
-re-psn is unofficial fan work. There is no public instance and there are no accounts: you run your own server. Nothing
+re-psn is unofficial fan work. There is no public instance and the server has no account of its own: you run your own server. Nothing
 here is a Sony protocol, and the protocol is not related to any title's own online services.
 
 ## Contents

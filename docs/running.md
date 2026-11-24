@@ -241,8 +241,10 @@ the second and later lines of a burst have no client or address. Which events ar
 - a connection refused for the per-address, total or not-signed-in limit, and a trusted proxy's connection with no valid PROXY
   header;
 - a HELLO refused for a taken name, in plain mode and at AUTH in connect mode (the address is in the first line only);
-- under `-require-pass connect` also: a pass refused, a connection closed for refused passes, for no sign-in in time, for a
-  frame too long before sign-in, or for its request rate before it signed in.
+- a pass refused, whenever the server has pass settings (a client may send AUTH under `-require-pass relay` too), and a
+  connection closed for refused passes;
+- under `-require-pass connect` also: a connection closed for no sign-in in time, for a frame too long before sign-in, or
+  for its request rate before it signed in.
 
 Without `-require-pass connect` a connection that is not signed in has no sign-in state: a connection closed for its request
 rate is always logged, and each connect, HELLO and close still writes its info lines, bounded only by the per-address limit
