@@ -57,15 +57,17 @@ The rest of the status response still contains the usual room/player data and ne
 | `source_capacity` | The source table is full and this source has no entry. |
 | `malformed` | An unusable source address, an IPv6 probe, short packet, wrong magic or unknown UDP message type, which includes a DISCOVER while `-discover` is off or one that is not exactly 64 bytes. A short RELAY is malformed even when relay is off. |
 | `relay_disabled` | A well-formed RELAY arrived while `-relay` is off, or from or to a player of a title in `-no-peer-titles`. |
+| `relay_no_pass` | `-require-pass relay` is on and the sender or the target of a RELAY datagram has no accepted, unexpired pass with the `relay` scope. A sender that has not completed AUTH under `-require-pass connect` is counted as `unauthorized`, not here. |
 | `unauthorized` | A missing client, bad token, unready target endpoint or missing shared room prevents acceptance. Also a player that has not completed AUTH under `-require-pass connect` (PROBE or RELAY with its id): it is not in the client list yet. |
 | `source_mismatch` | An otherwise authorized packet's source differs from the player's TCP source and `-udp-any-source` is off. |
-| `relay_no_pass` | `-require-pass relay` is on and the sender or the target of a RELAY datagram has no accepted, unexpired pass with the `relay` scope. A sender that has not completed AUTH under `-require-pass connect` is counted as `unauthorized`, not here. |
 | `discover_refused` | A LAN DISCOVER arrived from a source that is not private, carrier-grade NAT, link-local or loopback while `-discover` is on (never answered). |
-| `write_error` | Writing an otherwise accepted probe reply or relay forward fails or is short. |
+| `write_error` | Writing an otherwise accepted probe reply, DISCOVER reply or relay forward fails or is short. |
 
 A rejected packet increments one counter, at the first applicable check in the order above, except that an unusable source
 address is counted as `malformed` before the allowance is applied. Successful replies and
-forwards do not increment a drop counter. Invalid traffic rejected by admission increments the admission reason rather
+forwards do not increment a drop counter. A PROBE from a player of a title in `-no-peer-titles` is ignored without a reply
+and increments no counter. For RELAY datagrams the checks run in this order: relay off, token and room, no-peer title,
+relay pass, unready target (`unauthorized`), source address. Invalid traffic rejected by admission increments the admission reason rather
 than its later parse/authentication reason. The existing one-time warning for a player's mismatched probe remains;
 new drop paths add no per-packet log messages. Counters are cumulative across all sources and are sampled independently.
 

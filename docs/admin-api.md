@@ -2,7 +2,7 @@
 
 > [!WARNING]
 > Experimental. It is off unless you start the server with `-admin`, it can only read, and its format may change without
-> notice before it is released. Nothing here can change the server.
+> notice in a later release. Nothing here can change the server.
 
 The admin API is a second HTTP listener, separate from the [status page](running.md), with one route and one token. It is
 meant for a tool such as the desktop app's Server tab to read the server's state from a machine that is not the server.
@@ -45,7 +45,7 @@ server `SIGHUP` to rotate the token without a restart: the old token stops worki
 `GET /admin/v1/state` answers JSON, schema 1. The fields are fixed; a later version adds fields and keeps these:
 
 ```json
-{"schema":1,"version":"0.5.0","uptime":"2h3m0s","relay":false,"relay_bytes":0,
+{"schema":1,"version":"0.9.0","uptime":"2h3m0s","relay":false,"relay_bytes":0,
  "limits":{"max_rooms":0,"max_player_rooms":8,"max_conns":4096,"max_conns_per_addr":32,"max_req_rate":200,"max_udp_rate":1000},
  "tcp_refusals":{"conns":0,"conns_per_addr":0,"req_rate":0},"udp_drops":{"...":0},
  "bans":{"count":0,"next_expiry_seconds":null},"actions_enabled":false}
@@ -61,8 +61,8 @@ exists.
   that routes are not revealed, the same `401` for any path. The read token on a request that is not `GET` or `HEAD`
   gets `403`.
 - A failure costs the client a growing delay (100 ms, doubling, up to 5 s) before the answer, keyed by IPv4 address or IPv6
-  `/64`, in a table of fixed size. A request that carries the right token is never delayed and never counted as a failure,
-  even when it is a method the API does not take (that gets a plain `403` at once).
+  `/64`, in a table of fixed size. A request that carries the right token, has no `Origin` header and an acceptable `Host` is never delayed and never
+  counted as a failure, even when it is a method the API does not take (that gets a plain `403` at once).
 - Each refusal writes one log line with the socket's remote address and a fixed reason, and nothing the client wrote:
 
   ```
@@ -80,7 +80,7 @@ exists.
   (an SSH forward) every local process and every forwarded request share one source, so another local user can lock
   the admin out of 127.0.0.1. A web page open in the admin's browser can also send requests with an `Origin` header to the
   listener; each is refused and counted against the admin's own address, and while it is delayed it holds one of that
-  address's 8 slots (a request with the right token is never delayed). Do not expose the port to the internet without a firewall in front. Also 5 s to send headers, 10 s
+  address's 8 slots (a request with the right token, no `Origin` and an acceptable `Host` is never delayed). Do not expose the port to the internet without a firewall in front. Also 5 s to send headers, 10 s
   to read or write, 8 KiB of headers and 4 KiB of body.
 
 ## Reaching it safely

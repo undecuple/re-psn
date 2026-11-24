@@ -14,7 +14,9 @@ contracts. Its identities do not authenticate sessions on the game protocol desc
 
 - [Framing](#framing)
 - [Session](#session)
+- [Sign-in passes](#sign-in-passes)
 - [Rooms](#rooms)
+- [Peer keys](#peer-keys)
 - [Leaderboards](#leaderboards)
 - [UDP](#udp)
 - [Relay](#relay)

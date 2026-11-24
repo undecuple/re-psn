@@ -11,7 +11,7 @@ This page states what holds today, from the code at this revision. It adds no fe
 | Traffic | Port | When |
 |---|---|---|
 | TCP to the re-psn server | `36100` by default (`-addr`, or `-tcp-addr`) | Always, for any re-psn use |
-| UDP to the re-psn server | the same port by default (`-udp-addr`) | Only for the NAT probe and UDP relay packets |
+| UDP to the re-psn server | the same port by default (`-udp-addr`) | Only for the NAT probe, UDP relay packets and, with `-discover`, LAN discovery |
 | UDP between players | the title's own peer port | Only for direct peer traffic |
 
 A title that needs rooms and leaderboards only needs the TCP port. If you filter a title's outgoing traffic, allow the one TCP
@@ -21,8 +21,9 @@ and a firewall rule that drops it does not affect rooms or leaderboards.
 
 ## If the server is down or refuses the player
 
-`psnr_connect` returns `NULL` when the server cannot be reached or refuses the HELLO. It blocks while it resolves the name,
-connects and waits for the reply, with no deadline of its own, so call it from a worker thread and give up on your own timer.
+`psnr_connect` returns `NULL` when the server cannot be reached or refuses the HELLO. It blocks while it resolves the name
+and connects, with no deadline for those steps, then waits 5 seconds for the reply. `psnr_connect_timeout` puts one time
+limit on the connect and the reply together (the name lookup is still not covered). Either way, call it from a worker thread.
 `psnr_connect_error()` holds the last HELLO refusal, for example that another player has the name; after a DNS or TCP failure it
 can keep an earlier code, so do not read it as the cause of every `NULL`.
 
