@@ -24,6 +24,8 @@ await idle();
 await shot('app-welcome');
 
 await click('[data-role="both"]');
+await c.waitFor(`!document.querySelector('#setup').hidden`);
+await click('#setup-skip');
 await c.waitFor(`!document.querySelector('#workspace').hidden`);
 await idle();
 

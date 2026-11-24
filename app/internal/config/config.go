@@ -45,6 +45,7 @@ const (
 type Settings struct {
 	Mode            Mode   // [app] mode
 	Theme           Theme  // [app] theme
+	SetupDone       string // [app] setup_done: true or false; the first-run checklist is finished or skipped
 	Name            string // [player] name: the online ID
 	Server          string // [server] server: host:port
 	StatusURL       string // [server] status_url
@@ -65,6 +66,7 @@ type key struct {
 var keys = []key{
 	{"app", "mode", func(s *Settings) *string { return (*string)(&s.Mode) }, checkMode},
 	{"app", "theme", func(s *Settings) *string { return (*string)(&s.Theme) }, checkTheme},
+	{"app", "setup_done", func(s *Settings) *string { return &s.SetupDone }, checkBool},
 	{"player", "name", func(s *Settings) *string { return &s.Name }, checkName},
 	{"server", "server", func(s *Settings) *string { return &s.Server }, checkServer},
 	{"server", "status_url", func(s *Settings) *string { return &s.StatusURL }, checkURL},

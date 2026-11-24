@@ -72,6 +72,32 @@
     const origin = (state.settings.social_origin || '').replace(/\/$/, '');
     return origin ? relays.find(r => r.origin.replace(/\/$/, '') === origin) : relays[relays.length - 1];
   }
+  // How long ago a check finished, in plain words. Pure so it can be tested; render() feeds it the clock.
+  function ageWords(checkedAt, now) {
+    if (!checkedAt) return 'not checked';
+    const seconds = Math.max(0, Math.floor((now - checkedAt) / 1000));
+    if (seconds < 60) return seconds + ' s ago';
+    if (seconds < 3600) return Math.floor(seconds / 60) + ' min ago';
+    return 'over an hour ago';
+  }
+  // The first-run checklist rows, computed from state only. Nothing here contacts anything: `page` is where the button goes.
+  function setupSteps(state) {
+    const s = state.settings || {}, host = state.host || {}, play = state.play || {}, steps = [];
+    if (personal(s.mode)) {
+      const hasServer = !!(s.server || s.status_url);
+      steps.push({id: 'server', title: 'Server', done: hasServer, detail: hasServer ? (s.server || s.status_url) : 'Choose a game server or a status URL on the Play page.', page: 'play', button: 'Open Play page'});
+      steps.push({id: 'name', title: 'Your name', done: !!s.name, detail: s.name ? '"' + s.name + '". Not checked, not protected by a password.' : 'Optional. Set an online ID in Settings. It is not checked and has no password.', page: 'settings', button: 'Open Settings'});
+      steps.push({id: 'check', title: 'Check the server', done: !!play.checked_at, detail: 'Opens a short connection and asks who is there. It does not start a game.', page: 'play', button: 'Open Play page'});
+    }
+    if (hosting(s.mode)) {
+      const bind = host.address || s.host_address || '127.0.0.1:36100', local = localBind(bind);
+      steps.push({id: 'listen', title: 'Listen address', done: true, detail: bind + (local ? '. Friends cannot reach it.' : '.'), page: 'host', button: 'Open Host page'});
+      steps.push({id: 'running', title: 'Host running', done: !!host.running, detail: host.running ? 'Running on ' + host.address + '.' : 'Not running. Start it on the Host page.', page: 'host', button: 'Open Host page'});
+      const shared = !!host.running && !!host.address && !localBind(host.address);
+      steps.push({id: 'share', title: 'Address to give friends', done: shared, detail: shared ? 'Friends on your network type ' + host.address + '.' : 'Listen on a non-loopback address to let friends connect.', page: 'host', button: 'Open Host page'});
+    }
+    return steps;
+  }
   async function responseBytes(response, limit) {
     const declared = Number(response.headers.get('Content-Length'));
     if (declared > limit) throw new Error('The response exceeds its size limit.');
@@ -111,7 +137,7 @@
     }
     return {state: () => request('/api/state'), post: (path, body = {}) => request(path, body), export: passphrase => request('/api/profile/export', {passphrase}, true)};
   }
-  const exported = {MAX_ARCHIVE, SESSION_KEY, personal, hosting, readGuard, clean, fragmentToken, takeToken, openSession, catalogBody, base64, clientAddress, localBind, selectedRelay, responseBytes, makeAPI};
+  const exported = {MAX_ARCHIVE, SESSION_KEY, personal, hosting, ageWords, setupSteps, readGuard, clean, fragmentToken, takeToken, openSession, catalogBody, base64, clientAddress, localBind, selectedRelay, responseBytes, makeAPI};
   if (typeof module !== 'undefined' && module.exports) module.exports = exported;
   if (typeof document === 'undefined') return;
 
@@ -123,7 +149,7 @@
   const node = (tag, value, className) => { const n = document.createElement(tag); if (value !== undefined) n.textContent = clean(value); if (className) n.className = className; return n; };
   let state, api, currentPage = 'overview', busy = false, reading = false, authenticated = false, stopped = false;
   let settingsDirty = false, playDirty = false, hostDirty = false, rawCatalog = '', catalogSequence = 0;
-  let friendsKey = '', trophiesKey = '', playKey = '', serversKey = '';
+  let friendsKey = '', trophiesKey = '', playKey = '', serversKey = '', setupKey = '', setupLeft = false;
   const generations = readGuard();
   function message(value, error = false) { const id = error ? 'error' : 'notice'; text(id, value); show(id, !!value); if (!error) show('error', false); }
   function fail(error) {
@@ -187,7 +213,8 @@
     if (!hostDirty || force) { $('host-bind').value = state.settings.host_address || '127.0.0.1:36100'; $('host-relay').checked = !!state.settings.host_relay; }
     text('settings-dirty', settingsDirty ? 'Unsaved edits' : 'Saved');
   }
-  function draftSettings() { const out = {}; for (const [key, id] of Object.entries(settingFields)) out[key] = key === 'host_relay' ? $(id).checked : $(id).value.trim(); return out; }
+  // setup_done has no form control, so it is carried over here; otherwise saving Settings would reset it.
+  function draftSettings() { const out = {}; for (const [key, id] of Object.entries(settingFields)) out[key] = key === 'host_relay' ? $(id).checked : $(id).value.trim(); out.setup_done = !!state.settings.setup_done; return out; }
   async function saveSettings(next, discard = false) {
     let stop = false;
     if (next.mode === 'play' && state.host.running) { if (!await confirm('Stop your owned host?', 'Switching to Play will stop the server this app is hosting. Your separate Play target and local profile are kept.', 'Stop host & switch')) return null; stop = true; }
@@ -210,6 +237,34 @@
     text('play-message', p.message || 'This is a snapshot check. Your game connects directly.');
     tableRows('rooms-body', p.rooms, 4, 'No room snapshot. Check a server to load its public rooms.', r => [r.id, r.title, r.current + '/' + r.max, (r.members || []).join(', ')]);
     tableRows('boards-body', p.boards, 4, 'No leaderboard snapshot available.', b => [b.title + ' / ' + b.id, b.entries, b.leader || '—', b.best || '—']);
+  }
+  const NEXT_STEP = {
+    unchecked: 'Next: save a server and press Save & check server. Nothing is contacted until you do.',
+    reachable: 'Next: put this address in your game\'s own network setting. This app does not do that. A check is not a game session.',
+    unavailable: 'Next: check the address and that the server is running, then check again.'
+  };
+  // Runs on every render, outside renderPlay's early return, so the age moves with each poll. There is no timer.
+  function renderAge() {
+    const p = state.play, s = state.settings, status = NEXT_STEP[p.status] ? p.status : 'unchecked';
+    text('play-age', p.checked_at ? 'Checked ' + ageWords(p.checked_at, Date.now()) : 'Not checked yet');
+    text('play-next', NEXT_STEP[status]);
+    const noRooms = !s.status_url && !$('play-title-id').value.trim();
+    text('play-rooms-note', noRooms ? 'Set a title ID or status URL to list rooms.' : ''); show('play-rooms-note', noRooms);
+  }
+  function renderSetup() {
+    const showing = !!state.settings.mode && !state.settings.setup_done && !setupLeft;
+    show('setup', showing); show('workspace', !!state.settings.mode && !showing);
+    if (!showing) return;
+    const steps = setupSteps(state), key = JSON.stringify(steps); if (key === setupKey) return; setupKey = key;
+    const done = steps.filter(s => s.done).length, rows = document.createDocumentFragment();
+    text('setup-count', done + ' of ' + steps.length + ' done'); text('setup-skip', done === steps.length ? 'Finish setup' : 'Skip setup');
+    for (const [i, step] of steps.entries()) {
+      const row = node('li', undefined, 'setup-step'), body = node('div'), go = node('button', step.button);
+      body.append(node('strong', (step.done ? 'Done: ' : 'To do: ') + (i + 1) + '. ' + step.title), node('span', step.detail, 'muted'));
+      go.type = 'button'; go.dataset.setupPage = step.page; go.addEventListener('click', () => { setupLeft = true; render(state); navigate(step.page); });
+      row.append(body, go); rows.append(row);
+    }
+    $('setup-list').replaceChildren(rows);
   }
   const savedServers = () => state.servers || {entries: [], error: '', max: 64};
   const ref = e => ({server: e.server, status_url: e.status_url || ''});
@@ -306,7 +361,7 @@
     state = next; const mode = state.settings.mode;
     document.documentElement.dataset.theme = ['dark', 'light', 'system'].includes(state.settings.theme) ? state.settings.theme : 'dark';
     text('version', 'v' + state.version + ' · optional client'); text('footer-version', state.version);
-    show('welcome', !mode); show('workspace', !!mode);
+    show('welcome', !mode); renderSetup();
     for (const e of document.querySelectorAll('[data-personal]')) e.hidden = !personal(mode);
     for (const e of document.querySelectorAll('[data-host]')) e.hidden = !hosting(mode);
     for (const b of document.querySelectorAll('[data-role]')) b.setAttribute('aria-pressed', String(b.dataset.role === mode));
@@ -324,7 +379,7 @@
     text('profile-label', profile ? profile.label : 'Local profile'); $('profile-id').value = profile ? profile.account_id : '';
     text('profile-error', state.profile_error || ''); text('restore-note', profile ? 'A profile already exists here. Restore into a new private profile location using the CLI; this interface never replaces it.' : 'Restore into this new, empty profile. Remote registration and friendships are fetched from each relay after authentication.');
     text('grant-message', state.grant.message || (state.grant.active ? 'Game reporting is enabled. Keep this app running; revoke it when finished.' : 'Local game reporting is off.')); show('grant-path', state.grant.active && !!state.grant.path); text('grant-path', state.grant.active ? 'Private descriptor: ' + state.grant.path : '');
-    fillSettings(); renderPlay(); renderServers(); renderTrophies(); renderFriends(); navigate(currentPage, false); controls();
+    fillSettings(); renderPlay(); renderAge(); renderServers(); renderTrophies(); renderFriends(); navigate(currentPage, false); controls();
     text('bridge-state', 'Private app session · local state updated'); text('bridge-time', new Date().toLocaleTimeString());
   }
   async function readState(initial = false) {
@@ -340,7 +395,8 @@
   }
   function submit(id, fn) { $(id).addEventListener('submit', event => { event.preventDefault(); action(fn); }); }
   for (const b of document.querySelectorAll('[data-page]')) b.addEventListener('click', () => navigate(b.dataset.page));
-  for (const b of document.querySelectorAll('[data-role]')) b.addEventListener('click', () => action(async () => { if (settingsDirty && !await confirm('Discard unsaved settings?', 'Switching workspace keeps the saved settings and discards these unsaved edits.', 'Discard & switch')) return null; return saveSettings({...state.settings, mode: b.dataset.role}, true); }));
+  for (const b of document.querySelectorAll('[data-role]')) b.addEventListener('click', () => action(async () => { if (settingsDirty && !await confirm('Discard unsaved settings?', 'Switching workspace keeps the saved settings and discards these unsaved edits.', 'Discard & switch')) return null; return saveSettings({...state.settings, mode: b.dataset.role, ...(state.settings.mode ? {} : {setup_done: false})}, true); }));
+  $('setup-skip').addEventListener('click', () => action(() => saveSettings({...state.settings, setup_done: true}, false), 'Setup finished. You can change everything in Settings.'));
   $('settings-form').addEventListener('input', () => { settingsDirty = true; text('settings-dirty', 'Unsaved edits'); });
   $('play-form').addEventListener('input', () => { playDirty = true; });
   $('host-form').addEventListener('input', () => { hostDirty = true; });

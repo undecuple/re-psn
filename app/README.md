@@ -223,6 +223,7 @@ must be private. INI writes preserve unknown keys/comments and use temporary rep
 |---|---|---|
 | `[app]` | `mode` | `play`, `host` or `both`; selecting it starts nothing |
 | `[app]` | `theme` | `dark`, `light` or `system`; browser defaults to dark |
+| `[app]` | `setup_done` | `true` or `false`; whether the first-run checklist is finished or skipped. When unset (a settings file from before the checklist) it counts as done; the first workspace choice in the interface stores `false` |
 | `[player]` | `name` | Optional player display name; Host needs none |
 | `[server]` | `server` | Remote game target, `HOST:PORT` |
 | `[server]` | `status_url` | Explicit HTTP(S) read-only status base |

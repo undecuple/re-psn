@@ -28,7 +28,9 @@ try {
  const colours=await c.evaluate(`({page:getComputedStyle(document.documentElement).getPropertyValue('--page').trim(),bg:getComputedStyle(document.body).backgroundColor,font:getComputedStyle(document.body).fontFamily,text:getComputedStyle(document.body).color})`);
  await writeFile(rootDir+'/browser-colours.json',JSON.stringify(colours,null,2)+'\n');
  await c.screenshot(rootDir+'/screenshots/welcome.png');
- await click('button[data-role="host"]');await c.waitFor(`!document.querySelector('#workspace').hidden && document.querySelector('#workspace-badge').textContent==='Host'`);
+ await click('button[data-role="host"]');await c.waitFor(`!document.querySelector('#setup').hidden`);
+ ok(await c.evaluate(`document.querySelector('#workspace').hidden`),'first run shows the checklist, not the workspace');
+ await click('#setup-skip');await c.waitFor(`!document.querySelector('#workspace').hidden && document.querySelector('#workspace-badge').textContent==='Host'`);
  ok(await c.evaluate(`[...document.querySelectorAll('nav [data-personal], .sidebar [data-personal]')].every(x=>x.hidden)`),'Host intent hides personal navigation');
  await click('button[data-page="host"]');await fill('#host-bind',hostAddress);await submit('host-form');
  await c.waitFor(`document.querySelector('#host-badge').textContent==='Running'`);

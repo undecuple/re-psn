@@ -22,6 +22,13 @@ Selecting a workspace or saving settings starts no host, trophy broker or regist
 not need a remote server. Role-appropriate controls stay separate; a successful check is labeled reachability, not a
 live game session. The app does not change a recomp's networking files or launch/join a game for you.
 
+After you choose a workspace for the first time, a short **Getting started** checklist lists what is set (server, name,
+whether the server was checked; for a host, its listen address and whether it is running). It only reads your saved
+settings: its buttons open the matching page and nothing is contacted. **Skip setup** (or **Finish setup** once every
+row is done) hides it for good; if you only open a row's page, the checklist comes back when you reload. A settings file from
+before the checklist never shows it. The Play page also shows how long ago the last check finished and a plain next step; a
+check is still not a game session.
+
 ## Play and read-only snapshots
 
 ![Play: a checked server with its public room and leaderboard snapshot](img/app-play.png)
