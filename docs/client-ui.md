@@ -71,6 +71,13 @@ skips because they are already in your list or the list is full. Imported entrie
 no server. A file that is not a valid list (an unknown field, another version, a bad address, a status URL with a password, a
 duplicate, more than 64 entries or 64 KiB) is refused whole and changes nothing.
 
+Once you have saved a server, the Play form also has a **Fill from a saved server** drop-down above the Game server box. Choosing an
+entry fills the Game server and Optional status URL boxes (an entry with no status URL clears that box) and says so; it
+contacts nothing, and you still press **Save & check server** when you are ready. If you have typed text that is neither a
+saved server nor your saved setting, you are asked before it is replaced. The drop-down goes back to "Choose a saved
+server" when the two boxes no longer match a saved server. With no saved servers the drop-down is hidden and the form says that you can
+save one further down the page. **Manage saved servers** jumps to the list below.
+
 Nothing is contacted until you press a check button. The app never fetches a list from anywhere, and there is no central
 directory. Entries on a loopback, private or link-local address (for example `192.168.0.5:36100` or `localhost`) carry a
 "local network address" tag, so you can see when a check would reach inside your own network. A check shows reachable or

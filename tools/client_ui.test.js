@@ -122,7 +122,7 @@ test('the setup checklist makes no request before its button is pressed', async 
 test('setup_done has no form control but the settings draft carries it', () => {
   const root = path.join(__dirname, '../app/internal/webui/assets'), html = fs.readFileSync(path.join(root, 'index.html'), 'utf8'), js = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
   assert.doesNotMatch(js, /settingFields = \{[^}]*setup_done/); assert.match(js, /out\.setup_done = !!state\.settings\.setup_done/); assert.match(js, /mode: b\.dataset\.role, \.\.\.\(state\.settings\.mode \? \{\} : \{setup_done: false\}\)/);
-  for (const id of ['setup', 'setup-list', 'setup-count', 'setup-skip', 'play-age', 'play-next', 'play-rooms-note', 'play-copy', 'play-copy-text', 'play-copy-btn', 'play-copy-note', 'play-hints', 'play-hints-list']) assert.match(html, new RegExp('id="' + id + '"'));
+  for (const id of ['setup', 'setup-list', 'setup-count', 'setup-skip', 'play-age', 'play-next', 'play-rooms-note', 'play-copy', 'play-copy-text', 'play-copy-btn', 'play-copy-note', 'play-hints', 'play-hints-list', 'play-saved', 'play-saved-pick', 'play-saved-select', 'play-saved-note', 'play-saved-empty', 'play-saved-manage', 'servers-title']) assert.match(html, new RegExp('id="' + id + '"'));
 });
 test('roomsNote says what an empty or partial room list means', () => {
   const ok = {status: 'reachable', rooms: [], unlisted: 0};
@@ -190,4 +190,146 @@ test('HTML uses local assets, labeled forms and distinct role cards without exec
   assert.doesNotMatch(js, /\.innerHTML|\.outerHTML|insertAdjacentHTML|\beval\(|new Function|localStorage/);
   for (const input of ['export-passphrase', 'export-confirm', 'restore-passphrase']) assert.match(html, new RegExp('id="' + input + '" type="password"'));
   assert.equal(ui.clean('\x1b[31mname\u202espoof'), '[31mnamespoof');
+});
+test('every static id that app.js looks up exists in index.html', () => {
+  const root = path.join(__dirname, '../app/internal/webui/assets'), html = fs.readFileSync(path.join(root, 'index.html'), 'utf8'), js = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(x => x[1]));
+  // Matches $('id'), text('id', ...), show('id', ...), submit('id', ...) and tableRows('id', ...): a quoted literal followed by , or ).
+  // A literal followed by anything else, such as $('page-' + page), is built at run time and is covered by the allow-list below.
+  const lookup = /(?:\$|\b(?:text|show|submit|tableRows))\(\s*'([a-z][a-z0-9-]*)'\s*[,)]/g;
+  const used = new Set([...js.matchAll(lookup)].map(x => x[1]));
+  assert.ok(used.size > 50, 'the scan found only ' + used.size + ' ids; the pattern no longer matches the helpers');
+  assert.deepEqual([...used].filter(id => !ids.has(id)), [], 'ids read by app.js but missing from index.html');
+  // Ids app.js reads through a variable, so the scan above cannot see them. Each is listed with where it is built.
+  const dynamic = [
+    ...[...js.matchAll(/'(setting-[a-z-]+)'/g)].map(x => x[1]), // settingFields values, read with $(id) in fillSettings
+    ...[...html.matchAll(/data-page="([a-z]+)"/g)].map(x => 'page-' + x[1]) // navigate() reads $('page-' + page)
+  ];
+  assert.ok(dynamic.length > 8);
+  assert.deepEqual(dynamic.filter(id => !ids.has(id)), [], 'dynamically read ids missing from index.html');
+  assert.match(js, /\$\('page-' \+ page\)/); assert.match(js, /const settingFields = \{/);
+});
+// The picker lives after app.js's browser-only early return, so these tests cut its source out and run it against a small fake DOM.
+// Each cut is asserted to exist, so a rename fails loudly instead of leaving a test that checks nothing.
+function pickerHarness(list, fields = {}) {
+  const src = fs.readFileSync(path.join(__dirname, '../app/internal/webui/assets/app.js'), 'utf8');
+  const start = src.indexOf('let pickerKey'), end = src.indexOf('async function checkServer');
+  assert.ok(start > 0 && end > start, 'picker block not found');
+  const change = src.match(/\$\('play-saved-select'\)\.addEventListener\('change', async \(\) => \{[\s\S]*?\n  \}\);/), input = src.match(/\$\('play-form'\)\.addEventListener\('input', event => \{[^\n]*\}\);/), manage = src.match(/\$\('play-saved-manage'\)\.addEventListener\('click', [^\n]*\);/);
+  assert.ok(change && input && manage, 'picker listeners not found');
+  const els = {}, handlers = {};
+  const select = () => { let value = '', options = []; return {get value() {return value;}, set value(v) {value = options.some(o => o.value === v) ? v : '';}, get options() {return options;}, replaceChildren(f) {options = f.items; value = options.length ? options[0].value : '';}}; };
+  const $ = id => els[id] || (els[id] = Object.assign(id === 'play-saved-select' ? select() : {value: '', hidden: false, textContent: '', focused: false, focus() {this.focused = true;}}, {addEventListener(type, fn) {handlers[id + ':' + type] = fn;}}));
+  for (const [id, value] of Object.entries(fields)) $(id).value = value;
+  $('play-saved-note');
+  const confirms = [], requests = [], trap = new Proxy({}, {get: () => () => {requests.push('api'); throw new Error('request made');}});
+  const doc = {createDocumentFragment: () => ({items: [], append(...n) {this.items.push(...n);}})};
+  const text = (id, value) => { $(id).textContent = value; }, show = (id, visible) => { $(id).hidden = !visible; }, node = (tag, value) => ({tag, textContent: value, value: ''});
+  const body = src.slice(start, end) + change[0] + input[0] + manage[0] + '\nreturn {renderPicker, syncPicked, entries: () => pickerEntries, dirty: () => playDirty};';
+  const h = {answer: true}, state = {settings: {server: fields.__saved_server || '', status_url: ''}}, confirm = async (title) => { confirms.push(title); return h.answer; };
+  const run = new Function('$', 'text', 'show', 'node', 'savedServers', 'document', 'api', 'fetch', 'state', 'confirm', 'let playDirty = false;\n' + body)($, text, show, node, () => list, doc, trap, () => {requests.push('fetch');}, state, confirm);
+  return Object.assign(h, {els, handlers, requests, confirms, run, list});
+}
+const entry = (name, server, extra = {}) => ({name, server, status_url: '', ...extra});
+test('picker options follow the saved list: a prompt first, one option per entry, local ones labelled', () => {
+  const h = pickerHarness({entries: [entry('Friends', 'play.example.org:36100'), entry('Home', '192.0.2.2:36100', {local: true, status_url: 'https://relay.example.org/status'})], max: 64});
+  h.run.renderPicker();
+  const options = h.els['play-saved-select'].options;
+  assert.deepEqual(options.map(o => [o.value, o.textContent]), [['', 'Choose a saved server'], ['0', 'Friends · play.example.org:36100'], ['1', 'Home · 192.0.2.2:36100 · local network address']]);
+  assert.equal(h.els['play-saved-pick'].hidden, false); assert.equal(h.els['play-saved-empty'].hidden, true);
+  assert.equal(h.els['play-saved-select'].value, '');
+});
+test('an empty saved list hides the picker and shows the empty note, with the prompt as the only option', () => {
+  const h = pickerHarness({entries: [], max: 64});
+  h.run.renderPicker();
+  assert.equal(h.els['play-saved-pick'].hidden, true); assert.equal(h.els['play-saved-empty'].hidden, false);
+  assert.deepEqual(h.els['play-saved-select'].options.map(o => o.value), ['']);
+  const none = pickerHarness({}); none.run.renderPicker();
+  assert.equal(none.els['play-saved-pick'].hidden, true); assert.equal(none.els['play-saved-empty'].hidden, false);
+});
+test('the picker is capped at the list maximum', () => {
+  const h = pickerHarness({entries: [entry('a', 'a:1'), entry('b', 'b:1'), entry('c', 'c:1')], max: 2});
+  h.run.renderPicker();
+  assert.equal(h.els['play-saved-select'].options.length, 3);
+});
+test('the picker is not rebuilt for a check result, but is for a changed name, address, status URL or local flag', () => {
+  const list = {entries: [entry('Friends', 'play.example.org:36100')], max: 64}, h = pickerHarness(list);
+  h.run.renderPicker();
+  const first = h.els['play-saved-select'].options;
+  list.entries[0] = {...list.entries[0], status: 'reachable', checked_at: 5, rooms: 3}; h.run.renderPicker();
+  assert.equal(h.els['play-saved-select'].options, first, 'a check result rebuilt the options');
+  for (const change of [{name: 'Renamed'}, {server: 'other.example.org:36100'}, {status_url: 'https://relay.example.org/status'}, {local: true}]) {
+    const before = h.els['play-saved-select'].options; list.entries[0] = {...list.entries[0], ...change}; h.run.renderPicker();
+    assert.notEqual(h.els['play-saved-select'].options, before, JSON.stringify(change));
+  }
+});
+test('choosing an entry fills the two fields, marks the form edited, and makes no request', async () => {
+  const h = pickerHarness({entries: [entry('Friends', 'play.example.org:36100', {status_url: 'https://relay.example.org/status'}), entry('Plain', 'plain.example.org:36100')], max: 64}, {'play-server': 'old:1', 'play-status-url': 'https://old.example.org/status'});
+  h.run.renderPicker();
+  const select = h.els['play-saved-select'];
+  select.value = '0'; await h.handlers['play-saved-select:change']();
+  assert.equal(h.els['play-server'].value, 'play.example.org:36100'); assert.equal(h.els['play-status-url'].value, 'https://relay.example.org/status');
+  assert.equal(h.run.dirty(), true); assert.match(h.els['play-saved-note'].textContent, /Filled in Friends with its status URL\. Nothing was contacted/);
+  select.value = '1'; await h.handlers['play-saved-select:change']();
+  assert.equal(h.els['play-status-url'].value, '', 'an entry without a status URL must clear the old one');
+  assert.match(h.els['play-saved-note'].textContent, /cleared the status URL/);
+  assert.deepEqual(h.requests, []);
+});
+test('choosing the prompt changes nothing and clears the note', async () => {
+  const h = pickerHarness({entries: [entry('Friends', 'play.example.org:36100')], max: 64}, {'play-server': 'typed:1'});
+  h.run.renderPicker(); h.els['play-saved-note'].textContent = 'stale';
+  await h.handlers['play-saved-select:change']();
+  assert.equal(h.els['play-server'].value, 'typed:1'); assert.equal(h.run.dirty(), false); assert.equal(h.els['play-saved-note'].textContent, ''); assert.deepEqual(h.requests, []);
+});
+test('choosing an entry asks first when typed text is neither saved nor in the settings, and keeps it on cancel', async () => {
+  const h = pickerHarness({entries: [entry('Friends', 'play.example.org:36100')], max: 64}, {'play-server': 'typed:1', 'play-status-url': ''});
+  h.run.renderPicker(); h.answer = false;
+  h.els['play-saved-select'].value = '0'; await h.handlers['play-saved-select:change']();
+  assert.equal(h.confirms.length, 1); assert.equal(h.els['play-server'].value, 'typed:1'); assert.equal(h.els['play-saved-select'].value, '');
+  h.answer = true; h.els['play-saved-select'].value = '0'; await h.handlers['play-saved-select:change']();
+  assert.equal(h.confirms.length, 2); assert.equal(h.els['play-server'].value, 'play.example.org:36100'); assert.deepEqual(h.requests, []);
+});
+test('the picker shows the matching entry, and the prompt once the fields are edited or no entry matches', () => {
+  const h = pickerHarness({entries: [entry('A', 'a.example.org:1'), entry('B', 'b.example.org:1', {status_url: 'https://b.example.org/status'})], max: 64}, {'play-server': 'b.example.org:1', 'play-status-url': 'https://b.example.org/status'});
+  h.run.renderPicker();
+  assert.equal(h.els['play-saved-select'].value, '1');
+  h.els['play-status-url'].value = ''; h.els['play-saved-note'].textContent = 'Filled in B'; h.run.syncPicked();
+  assert.equal(h.els['play-saved-select'].value, '', 'the same address with a different status URL is a different target');
+  assert.equal(h.els['play-saved-note'].textContent, '');
+  h.els['play-server'].value = 'a.example.org:1'; h.run.syncPicked(); assert.equal(h.els['play-saved-select'].value, '0');
+  h.els['play-server'].value = 'nobody:1'; h.run.syncPicked(); assert.equal(h.els['play-saved-select'].value, '');
+});
+test('a rebuild keeps the chosen entry by address even when its position moves, and drops it when removed', () => {
+  const list = {entries: [entry('A', 'a.example.org:1'), entry('B', 'b.example.org:1')], max: 64}, h = pickerHarness(list, {'play-server': 'b.example.org:1'});
+  h.run.renderPicker(); assert.equal(h.els['play-saved-select'].value, '1');
+  list.entries = [entry('Z', 'z.example.org:1'), entry('A', 'a.example.org:1'), entry('B', 'b.example.org:1')]; h.run.renderPicker();
+  assert.equal(h.els['play-saved-select'].value, '2');
+  list.entries = [entry('A', 'a.example.org:1')]; h.run.renderPicker();
+  assert.equal(h.els['play-saved-select'].value, '');
+});
+test('typing in the Play form resyncs the picker, but the picker own input event does not', () => {
+  const h = pickerHarness({entries: [entry('A', 'a.example.org:1')], max: 64}, {'play-server': 'a.example.org:1'});
+  h.run.renderPicker(); assert.equal(h.els['play-saved-select'].value, '0');
+  h.els['play-server'].value = 'a.example.org:2'; h.handlers['play-form:input']({target: {id: 'play-server'}});
+  assert.equal(h.els['play-saved-select'].value, ''); assert.equal(h.run.dirty(), true);
+  h.els['play-server'].value = 'a.example.org:1'; h.run.syncPicked(); assert.equal(h.els['play-saved-select'].value, '0');
+  h.els['play-server'].value = 'stale:9'; h.handlers['play-form:input']({target: {id: 'play-saved-select'}});
+  assert.equal(h.els['play-saved-select'].value, '0', 'the picker input event fires before change and must not resync');
+});
+test('Manage saved servers moves focus to the heading and contacts nothing', () => {
+  const h = pickerHarness({entries: [], max: 64});
+  h.handlers['play-saved-manage:click']();
+  assert.equal(h.els['servers-title'].focused, true); assert.equal(h.els['servers-title'].tabIndex, -1); assert.deepEqual(h.requests, []);
+});
+test('the picker is redrawn on every state read and resynced when the settings fields are filled', () => {
+  const js = fs.readFileSync(path.join(__dirname, '../app/internal/webui/assets/app.js'), 'utf8');
+  assert.match(js, /renderServers\(\); renderPicker\(\);/);
+  assert.match(js, /text\('settings-dirty', [^\n]*\);\n    syncPicked\(\);/);
+});
+test('the picker markup sits in the Play form, starts empty and hidden-safe, and the heading it focuses is the saved-servers one', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../app/internal/webui/assets/index.html'), 'utf8');
+  assert.match(html, /<form id="play-form"[^>]*>\s*<div class="saved-pick" id="play-saved">/);
+  assert.match(html, /<select id="play-saved-select"><option value="">Choose a saved server<\/option><\/select>/);
+  assert.match(html, /id="play-saved-empty" hidden>/); assert.match(html, /<button type="button" id="play-saved-manage">/);
+  assert.match(html, /<h2 id="servers-title">Saved servers<\/h2>/);
 });

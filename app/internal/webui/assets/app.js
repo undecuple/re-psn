@@ -212,6 +212,7 @@
     if (!playDirty || force) { $('play-server').value = state.settings.server || ''; $('play-status-url').value = state.settings.status_url || ''; }
     if (!hostDirty || force) { $('host-bind').value = state.settings.host_address || '127.0.0.1:36100'; $('host-relay').checked = !!state.settings.host_relay; }
     text('settings-dirty', settingsDirty ? 'Unsaved edits' : 'Saved');
+    syncPicked();
   }
   // setup_done has no form control, so it is carried over here; otherwise saving Settings would reset it.
   function draftSettings() { const out = {}; for (const [key, id] of Object.entries(settingFields)) out[key] = key === 'host_relay' ? $(id).checked : $(id).value.trim(); out.setup_done = !!state.settings.setup_done; return out; }
@@ -327,6 +328,31 @@
     });
     controls();
   }
+  // The Play page's saved-server picker. Options are rebuilt only when the entries' names or addresses change (a check result does not),
+  // so a poll never closes an open list or moves focus. Choosing an entry only fills the two fields; nothing is contacted.
+  let pickerKey = '', pickerEntries = [];
+  const sameTarget = (e, server, statusURL) => e.server === server && (e.status_url || '') === statusURL;
+  // Show the entry whose address and status URL are in the fields, or the prompt when none matches (typed, edited or removed since).
+  function syncPicked() {
+    const select = $('play-saved-select'), server = $('play-server').value, statusURL = $('play-status-url').value;
+    const index = pickerEntries.findIndex(e => sameTarget(e, server, statusURL)), value = index >= 0 ? String(index) : '';
+    if (select.value !== value) select.value = value;
+    if (index < 0) text('play-saved-note', '');
+  }
+  function renderPicker() {
+    const list = savedServers(), entries = (list.entries || []).slice(0, list.max || 64);
+    show('play-saved-pick', entries.length > 0); show('play-saved-empty', entries.length === 0 && !list.error);
+    const key = JSON.stringify(entries.map(e => [e.name, e.server, e.status_url || '', !!e.local]));
+    if (key === pickerKey) return; pickerKey = key;
+    const select = $('play-saved-select'), chosen = select.value === '' ? null : pickerEntries[Number(select.value)];
+    pickerEntries = entries;
+    const fragment = document.createDocumentFragment(), prompt = node('option', 'Choose a saved server'); prompt.value = ''; fragment.append(prompt);
+    for (const [i, e] of entries.entries()) { const option = node('option', e.name + ' · ' + e.server + (e.local ? ' · local network address' : '')); option.value = String(i); fragment.append(option); }
+    select.replaceChildren(fragment);
+    const kept = chosen ? entries.findIndex(e => sameTarget(e, chosen.server, chosen.status_url || '')) : -1;
+    select.value = kept >= 0 ? String(kept) : '';
+    syncPicked();
+  }
   async function checkServer(e) { const next = await api.post('/api/servers/check', ref(e)); message('Checked ' + e.name + '.'); return next; }
   async function useServer(e) {
     if ((playDirty || settingsDirty) && !await confirm('Replace your unsaved edits?', 'Using ' + e.name + ' replaces the Play server and status URL you are editing.', 'Use this server')) return null;
@@ -420,7 +446,7 @@
     text('profile-label', profile ? profile.label : 'Local profile'); $('profile-id').value = profile ? profile.account_id : '';
     text('profile-error', state.profile_error || ''); text('restore-note', profile ? 'A profile already exists here. Restore into a new private profile location using the CLI; this interface never replaces it.' : 'Restore into this new, empty profile. Remote registration and friendships are fetched from each relay after authentication.');
     text('grant-message', state.grant.message || (state.grant.active ? 'Game reporting is enabled. Keep this app running; revoke it when finished.' : 'Local game reporting is off.')); show('grant-path', state.grant.active && !!state.grant.path); text('grant-path', state.grant.active ? 'Private descriptor: ' + state.grant.path : '');
-    fillSettings(); renderPlay(); renderAge(); renderServers(); renderTrophies(); renderFriends(); navigate(currentPage, false); controls();
+    fillSettings(); renderPlay(); renderAge(); renderServers(); renderPicker(); renderTrophies(); renderFriends(); navigate(currentPage, false); controls();
     text('bridge-state', 'Private app session · local state updated'); text('bridge-time', new Date().toLocaleTimeString());
   }
   async function readState(initial = false) {
@@ -444,7 +470,20 @@
     if (result === 'copied') { text('play-copy-note', 'Address copied.'); return; }
     field.focus(); field.select(); text('play-copy-note', 'Copying was blocked here. The address is selected: press Ctrl+C (Cmd+C on a Mac) to copy it.');
   });
-  $('play-form').addEventListener('input', () => { playDirty = true; });
+  // The picker's own input event fires before its change event, while the fields still hold the old text, so it must not resync here.
+  $('play-form').addEventListener('input', event => { playDirty = true; if (event.target.id !== 'play-saved-select') syncPicked(); });
+  $('play-saved-select').addEventListener('change', async () => {
+    const select = $('play-saved-select'), e = select.value === '' ? null : pickerEntries[Number(select.value)];
+    if (!e) { text('play-saved-note', ''); return; }
+    // A closed drop-down changes on arrow keys, so typed text that is neither saved nor in the settings is not replaced unasked.
+    const typed = $('play-server').value.trim(), typedStatus = $('play-status-url').value.trim();
+    const matches = pickerEntries.some(x => x.server === typed && (x.status_url || '') === typedStatus), same = typed === (state.settings.server || '') && typedStatus === (state.settings.status_url || '');
+    if ((typed || typedStatus) && !matches && !same && !await confirm('Replace your unsaved edits?', 'Choosing ' + e.name + ' replaces the Play server and status URL you are editing.', 'Use this server')) { syncPicked(); return; }
+    // Only the two fields change. The Save & check server button is the one thing that contacts anything.
+    $('play-server').value = e.server; $('play-status-url').value = e.status_url || ''; playDirty = true;
+    text('play-saved-note', 'Filled in ' + e.name + (e.status_url ? ' with its status URL' : ', and cleared the status URL') + '. Nothing was contacted. Press Save & check server when you are ready.');
+  });
+  $('play-saved-manage').addEventListener('click', () => { const title = $('servers-title'); title.tabIndex = -1; title.focus(); });
   $('host-form').addEventListener('input', () => { hostDirty = true; });
   submit('settings-form', async () => { const result = await saveSettings(draftSettings(), true); if (result) message('Settings saved. Services start only when you choose their action.'); return result; });
   $('settings-reset').addEventListener('click', () => { settingsDirty = playDirty = hostDirty = false; fillSettings(true); });
