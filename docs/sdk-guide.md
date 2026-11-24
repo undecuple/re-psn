@@ -13,7 +13,7 @@ thread, and what to do when it fails.
 C compiler and make), and for the Python chapters Python 3. Every program in the guide talks to a server you start yourself on
 127.0.0.1.
 
-**Scope and status.** re-psn is unofficial fan work. There is no public instance and there are no accounts: you run your own
+**Scope and status.** re-psn is unofficial fan work. There is no public instance and the server has no account of its own: you run your own
 server, and while you develop it listens on loopback. This guide teaches the SDK and the way it uses the wire. It does not
 claim that any particular game works, and it is not a substitute for the wire references, which are listed under "Where to go
 next".
@@ -65,7 +65,7 @@ list of pitfalls. Read Part I once, in order. Use Parts II and III as recipes: l
 **What this chapter is for.** Before you write a line of integration code you need a picture of what a re-psn server is,
 what it is not, and which bytes go where. Most integration bugs come from guessing wrong about one of these.
 
-re-psn is unofficial fan work. There is no public instance and there are no accounts: you run your own server, and while
+re-psn is unofficial fan work. There is no public instance and the server has no account of its own: you run your own server, and while
 you develop it listens on loopback. Nothing in this guide is a Sony protocol, and the protocol is not related to any
 title's own online services.
 
@@ -122,7 +122,7 @@ dense: do not use one as an array index and do not expect the first connection t
 
 - The control connection is plain TCP and the UDP packets are plain UDP. There is no encryption and the client does not
   authenticate the server.
-- A name is not an identity. There are no accounts and no proof of who is connecting; HELLO grants no credential of any kind.
+- A name is not an identity. The server keeps no accounts, and a plain connection gives no proof of who is connecting; HELLO grants no credential of any kind.
 - The token in HELLO_ACK (a random `u32` with the low bit set, so never 0 outside connect mode) is the secret that UDP
   probes, relay datagrams and stream legs present. It travels in the clear.
 - Capability bits, HELLO_ACK flags and an `ERROR 1` answer to GET_CAPS can be forged by anything on the network path. Use
@@ -3591,7 +3591,7 @@ Wire reference: [protocol.md section 9.3](protocol.md#93-discover) and [api.md, 
 developer you need to know what to send, when, and what the answers mean.
 
 **No login service exists yet.** A pass comes from a login service the host runs itself. That service is not part of this
-server or of the supported pieces of this repository, and no account system exists in the project. Until a host has such a
+server or of the supported pieces of this repository, and the project has no login service of its own. Until a host has such a
 service, you will not hold a real pass, and everything in this chapter is exercised only against test servers with
 throwaway keys. Do not describe to players where passes come from.
 

@@ -184,7 +184,7 @@ ABOUT = (
     "each player where the others are. Game traffic goes directly between players, and through the server only when two "
     "players cannot reach each other and the host has turned the relay on.",
     "It began as a fork of [psnr](https://github.com/sp00nznet/psnr) by sp00nz: a Go server and a one-file C client, "
-    "with no accounts and no public instance.",
+    "with no account of its own and no public instance.",
 )
 NOTICE = UNOFFICIAL + " No game files, keys or firmware are in the repository or needed from it. Play only games you own."
 CREDITS = (

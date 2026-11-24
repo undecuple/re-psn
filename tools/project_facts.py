@@ -43,7 +43,7 @@ LABEL = {
             ("bullet", "an optional desktop app to host, play and keep a profile"),
         ]),
         ("Warnings", [
-            ("note", "Do not use:", "as a public service. There are no accounts and no public instance; you run it for your own group."),
+            ("note", "Do not use:", "as a public service. The server has no account of its own and there is no public instance; you run it for your own group."),
             ("note", "Not for:", "games you do not own. No game files, keys or firmware are included or needed."),
             ("note", "When using this product:", "the status page lists every online ID, so keep it on your own machine (the default) or behind a token. The relay uses the host's bandwidth."),
             ("note", "Ask a maintainer or open an issue if:", "players cannot reach each other (a router that picks a new port for every destination cannot be punched) or anything looks wrong. Some features are unverified."),

@@ -15,7 +15,7 @@ friends connecting to one person's machine. The goal is for that group to have
 everything a title's online mode needs: matchmaking, friends, invites,
 leaderboards, per-player storage.
 
-It is **not** a public PSN replacement, and won't grow into one:
+It is **not** a public PSN replacement:
 - no public instance and no server directory;
 - the game protocol keeps an unauthenticated name; optional desktop identities and per-host friend accounts
   are separate, explicitly registered services, without a public directory;
