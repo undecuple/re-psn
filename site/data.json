@@ -1384,6 +1384,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "Docs: `docs/sdk-guide.md`, a developer guide to the SDK in three parts: how the pieces fit, building and the connection lifecycle, blocking and threads, errors and capabilities; rooms, pushes, leaderboards, a mapping ...",
      "Docs: `docs/code-map.md`, a maintainer's map of the repository with diagrams: the layers and modules of the server, the C and Python clients, the desktop app, the site and tools, and CI and deploy; the main request, ..."
     ],
     "Changed": [
@@ -1401,7 +1402,7 @@
     ]
    },
    "counts": {
-    "Added": 1,
+    "Added": 2,
     "Changed": 8,
     "Fixed": 1
    }

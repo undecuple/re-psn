@@ -29,6 +29,7 @@ instance and there are no accounts: you run your own server. The [project README
 - [Requesting a title](title-requests.md): what compatibility means here and what to send to ask for a game to be checked.
 - [Integrating re-psn into a recompiled game](integrating.md): choose an integration path for your port.
 - [Client quick start](sdk.md): build the C client with make or CMake, or use the single-file Python client.
+- [Developer guide to the SDK](sdk-guide.md): a detailed, code-first guide to the C client, the Python client and the local trophy SDK: connection, rooms, pushes, scores, NAT traversal, the relay, testing and a checklist.
 - [Protocol guide](api.md): how game clients talk to the server over TCP, message by message, with advice.
 - [Protocol specification](protocol.md): the reference for writing a second client or server: byte layouts, state machine, error codes, limits.
 - [Architecture](architecture.md): the server, the C client, the relay and how the parts fit.
