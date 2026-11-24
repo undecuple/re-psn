@@ -1383,6 +1383,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "App: while the app's own host runs, the Host page has a Host status panel.",
      "App: while the app's own host runs, the Host page has a What to give friends panel with the listen address as configured and, for a host listening on every interface, this computer's addresses with the port, each ...",
      "Release: the desktop app archives that hold `re-psn-window` now also hold `THIRD-PARTY-WINDOW.txt`, which holds the licence texts of the Rust crates compiled into the window.",
      "App: the Play page has a \"Fill from a saved server\" drop-down above the Game server box.",
@@ -1410,7 +1411,7 @@
     ]
    },
    "counts": {
-    "Added": 7,
+    "Added": 8,
     "Changed": 11,
     "Fixed": 2
    }

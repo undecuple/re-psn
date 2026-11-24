@@ -116,6 +116,8 @@ type Server struct {
 	servers          *serverStore
 	fetch            tui.Fetcher
 	addrs            addrLister
+	hostSnapshot     func() (host.View, string, string)
+	stats            statsReader
 	ctx              context.Context
 	cancel           context.CancelFunc
 	closed           bool
@@ -139,7 +141,12 @@ func New(opts Options) (*Server, error) {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Server{servers: newServerStore(opts.ConfigPath), fetch: tui.NativeStatus{}, addrs: interfaceAddresses, opts: opts, file: f, profile: tui.NewProfileSession(opts.ProfileDir), host: host.New(opts.ServerBinary), action: make(chan struct{}, 1), play: Play{Status: "unchecked", Rooms: []Room{}, Boards: []Board{}}, token: hex.EncodeToString(token[:]), bootstrap: hex.EncodeToString(bootstrap[:]), bootstrapExpires: time.Now().Add(time.Minute), reopenKey: hex.EncodeToString(reopen[:]), ctx: ctx, cancel: cancel}, nil
+	srv := &Server{servers: newServerStore(opts.ConfigPath), fetch: tui.NativeStatus{}, addrs: interfaceAddresses, stats: tui.FetchHTTPStats, opts: opts, file: f, profile: tui.NewProfileSession(opts.ProfileDir), host: host.New(opts.ServerBinary), action: make(chan struct{}, 1), play: Play{Status: "unchecked", Rooms: []Room{}, Boards: []Board{}}, token: hex.EncodeToString(token[:]), bootstrap: hex.EncodeToString(bootstrap[:]), bootstrapExpires: time.Now().Add(time.Minute), reopenKey: hex.EncodeToString(reopen[:]), ctx: ctx, cancel: cancel}
+	srv.hostSnapshot = func() (host.View, string, string) {
+		url, file := srv.host.StatusSource()
+		return srv.host.View(), url, file
+	}
+	return srv, nil
 }
 
 // Locator is passed only to the native per-user controller; HTTP never returns its key.

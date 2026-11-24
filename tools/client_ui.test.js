@@ -379,3 +379,56 @@ test('the host invite markup has the ids the script uses, a status role for the 
   assert.match(js, /Warning: only this computer can connect/);
   assert.doesNotMatch(js, /https?:\/\/(?!www\.w3\.org)/);
 });
+
+test('statusUptime says the time in words and not reported for anything odd', () => {
+  assert.equal(ui.statusUptime(0), '0 seconds'); assert.equal(ui.statusUptime(1), '1 second'); assert.equal(ui.statusUptime(59), '59 seconds');
+  assert.equal(ui.statusUptime(60), '1 minute'); assert.equal(ui.statusUptime(125), '2 minutes');
+  assert.equal(ui.statusUptime(3600), '1 hour'); assert.equal(ui.statusUptime(3 * 3600 + 5 * 60), '3 hours 5 minutes');
+  assert.equal(ui.statusUptime(2 * 86400 + 3600), '2 days 1 hour');
+  for (const bad of [undefined, null, -1, NaN, Infinity, '5']) assert.equal(ui.statusUptime(bad), 'not reported');
+});
+test('statusRows shows missing fields as not reported and a reported zero as a number or no limit', () => {
+  const rows = Object.fromEntries(ui.statusRows({clients: 0, rooms: 2, unlisted: 1, uptime_seconds: 90, limits: {max_rooms: 100, max_req_rate: 0}, refusals: {tcp_req_rate: 3}}));
+  assert.equal(rows['Players connected'], '0'); assert.equal(rows['Public rooms'], '2'); assert.equal(rows['Running for (timed by this app)'], '1 minute');
+  assert.equal(rows['Room limit'], '100'); assert.equal(rows['Requests per second limit'], 'no limit'); assert.equal(rows['Rooms per player limit'], 'not reported');
+  assert.equal(rows['Requests refused (rate)'], '3'); assert.equal(rows['UDP packets dropped or refused'], 'not reported');
+  const none = ui.statusRows({clients: null, limits: null, refusals: null});
+  assert.ok(none.length >= 10); assert.equal(none[0][1], 'not reported'); assert.ok(none.every(r => r[1] === 'not reported'));
+  assert.equal(ui.statusRows(null).length, none.length);
+});
+test('statusKey changes when the host stops or restarts', () => {
+  const run = {host: {running: true, address: '127.0.0.1:36100', started_at: 5}};
+  assert.equal(ui.statusKey(run), '127.0.0.1:36100|5');
+  assert.notEqual(ui.statusKey({host: {...run.host, started_at: 6}}), ui.statusKey(run));
+  assert.equal(ui.statusKey({host: {...run.host, running: false}}), ''); assert.equal(ui.statusKey(null), '');
+});
+test('host status is a known route, read only from the button, never polled or loaded with the state', async () => {
+  const calls = [];
+  const api = ui.makeAPI(token, async (url, options) => {calls.push([url, options.method]); return json({clients: 1});});
+  await api.post('/api/host/status'); assert.deepEqual(calls, [['/api/host/status', 'POST']]);
+  const js = fs.readFileSync(path.join(__dirname, '../app/internal/webui/assets/app.js'), 'utf8');
+  assert.equal([...js.matchAll(/api\.post\('\/api\/host\/status'/g)].length, 1);
+  assert.equal([...js.matchAll(/loadHostStatus\(/g)].length, 2); // its definition and the button handler
+  assert.match(js, /\$\('host-status-refresh'\)\.addEventListener\('click'/);
+  assert.doesNotMatch(js, /setInterval\([^)]*[sS]tatus/);
+  const read = js.slice(js.indexOf('async function readState'), js.indexOf('function friendAction'));
+  assert.doesNotMatch(read, /[hH]ostStatus/);
+});
+test('the host status markup has the ids the script uses, a status role for the note, and no external address', () => {
+  const root = path.join(__dirname, '../app/internal/webui/assets'), html = fs.readFileSync(path.join(root, 'index.html'), 'utf8'), js = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  for (const id of ['host-status', 'host-status-title', 'host-status-note', 'host-status-list', 'host-status-refresh']) assert.match(html, new RegExp('id="' + id + '"'));
+  assert.match(html, /id="host-status-note" role="status"/); assert.match(html, /id="host-status" hidden/); assert.match(html, />Host status</); assert.match(html, />Refresh status</);
+  assert.match(js, /Read at /); assert.doesNotMatch(js, /https?:\/\/(?!www\.w3\.org)/);
+});
+
+test('the host status button is guarded, discards a read from an earlier run, and never shows a raw error', () => {
+  const js = fs.readFileSync(path.join(__dirname, '../app/internal/webui/assets/app.js'), 'utf8');
+  const handler = js.slice(js.indexOf("$('host-status-refresh').addEventListener"), js.indexOf("$('host-invite-list').addEventListener"));
+  assert.match(handler, /hostStatusBusy/); assert.match(handler, /!authenticated/); assert.match(handler, /stopped/); assert.match(handler, /hosting\(state\.settings\.mode\)/);
+  const load = js.slice(js.indexOf('async function loadHostStatus'), js.indexOf('function renderHostStatus'));
+  assert.match(load, /hostStatusKey === key && !stopped/); assert.doesNotMatch(load, /error\.message/);
+  const render = js.slice(js.indexOf('function renderHostStatus'), js.indexOf('const NEXT_STEP'));
+  assert.match(render, /show\('host-status', !!key\)/); assert.match(render, /key !== hostStatusKey/); assert.match(render, /setAttribute\('aria-disabled', String\(hostStatusBusy\)\)/);
+  assert.match(render, /not a live view/); assert.match(render, /Nothing has been read yet/);
+  assert.match(js, /renderInvite\(\); renderHostStatus\(\);/);
+});

@@ -1036,3 +1036,20 @@ th,td,.friend-item,.friend-group>h2 {
 .invite-warning:empty{
   display:none
 }
+
+.status-list{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:.35rem 1rem;
+  margin:.5rem 0
+}
+.status-list dt{
+  margin:0
+}
+.status-list dd{
+  margin:0;
+  text-align:right
+}
+.status-list:empty{
+  display:none
+}

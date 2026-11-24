@@ -188,6 +188,24 @@ func (s *Server) actionRequest(w http.ResponseWriter, r *http.Request) error {
 		}
 		writeJSON(w, invite)
 		return nil
+	case "/api/host/status":
+		// Read-only: one read of the owned host's own status page, only when the person presses Refresh status. The
+		// token file is read here, on the server side, and the token is never part of any answer.
+		if err := s.role(true); err != nil {
+			return err
+		}
+		if err := decode(r, &struct{}{}); err != nil {
+			return err
+		}
+		v, origin, tokenFile := s.hostSnapshot()
+		if !v.Running || origin == "" {
+			return errors.New("Start the owned host before reading its status")
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+		stats, err := s.stats(ctx, origin, tokenFile)
+		writeJSON(w, buildHostStatus(stats, err, v.StartedAt, time.Now()))
+		return nil
 	case "/api/shutdown":
 		if err := decode(r, &struct{}{}); err != nil {
 			return err

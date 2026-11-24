@@ -51,7 +51,7 @@ The app is its own Go 1.26 module, `github.com/undecuple/re-psn/app`. The game s
 | Workspace | Working actions |
 |---|---|
 | **Play / connect** | Save a remote game target, explicitly check it, view public snapshots and use optional Profile/Trophies/Friends. A check is not a live game session or game configuration adapter. |
-| **Host** | Configure a local literal IP/port and explicitly start/stop the owned server component. No player name or profile is required. While it runs, the page lists this computer's addresses with the port, labelled by kind, for friends to try. The list is a guess read from the network interfaces and nothing is contacted; a loopback bind is flagged as reachable only from this computer. |
+| **Host** | Configure a local literal IP/port and explicitly start/stop the owned server component. No player name or profile is required. While it runs, the page lists this computer's addresses with the port, labelled by kind, for friends to try. The list is a guess read from the network interfaces and nothing is contacted; a loopback bind is flagged as reachable only from this computer. A Host status panel reads the owned host's own status page when you press Refresh status: players, rooms, uptime, limits and refusals, with "not reported" for anything an older host does not send. |
 | **Both** | Keep the remote Play target and local host independent. An explicit button can copy the local host address into the Play target. |
 
 Choosing a role or saving settings starts no server, broker or registration. Closing a browser tab leaves the controller

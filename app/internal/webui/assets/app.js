@@ -6,7 +6,7 @@
   // Check all runs 4 servers at a time with 5 s each; 64 unreachable ones take 80 s.
   const CHECK_ALL_MS = 100000;
   const SESSION_KEY = 're-psn-ui-token-v1';
-  const ROUTES = new Set(['/api/settings', '/api/play', '/api/host/start', '/api/host/stop', '/api/host/invite', '/api/profile/create', '/api/catalog', '/api/grant', '/api/revoke', '/api/friends', '/api/profile/export', '/api/profile/restore', '/api/shutdown', '/api/servers/add', '/api/servers/remove', '/api/servers/check', '/api/servers/check-all', '/api/servers/use', '/api/servers/export', '/api/servers/preview', '/api/servers/import']);
+  const ROUTES = new Set(['/api/settings', '/api/play', '/api/host/start', '/api/host/stop', '/api/host/invite', '/api/host/status', '/api/profile/create', '/api/catalog', '/api/grant', '/api/revoke', '/api/friends', '/api/profile/export', '/api/profile/restore', '/api/shutdown', '/api/servers/add', '/api/servers/remove', '/api/servers/check', '/api/servers/check-all', '/api/servers/use', '/api/servers/export', '/api/servers/preview', '/api/servers/import']);
   const personal = mode => mode === 'play' || mode === 'both';
   const hosting = mode => mode === 'host' || mode === 'both';
   function readGuard() { let generation = 0; return {capture: () => generation, invalidate: () => {generation++;}, current: value => value === generation}; }
@@ -89,6 +89,30 @@
     if (page !== 'host' || !host || !host.running || !host.address || !hosting(state.settings && state.settings.mode)) return '';
     return host.address + '|' + (host.started_at || 0);
   }
+  const NOT_REPORTED = 'not reported';
+  // Uptime in words from a whole number of seconds, or "not reported".
+  function statusUptime(seconds) {
+    if (typeof seconds !== 'number' || !isFinite(seconds) || seconds < 0) return NOT_REPORTED;
+    const s = Math.floor(seconds), d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+    if (s < 60) return plural(s, 'second');
+    const parts = []; if (d) parts.push(plural(d, 'day')); if (h) parts.push(plural(h, 'hour')); if (m && !d) parts.push(plural(m, 'minute'));
+    return parts.join(' ');
+  }
+  function statusCount(value) { return typeof value === 'number' && isFinite(value) ? String(value) : NOT_REPORTED; }
+  function statusLimit(value) { return typeof value === 'number' && isFinite(value) ? (value === 0 ? 'no limit' : String(value)) : NOT_REPORTED; }
+  // The labelled rows of the status list, from one answer. A missing field says "not reported" rather than 0.
+  function statusRows(status) {
+    const l = (status && status.limits) || {}, r = (status && status.refusals) || {}, s = status || {};
+    return [
+      ['Players connected', statusCount(s.clients)], ['Public rooms', statusCount(s.rooms)], ['Unlisted rooms', statusCount(s.unlisted)],
+      ['Running for (timed by this app)', statusUptime(s.uptime_seconds)],
+      ['Room limit', statusLimit(l.max_rooms)], ['Rooms per player limit', statusLimit(l.max_player_rooms)], ['Connections per address limit', statusLimit(l.max_conns_per_addr)],
+      ['Requests per second limit', statusLimit(l.max_req_rate)], ['UDP packets per second limit', statusLimit(l.max_udp_rate)],
+      ['Connections refused (per address)', statusCount(r.tcp_conns_per_addr)], ['Requests refused (rate)', statusCount(r.tcp_req_rate)], ['UDP packets dropped or refused', statusCount(r.udp_dropped)]
+    ];
+  }
+  // The key a status read belongs to; a different key (the host stopped or restarted) discards it.
+  function statusKey(state) { const h = state && state.host; return h && h.running && h.address ? h.address + '|' + (h.started_at || 0) : ''; }
   function selectedRelay(state) {
     const relays = (state.profile && state.profile.relays) || [];
     const origin = (state.settings.social_origin || '').replace(/\/$/, '');
@@ -159,7 +183,7 @@
     }
     return {state: () => request('/api/state'), post: (path, body = {}) => request(path, body), export: passphrase => request('/api/profile/export', {passphrase}, true)};
   }
-  const exported = {MAX_ARCHIVE, SESSION_KEY, personal, hosting, ageWords, setupSteps, roomsNote, failureHints, copyText, inviteKind, inviteLoopbackOnly, inviteWanted, readGuard, clean, fragmentToken, takeToken, openSession, catalogBody, base64, clientAddress, localBind, selectedRelay, responseBytes, makeAPI};
+  const exported = {MAX_ARCHIVE, SESSION_KEY, personal, hosting, ageWords, setupSteps, roomsNote, failureHints, copyText, inviteKind, inviteLoopbackOnly, inviteWanted, statusUptime, statusRows, statusKey, readGuard, clean, fragmentToken, takeToken, openSession, catalogBody, base64, clientAddress, localBind, selectedRelay, responseBytes, makeAPI};
   if (typeof module !== 'undefined' && module.exports) module.exports = exported;
   if (typeof document === 'undefined') return;
 
@@ -226,7 +250,7 @@
     currentPage = page;
     for (const section of document.querySelectorAll('.page')) section.hidden = section.id !== 'page-' + page;
     for (const button of document.querySelectorAll('.navigation [data-page]')) { if (button.dataset.page === page) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current'); }
-    renderInvite();
+    renderInvite(); renderHostStatus();
     if (focus) { const title = $('page-' + page).querySelector('h1'); title.tabIndex = -1; title.focus(); }
   }
   const settingFields = {mode: 'setting-mode', theme: 'setting-theme', name: 'setting-name', server: 'setting-server', status_url: 'setting-status-url', social_origin: 'setting-social-origin', social_ca_file: 'setting-social-ca', host_address: 'setting-host-address', host_relay: 'setting-host-relay'};
@@ -338,6 +362,33 @@
     else note = (invite.all_interfaces ? 'The host listens on every network interface, so these are this computer\u2019s addresses. ' : '') + 'This list is a guess made from this computer\u2019s network interfaces' + (invite.truncated ? ' (only the first ' + rows.length + ' are shown)' : '') + '. The app asks nothing outside this computer, so it cannot tell which address friends should use.';
     text('host-invite-list-note', note);
     $('host-invite-refresh').setAttribute('aria-disabled', String(inviteBusy));
+  }
+  // The host status is read only when the person presses Refresh status: never on load, never polled. It is dropped
+  // when the host stops or restarts, so a number from an earlier run is never shown beside a new one.
+  let hostStatus = null, hostStatusKey = '', hostStatusBusy = false, hostStatusShown = '';
+  async function loadHostStatus(key) {
+    hostStatusBusy = true; hostStatusKey = key; hostStatus = null; renderHostStatus();
+    try { const result = await api.post('/api/host/status'); if (hostStatusKey === key && !stopped) hostStatus = result; }
+    catch (error) { if (hostStatusKey === key && !stopped) hostStatus = {error: 'The status could not be read. Press Refresh status to try again.'}; }
+    finally { hostStatusBusy = false; }
+    renderHostStatus();
+  }
+  function renderHostStatus() {
+    if (!state) return;
+    const key = hosting(state.settings.mode) ? statusKey(state) : '';
+    show('host-status', !!key);
+    if (!key) { hostStatus = null; hostStatusKey = ''; hostStatusShown = ''; return; }
+    if (key !== hostStatusKey && !hostStatusBusy) { hostStatus = null; hostStatusKey = key; }
+    const shown = JSON.stringify([key, hostStatus, hostStatusBusy]);
+    if (shown === hostStatusShown) return; hostStatusShown = shown;
+    const list = $('host-status-list'), ok = hostStatus && !hostStatus.error;
+    list.replaceChildren(...(ok ? statusRows(hostStatus) : []).flatMap(([name, value]) => [node('dt', name), node('dd', value, value === NOT_REPORTED ? 'muted' : undefined)]));
+    let note = 'Nothing has been read yet. Press Refresh status to ask your host how it is doing.';
+    if (hostStatusBusy) note = 'Reading the host\u2019s status.';
+    else if (hostStatus && hostStatus.error) note = hostStatus.error;
+    else if (ok) note = 'Read at ' + (Number.isFinite(hostStatus.read_at) ? new Date(hostStatus.read_at).toLocaleTimeString([], {hour12: false}) : 'an unknown time') + '. This is a snapshot from your own host, not a live view; press Refresh status to read it again.';
+    text('host-status-note', note);
+    $('host-status-refresh').setAttribute('aria-disabled', String(hostStatusBusy));
   }
   const NEXT_STEP = {
     unchecked: 'Next: save a server and press Save & check server. Nothing is contacted until you do.',
@@ -545,6 +596,7 @@
   });
   $('play-saved-manage').addEventListener('click', () => { const title = $('servers-title'); title.tabIndex = -1; title.focus(); });
   $('host-invite-refresh').addEventListener('click', () => { if (inviteBusy || !state || !inviteWanted(state, 'host')) return; text('host-invite-copy-note', ''); invite = null; inviteShown = ''; loadInvite(inviteKey || inviteWanted(state, 'host')); renderInvite(); });
+  $('host-status-refresh').addEventListener('click', () => { if (hostStatusBusy || !authenticated || stopped || !state) return; const key = hosting(state.settings.mode) ? statusKey(state) : ''; if (key) loadHostStatus(key); });
   $('host-invite-list').addEventListener('click', async event => {
     const button = event.target.closest && event.target.closest('button[data-invite-copy]'); if (!button) return;
     const value = button.dataset.inviteCopy, result = await copyText(value, navigator.clipboard);
