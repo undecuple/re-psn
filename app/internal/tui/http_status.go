@@ -109,6 +109,13 @@ func statusToken(path string) (string, error) {
 	return token, nil
 }
 
+// FetchHTTPStats reads the status page of an owned or configured server once, with the same checks the Status screen
+// uses: a bounded body, no redirects, no proxy, a short timeout, and a bearer token read from tokenFile. Every failure
+// is the same plain error, so the token and the file path never reach a caller's message.
+func FetchHTTPStats(ctx context.Context, address, tokenFile string) (*HTTPStats, error) {
+	return fetchHTTPStatus(ctx, address, tokenFile)
+}
+
 func fetchHTTPStatus(ctx context.Context, address, tokenFile string) (*HTTPStats, error) {
 	endpoint, err := statusEndpoint(address)
 	if err != nil {

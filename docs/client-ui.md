@@ -109,6 +109,13 @@ which address friends should use. It is read once for each host start, the first
 when you press **Refresh addresses**. If the host listens on a loopback address, the panel says that only this computer can
 connect and friends cannot reach it.
 
+Below it, the **Host status** panel shows how the app's own host is doing: players connected, public and unlisted rooms,
+how long it has run, the limits in force and what it has refused. It reads the host's own private status page on this
+computer once, only when you press **Refresh status** (never on its own, never polled), and shows "Read at" with the
+local time. The app reads the access token itself and never shows it to the page. A number an older host does not send
+is shown as "not reported", a limit of 0 as "no limit", and a host that does not answer gets a plain message. The numbers
+are dropped when the host stops or restarts.
+
 The controller starts its trusted component with bounded, fixed settings and checks its private authenticated status
 source. Port conflicts and startup failures are errors, not permission to replace another server. The browser cannot
 select arbitrary executables/arguments or control a remote server. Advanced source setups can explicitly select a
