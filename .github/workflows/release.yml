@@ -10,6 +10,8 @@
 # the SHA-256 pins below before use (scripts/build-appimage.sh checks the same pins again before running anything).
 # The notes are scripts/release-notes.sh for VERSION: the CHANGELOG.md entries under that version's heading.
 # The window's Rust crate licences: job `licences` writes THIRD-PARTY-WINDOW.txt (tools/third_party.py) for the app archives.
+# The Go licences: the `build` job writes THIRD-PARTY-GO.txt (tools/third_party_go.py) with the toolchain that builds, from
+# `go list -deps -json` of each program and target in the verified module cache, for every server and app archive.
 # Not checked here: that the binaries run on Windows or arm64 (they are cross-built), signing (the exe and the AppImage
 # are unsigned).
 name: release
@@ -126,6 +128,24 @@ jobs:
       - name: Tag is v + VERSION
         if: github.ref_type == 'tag'
         run: scripts/check-release.sh --tag "$TAG"
+      - name: Go licence texts (the standard library and the modules in the programs)
+        env:
+          GOTOOLCHAIN: local
+          GOFLAGS: ''
+          GONOSUMDB: ''
+        run: |
+          set -euo pipefail
+          d="$RUNNER_TEMP/go-licences"; mkdir -p "$d"
+          (cd app && go mod download && go mod verify)
+          args=()
+          for target in windows/amd64 linux/amd64 linux/arm64; do
+            os="${target%/*}"; arch="${target#*/}"
+            (cd app && CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go list -mod=readonly -deps -json ./cmd/re-psn-app) > "$d/app-$os-$arch.json"
+            CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go list -mod=readonly -deps -json ./server > "$d/server-$os-$arch.json"
+            args+=(--list "app-$os-$arch=$d/app-$os-$arch.json" --list "server-$os-$arch=$d/server-$os-$arch.json")
+          done
+          python3 tools/third_party_go.py "${args[@]}" --go-mod app/go.mod --go-sum app/go.sum \
+            --goroot-licence "$(go env GOROOT)/LICENSE" --go-version "$(go version)" --out "$d/THIRD-PARTY-GO.txt"
       - name: vet and test
         run: |
           go vet ./...
@@ -144,14 +164,15 @@ jobs:
             | sha256sum -c - || { echo "::error::a pinned AppImage tool does not match its SHA-256"; rm -rf "$d"; exit 1; }
       - name: Build archives, the AppImage (with its smoke test), the install scripts and checksums
         run: scripts/release-build.sh "$TAG" --appimage-tools "$RUNNER_TEMP/appimage-tools" --shell-dir "$RUNNER_TEMP/window" \
+          --go-licence-file "$RUNNER_TEMP/go-licences/THIRD-PARTY-GO.txt" \
           --licence-file "$RUNNER_TEMP/window-licences/THIRD-PARTY-WINDOW.txt"
       - name: Release notes
         run: |
           {
             echo "### Files"
             echo
-            echo "Each archive holds one self-contained server binary (no installer, no runtime needed), LICENSE, NOTICE.md and an examples folder (settings file, systemd unit, proxy configs)."
-            echo "The \`re-psn-app\` archives hold the desktop app (one static binary), the matching \`re-psn-host\` server binary the app starts for local hosting, \`re-psn-window\` (the same app in a window of its own: on Linux it needs WebKitGTK 4.1 installed, on Windows the WebView2 runtime that ships with Windows 10 and 11, and without it the app still opens in your browser), LICENSE, NOTICE.md, THIRD-PARTY-WINDOW.txt (the licence texts of the Rust crates in the window) and its README, for the same three platforms. \`install.sh --app\` and \`install.ps1 -App\` install the app and its host from a release instead of the server; or unpack one by hand."
+            echo "Each archive holds one self-contained server binary (no installer, no runtime needed), LICENSE, NOTICE.md, THIRD-PARTY-GO.txt (the licence texts of the Go standard library and modules in the Go programs) and an examples folder (settings file, systemd unit, proxy configs)."
+            echo "The \`re-psn-app\` archives hold the desktop app (one static binary), the matching \`re-psn-host\` server binary the app starts for local hosting, \`re-psn-window\` (the same app in a window of its own: on Linux it needs WebKitGTK 4.1 installed, on Windows the WebView2 runtime that ships with Windows 10 and 11, and without it the app still opens in your browser), LICENSE, NOTICE.md, THIRD-PARTY-GO.txt, THIRD-PARTY-WINDOW.txt (the licence texts of the Rust crates in the window) and its README, for the same three platforms. \`install.sh --app\` and \`install.ps1 -App\` install the app and its host from a release instead of the server; or unpack one by hand."
             echo "The x86_64 AppImage holds the same Linux binary and examples as one runnable file; it needs FUSE to mount, or run it with \`--appimage-extract-and-run\`. It is not signed."
             echo "\`install.sh\` (Linux) and \`install.ps1\` (Windows) are the install scripts from this tag, listed in SHA256SUMS too: download one with SHA256SUMS, check it, read it, then run it (see docs/installing.md)."
             echo "Check a download with \`sha256sum -c SHA256SUMS --ignore-missing\`."

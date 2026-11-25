@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build the Linux AppImage of the server, re-psn-vX.Y.Z-x86_64.AppImage, from the linux/amd64 release archive in dist/.
-# It holds the same server binary as that archive, its examples, LICENSE and NOTICE.md, an AppRun that runs the binary
+# It holds the same server binary as that archive, its examples, LICENSE, NOTICE.md and THIRD-PARTY-GO.txt, an AppRun that runs the binary
 # with the arguments given, a .desktop file and an icon (scripts/appimage/). x86_64 only.
 #
 # usage: scripts/build-appimage.sh fetch DIR           download the two pinned files below into DIR (the only network use)
@@ -86,7 +86,7 @@ build() {
   mkdir -p "$app/usr/bin" "$app/usr/share/re-psn" "$app/usr/share/doc/re-psn"
   cp "$src/re-psn" "$app/usr/bin/re-psn"
   cp -R "$src/examples" "$app/usr/share/re-psn/examples"
-  cp "$src/LICENSE" "$src/NOTICE.md" "$app/usr/share/doc/re-psn/"
+  cp "$src/LICENSE" "$src/NOTICE.md" "$src/THIRD-PARTY-GO.txt" "$app/usr/share/doc/re-psn/"
   cp "$root/scripts/appimage/AppRun" "$root/scripts/appimage/re-psn.desktop" "$root/scripts/appimage/re-psn.svg" "$app/"
   cp "$root/scripts/appimage/re-psn.svg" "$app/.DirIcon"
   find "$app" -type d -exec chmod 755 {} +

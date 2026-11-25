@@ -75,7 +75,8 @@ checked on the way. Pre-releases come often and on no schedule, whenever there i
    `scripts/check-release.sh --tag <tag>`, which fails unless the tag is `v` + `VERSION` at the tagged commit and the
    version checks pass; nothing is built after a failure. Then vet and tests, the server archives for windows/amd64, linux/amd64
    and linux/arm64, the same three archives for the desktop app (`re-psn-app-vX.Y.Z-<os>-<arch>`, built from `app/`),
-   (each also holds `re-psn-window`, the native window program from `app/shell/`: three `window` jobs build it, one per
+   (every server and app archive also holds `THIRD-PARTY-GO.txt`, the licence texts of the Go standard library and of the Go modules in the programs: a step of the `build` job runs `go mod download` and `go mod verify` in `app`, `go list -mod=readonly -deps -json` for each program and target with the toolchain that builds, and `tools/third_party_go.py`, which fails when a module has no licence file, its licence is not MIT, BSD-3-Clause, BSD-2-Clause or Apache-2.0, or its version or hash is not in `go.mod` and `go.sum`; `scripts/release-build.sh --go-licence-file` copies it into each archive and fails when one lacks it)
+   (each app archive also holds `re-psn-window`, the native window program from `app/shell/`: three `window` jobs build it, one per
    system, on native runners with the runner's rustup at Rust 1.99.1 and `Cargo.lock` enforced; a `licences` job runs
    `cargo fetch --locked` and `cargo metadata --locked` in `app/shell` and `tools/third_party.py` turns the result into
    `THIRD-PARTY-WINDOW.txt`, the licence texts of the Rust crates in the window (where a crate ships no licence file, the
@@ -217,6 +218,7 @@ How it is built ([`scripts/build-appimage.sh`](../scripts/build-appimage.sh), ru
 ## Not checked yet
 
 - The window program (`re-psn-window`): the app archives have carried it since v0.8.0 (`THIRD-PARTY-WINDOW.txt`, the licence texts of its Rust crates, came later; the list names every platform's crates, so it is a superset of one binary). It is built per system with a
+- `THIRD-PARTY-GO.txt` (the licence texts of the Go standard library and of the modules the Go programs link) has not yet been produced by a real release run. The generator was run only on synthetic and cached module data, and the first real run is the next tag build. The container image carries no licence texts yet, and the install scripts keep it only in the downloaded archive.
   Rust toolchain that the runner downloads at the pinned version, and `install.sh --app` /
   `install.ps1 -App` install it when the release has it. The Windows window has not been run at all. The binaries are
   unsigned.

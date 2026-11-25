@@ -249,7 +249,7 @@ with `-mod=readonly`, and `govulncheck` runs on the module):
 | [charm.land/lipgloss/v2](https://github.com/charmbracelet/lipgloss) | v2.0.6 | colours, frames and layout | MIT |
 | [github.com/charmbracelet/x/term](https://github.com/charmbracelet/x) | v0.2.2 | the "is this a terminal" check (already needed by the two above) | MIT |
 
-The program also links the modules those three need: `github.com/charmbracelet/colorprofile`, `ultraviolet`, `x/ansi`, `x/termios`
+The `re-psn-app` archives carry the licence texts of these modules in `THIRD-PARTY-GO.txt`. The program also links the modules those three need: `github.com/charmbracelet/colorprofile`, `ultraviolet`, `x/ansi`, `x/termios`
 and `x/windows` (MIT), `github.com/clipperhouse/displaywidth` and `uax29/v2` (MIT), `github.com/lucasb-eyer/go-colorful` (MIT),
 `github.com/mattn/go-runewidth` (MIT), `github.com/muesli/cancelreader` (MIT), `github.com/rivo/uniseg` (MIT),
 `github.com/xo/terminfo` (MIT), and `golang.org/x/sync` and `golang.org/x/sys` (BSD-3-Clause). The framework also uses the
