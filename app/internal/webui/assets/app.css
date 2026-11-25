@@ -1036,6 +1036,9 @@ th,td,.friend-item,.friend-group>h2 {
 .invite-warning:empty{
   display:none
 }
+#lan-status:empty{
+  display:none
+}
 
 .status-list{
   display:grid;

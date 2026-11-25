@@ -314,6 +314,7 @@ func (s *Server) useServer(e servers.Entry) error {
 	}
 	s.mu.Lock()
 	s.file = &next
+	s.lan = []LANServer{}
 	if old.Server != next.Server || old.StatusURL != next.StatusURL {
 		s.play = Play{Status: "unchecked", Rooms: []Room{}, Boards: []Board{}}
 	}

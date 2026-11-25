@@ -74,6 +74,7 @@ func (s *Server) actionRequest(w http.ResponseWriter, r *http.Request) error {
 		}
 		s.mu.Lock()
 		s.file = &next
+		s.lan = []LANServer{}
 		if old.Server != next.Server || old.StatusURL != next.StatusURL {
 			s.play = Play{Status: "unchecked", Rooms: []Room{}, Boards: []Board{}}
 		}
@@ -206,6 +207,21 @@ func (s *Server) actionRequest(w http.ResponseWriter, r *http.Request) error {
 		stats, err := s.stats(ctx, origin, tokenFile)
 		writeJSON(w, buildHostStatus(stats, err, v.StartedAt, time.Now()))
 		return nil
+	case "/api/lan/find":
+		// One broadcast to this computer's subnets, only when the person presses the button. The answer is kept in memory
+		// and shown in the state; nothing is saved or checked.
+		if err := s.role(false); err != nil {
+			return err
+		}
+		var q struct {
+			Port *int `json:"port"`
+		}
+		if err := decode(r, &q); err != nil {
+			return err
+		}
+		if err := s.findLAN(r.Context(), q.Port); err != nil {
+			return err
+		}
 	case "/api/shutdown":
 		if err := decode(r, &struct{}{}); err != nil {
 			return err

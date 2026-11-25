@@ -6,7 +6,7 @@
   // Check all runs 4 servers at a time with 5 s each; 64 unreachable ones take 80 s.
   const CHECK_ALL_MS = 100000;
   const SESSION_KEY = 're-psn-ui-token-v1';
-  const ROUTES = new Set(['/api/settings', '/api/play', '/api/host/start', '/api/host/stop', '/api/host/invite', '/api/host/status', '/api/profile/create', '/api/catalog', '/api/grant', '/api/revoke', '/api/friends', '/api/profile/export', '/api/profile/restore', '/api/shutdown', '/api/servers/add', '/api/servers/remove', '/api/servers/check', '/api/servers/check-all', '/api/servers/use', '/api/servers/export', '/api/servers/preview', '/api/servers/import']);
+  const ROUTES = new Set(['/api/settings', '/api/play', '/api/host/start', '/api/host/stop', '/api/host/invite', '/api/host/status', '/api/lan/find', '/api/profile/create', '/api/catalog', '/api/grant', '/api/revoke', '/api/friends', '/api/profile/export', '/api/profile/restore', '/api/shutdown', '/api/servers/add', '/api/servers/remove', '/api/servers/check', '/api/servers/check-all', '/api/servers/use', '/api/servers/export', '/api/servers/preview', '/api/servers/import']);
   const personal = mode => mode === 'play' || mode === 'both';
   const hosting = mode => mode === 'host' || mode === 'both';
   function readGuard() { let generation = 0; return {capture: () => generation, invalidate: () => {generation++;}, current: value => value === generation}; }
@@ -144,6 +144,33 @@
     }
     return steps;
   }
+  // Find on my network. The list comes from the network, so every row is cleaned and the count capped again here.
+  const LAN_MAX = 16;
+  // The port typed in a "host:port" box, or 0 when there is none or it is out of range (the app then uses the saved server's port, else 36100).
+  function lanPortFrom(value) {
+    const match = /^(?:\[[^\]]*\]|[^:\s]*):(\d{1,5})$/.exec(String(value == null ? '' : value).trim());
+    if (!match) return 0;
+    const port = Number(match[1]);
+    return port >= 1 && port <= 65535 ? port : 0;
+  }
+  // The rows shown for a search answer: address, and the words after it. Pure, so it can be tested.
+  function lanRows(list) {
+    const rows = [];
+    for (const e of Array.isArray(list) ? list : []) {
+      if (rows.length >= LAN_MAX) break;
+      if (!e || typeof e.address !== 'string' || !clean(e.address)) continue;
+      const players = Number.isFinite(e.players) && e.players >= 0 ? Math.floor(e.players) : null, version = clean(e.version).slice(0, 12);
+      const words = [clean(e.name).slice(0, 24) || 'unnamed server', players === null ? '' : players + (players === 1 ? ' player' : ' players'), version ? 'version ' + version : ''].filter(Boolean);
+      rows.push({address: clean(e.address).slice(0, 64), label: words.join(' \u00b7 ')});
+    }
+    return rows;
+  }
+  // What to say under the button. `asked` is true once a search finished since the last settings change.
+  function lanNote(asked, count) {
+    if (!asked) return '';
+    if (count === 0) return 'No server answered. Only servers on this network that have discovery turned on reply, and a broadcast does not cross a router. You can still type an address yourself.';
+    return count + (count === 1 ? ' server answered' : ' servers answered') + '. Use fills the Game server box; nothing is saved until you press Save & check server. Names and counts are what each server says about itself and are not verified.';
+  }
   async function responseBytes(response, limit) {
     const declared = Number(response.headers.get('Content-Length'));
     if (declared > limit) throw new Error('The response exceeds its size limit.');
@@ -183,7 +210,7 @@
     }
     return {state: () => request('/api/state'), post: (path, body = {}) => request(path, body), export: passphrase => request('/api/profile/export', {passphrase}, true)};
   }
-  const exported = {MAX_ARCHIVE, SESSION_KEY, personal, hosting, ageWords, setupSteps, roomsNote, failureHints, copyText, inviteKind, inviteLoopbackOnly, inviteWanted, statusUptime, statusRows, statusKey, readGuard, clean, fragmentToken, takeToken, openSession, catalogBody, base64, clientAddress, localBind, selectedRelay, responseBytes, makeAPI};
+  const exported = {MAX_ARCHIVE, SESSION_KEY, personal, hosting, ageWords, setupSteps, roomsNote, failureHints, copyText, lanPortFrom, lanRows, lanNote, inviteKind, inviteLoopbackOnly, inviteWanted, statusUptime, statusRows, statusKey, readGuard, clean, fragmentToken, takeToken, openSession, catalogBody, base64, clientAddress, localBind, selectedRelay, responseBytes, makeAPI};
   if (typeof module !== 'undefined' && module.exports) module.exports = exported;
   if (typeof document === 'undefined') return;
 
@@ -195,6 +222,7 @@
   const node = (tag, value, className) => { const n = document.createElement(tag); if (value !== undefined) n.textContent = clean(value); if (className) n.className = className; return n; };
   let state, api, currentPage = 'overview', busy = false, reading = false, authenticated = false, stopped = false;
   let settingsDirty = false, playDirty = false, hostDirty = false, rawCatalog = '', catalogSequence = 0;
+  let lanAsked = false, lanMessage = '', lanSearching = false, lanConfirming = false, lanShown = '';
   let friendsKey = '', trophiesKey = '', playKey = '', serversKey = '', setupKey = '', setupLeft = false;
   const generations = readGuard();
   function message(value, error = false) { const id = error ? 'error' : 'notice'; text(id, value); show(id, !!value); if (!error) show('error', false); }
@@ -266,7 +294,7 @@
   async function saveSettings(next, discard = false) {
     let stop = false;
     if (next.mode === 'play' && state.host.running) { if (!await confirm('Stop your owned host?', 'Switching to Play will stop the server this app is hosting. Your separate Play target and local profile are kept.', 'Stop host & switch')) return null; stop = true; }
-    const result = await api.post('/api/settings', {...next, stop_host: stop});
+    const result = await api.post('/api/settings', {...next, stop_host: stop}); lanAsked = false; lanMessage = '';
     if (discard) settingsDirty = playDirty = hostDirty = false;
     return result;
   }
@@ -390,6 +418,26 @@
     text('host-status-note', note);
     $('host-status-refresh').setAttribute('aria-disabled', String(hostStatusBusy));
   }
+  // The search runs only when the person presses the button and then confirms; it is never polled. The answer lives in the
+  // app's memory (state.lan) and is dropped by any settings change, which also resets lanAsked here.
+  async function findOnLan() {
+    lanConfirming = false; lanSearching = true; lanMessage = ''; renderLan();
+    const port = lanPortFrom($('play-server').value);
+    try { const next = await api.post('/api/lan/find', port ? {port} : {}); lanAsked = true; return next; }
+    catch (error) { if (error.status === 401) throw error; lanAsked = false; lanMessage = clean(error.message) || 'The search failed. Try again.'; return null; }
+    finally { lanSearching = false; renderLan(); }
+  }
+  function renderLan() {
+    if (!state) return;
+    const rows = lanRows(state.lan), note = lanSearching ? 'Searching this network. This takes about two seconds.' : lanMessage || lanNote(lanAsked, rows.length);
+    const key = JSON.stringify([rows, note, lanConfirming, lanSearching]); if (key === lanShown) return; lanShown = key;
+    show('lan-confirm', lanConfirming); text('lan-status', note);
+    $('lan-list').replaceChildren(...rows.map(r => {
+      const li = node('li', undefined, 'invite-row'), code = node('code', r.address, 'break'), button = node('button', 'Use');
+      button.type = 'button'; button.dataset.lanUse = r.address; button.setAttribute('aria-label', 'Use ' + r.address + ' as the game server');
+      li.append(code, node('span', r.label, 'muted'), button); return li;
+    }));
+  }
   const NEXT_STEP = {
     unchecked: 'Next: save a server and press Save & check server. Nothing is contacted until you do.',
     reachable: 'Next: put this address in your game\'s own network setting. This app does not do that. A check is not a game session.',
@@ -467,7 +515,7 @@
   async function checkServer(e) { const next = await api.post('/api/servers/check', ref(e)); message('Checked ' + e.name + '.'); return next; }
   async function useServer(e) {
     if ((playDirty || settingsDirty) && !await confirm('Replace your unsaved edits?', 'Using ' + e.name + ' replaces the Play server and status URL you are editing.', 'Use this server')) return null;
-    const next = await api.post('/api/servers/use', ref(e)); settingsDirty = playDirty = false;
+    const next = await api.post('/api/servers/use', ref(e)); settingsDirty = playDirty = false; lanAsked = false; lanMessage = '';
     message('Play target is now ' + e.name + '. Press Save & check server when you are ready to contact it.'); return next;
   }
   async function removeServer(e) {
@@ -557,7 +605,7 @@
     text('profile-label', profile ? profile.label : 'Local profile'); $('profile-id').value = profile ? profile.account_id : '';
     text('profile-error', state.profile_error || ''); text('restore-note', profile ? 'A profile already exists here. Restore into a new private profile location using the CLI; this interface never replaces it.' : 'Restore into this new, empty profile. Remote registration and friendships are fetched from each relay after authentication.');
     text('grant-message', state.grant.message || (state.grant.active ? 'Game reporting is enabled. Keep this app running; revoke it when finished.' : 'Local game reporting is off.')); show('grant-path', state.grant.active && !!state.grant.path); text('grant-path', state.grant.active ? 'Private descriptor: ' + state.grant.path : '');
-    fillSettings(); renderPlay(); renderAge(); renderServers(); renderPicker(); renderTrophies(); renderFriends(); navigate(currentPage, false); controls();
+    fillSettings(); renderPlay(); renderAge(); renderServers(); renderPicker(); renderLan(); renderTrophies(); renderFriends(); navigate(currentPage, false); controls();
     text('bridge-state', 'Private app session · local state updated'); text('bridge-time', new Date().toLocaleTimeString());
   }
   async function readState(initial = false) {
@@ -595,6 +643,16 @@
     text('play-saved-note', 'Filled in ' + e.name + (e.status_url ? ' with its status URL' : ', and cleared the status URL') + '. Nothing was contacted. Press Save & check server when you are ready.');
   });
   $('play-saved-manage').addEventListener('click', () => { const title = $('servers-title'); title.tabIndex = -1; title.focus(); });
+  $('lan-find').addEventListener('click', () => { if (busy || lanSearching || !authenticated || stopped || !state) return; lanConfirming = true; renderLan(); $('lan-go').focus(); });
+  $('lan-cancel').addEventListener('click', () => { lanConfirming = false; renderLan(); $('lan-find').focus(); });
+  $('lan-confirm').addEventListener('keydown', e => { if (e.key === 'Escape') { lanConfirming = false; renderLan(); $('lan-find').focus(); } });
+  $('lan-go').addEventListener('click', () => { if (lanSearching) return; if (busy) { lanConfirming = false; renderLan(); $('lan-find').focus(); return; } action(findOnLan, null).then(() => $('lan-find').focus()); });
+  $('lan-list').addEventListener('click', event => {
+    const button = event.target.closest && event.target.closest('button[data-lan-use]'); if (!button) return;
+    // Only the server box changes, and the old status URL is cleared with it. Nothing is saved or contacted.
+    $('play-server').value = button.dataset.lanUse; $('play-status-url').value = ''; playDirty = true; syncPicked();
+    lanMessage = 'Filled in ' + button.dataset.lanUse + ' and cleared the status URL. Nothing was saved or contacted. Press Save & check server when you are ready.'; lanShown = ''; renderLan(); $('play-server').focus();
+  });
   $('host-invite-refresh').addEventListener('click', () => { if (inviteBusy || !state || !inviteWanted(state, 'host')) return; text('host-invite-copy-note', ''); invite = null; inviteShown = ''; loadInvite(inviteKey || inviteWanted(state, 'host')); renderInvite(); });
   $('host-status-refresh').addEventListener('click', () => { if (hostStatusBusy || !authenticated || stopped || !state) return; const key = hosting(state.settings.mode) ? statusKey(state) : ''; if (key) loadHostStatus(key); });
   $('host-invite-list').addEventListener('click', async event => {
