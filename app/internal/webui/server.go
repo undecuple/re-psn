@@ -25,6 +25,7 @@ import (
 
 	"github.com/undecuple/re-psn/app/framework"
 	"github.com/undecuple/re-psn/app/internal/appinstance"
+	"github.com/undecuple/re-psn/app/internal/client"
 	"github.com/undecuple/re-psn/app/internal/config"
 	"github.com/undecuple/re-psn/app/internal/host"
 	"github.com/undecuple/re-psn/app/internal/tui"
@@ -100,6 +101,7 @@ type State struct {
 	ProfileError string          `json:"profile_error"`
 	Grant        Grant           `json:"grant"`
 	Servers      ServerList      `json:"servers"`
+	LAN          []LANServer     `json:"lan"` // last "Find on my network" answer: at most 16, memory only, cleared by a settings change
 }
 type Server struct {
 	mu               sync.Mutex
@@ -118,6 +120,8 @@ type Server struct {
 	addrs            addrLister
 	hostSnapshot     func() (host.View, string, string)
 	stats            statsReader
+	discover         discoverer
+	lan              []LANServer
 	ctx              context.Context
 	cancel           context.CancelFunc
 	closed           bool
@@ -141,7 +145,7 @@ func New(opts Options) (*Server, error) {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	srv := &Server{servers: newServerStore(opts.ConfigPath), fetch: tui.NativeStatus{}, addrs: interfaceAddresses, stats: tui.FetchHTTPStats, opts: opts, file: f, profile: tui.NewProfileSession(opts.ProfileDir), host: host.New(opts.ServerBinary), action: make(chan struct{}, 1), play: Play{Status: "unchecked", Rooms: []Room{}, Boards: []Board{}}, token: hex.EncodeToString(token[:]), bootstrap: hex.EncodeToString(bootstrap[:]), bootstrapExpires: time.Now().Add(time.Minute), reopenKey: hex.EncodeToString(reopen[:]), ctx: ctx, cancel: cancel}
+	srv := &Server{servers: newServerStore(opts.ConfigPath), fetch: tui.NativeStatus{}, addrs: interfaceAddresses, stats: tui.FetchHTTPStats, discover: client.Discover, lan: []LANServer{}, opts: opts, file: f, profile: tui.NewProfileSession(opts.ProfileDir), host: host.New(opts.ServerBinary), action: make(chan struct{}, 1), play: Play{Status: "unchecked", Rooms: []Room{}, Boards: []Board{}}, token: hex.EncodeToString(token[:]), bootstrap: hex.EncodeToString(bootstrap[:]), bootstrapExpires: time.Now().Add(time.Minute), reopenKey: hex.EncodeToString(reopen[:]), ctx: ctx, cancel: cancel}
 	srv.hostSnapshot = func() (host.View, string, string) {
 		url, file := srv.host.StatusSource()
 		return srv.host.View(), url, file
@@ -198,9 +202,9 @@ func failureKind(err error, server string) string {
 }
 func (s *Server) state() State {
 	s.mu.Lock()
-	settings, play := s.settings(), s.play
+	settings, play, lan := s.settings(), s.play, append([]LANServer{}, s.lan...)
 	s.mu.Unlock()
-	out := State{Version: s.opts.Version, Settings: settings, Play: play, Host: s.host.View(), Servers: s.servers.view()}
+	out := State{Version: s.opts.Version, Settings: settings, Play: play, Host: s.host.View(), Servers: s.servers.view(), LAN: lan}
 	if v, err := s.profile.Read(); err == nil {
 		out.Profile = &v
 	} else if !errors.Is(err, framework.ErrNotFound) && !os.IsNotExist(err) {

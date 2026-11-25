@@ -95,6 +95,13 @@
           </form>
           <div id="play-copy" class="actions" hidden><label>Game server address<input id="play-copy-text" readonly maxlength="255" autocomplete="off"></label><button type="button" id="play-copy-btn">Copy address</button><span class="muted" id="play-copy-note" role="status"></span></div>
           <div id="play-hints" class="muted" hidden><p>This check failed. These are things to look at, not a diagnosis. It may be that:</p><ul id="play-hints-list"></ul></div>
+          <div class="panel" id="lan-panel" aria-labelledby="lan-title"><h2 id="lan-title">Find on your network</h2>
+            <p class="muted">Looks for servers on the same local network that have discovery turned on. It sends one small broadcast message and listens for about two seconds. Nothing is saved or checked, and it does not cross a router.</p>
+            <div class="actions"><button type="button" id="lan-find" data-mutates>Find on my network (broadcasts to this subnet)</button></div>
+            <div class="callout" id="lan-confirm" hidden><p>This sends one broadcast message to every computer on this network, and only servers that have discovery turned on answer.</p><div class="actions"><button class="primary" type="button" id="lan-go" data-mutates>Send the broadcast</button><button type="button" id="lan-cancel">Cancel</button></div></div>
+            <p class="muted" id="lan-status" role="status" aria-live="polite"></p>
+            <ul class="invite-list" id="lan-list"></ul>
+          </div>
           <div class="panel table-panel" id="servers-panel"><div class="panel-heading"><h2 id="servers-title">Saved servers</h2><span class="muted" id="servers-count">0 of 64</span></div>
             <div class="panel-pad"><p class="section-note">A list you keep yourself, on this computer only. Nothing here is contacted until you press Check, and the app never fetches a list from anywhere.</p>
             <p class="callout" id="servers-error" role="alert" hidden></p>

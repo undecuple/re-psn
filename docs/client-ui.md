@@ -50,6 +50,16 @@ Ctrl+C. When a check fails, the page lists a few things that may be the cause (t
 does not forward it, a server that is not running, a status page that needs a token). They are places to look, not a
 diagnosis. The app still does not join rooms or launch games.
 
+The Play page also has a **Find on your network** panel. **Find on my network (broadcasts to this subnet)** first asks
+one question in the page; if you press **Send the broadcast**, the app sends one small discovery message to the
+networks this computer is connected to and listens for about two seconds. Only servers on the same local network that
+were started with discovery turned on answer, and the message does not cross a router. Each answer is shown with the
+server's address, the name it gives itself, its player count and version (up to 16 are listed, and the text is what the
+server says about itself, not verified). **Use** puts an address in the Game server box and clears the status URL box;
+nothing is saved or contacted until you press **Save & check server**. The port searched is the one in the box when it has a
+port, else the saved server's, else 36100. The list is kept only in the app's memory, is dropped when you save settings or use a saved
+server, and is never refreshed on its own. A second press while a search runs is refused.
+
 **Refresh local view** reads the local controller/profile state. It does not automatically check the remote game
 server or refresh a friend relay. Those network actions have their own explicit controls.
 

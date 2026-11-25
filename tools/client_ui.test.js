@@ -432,3 +432,77 @@ test('the host status button is guarded, discards a read from an earlier run, an
   assert.match(render, /not a live view/); assert.match(render, /Nothing has been read yet/);
   assert.match(js, /renderInvite\(\); renderHostStatus\(\);/);
 });
+
+test('lanPortFrom reads a typed port and gives 0 for anything the app should decide itself', () => {
+  assert.equal(ui.lanPortFrom('play.example.org:36100'), 36100); assert.equal(ui.lanPortFrom(' 192.0.2.7:4242 '), 4242);
+  assert.equal(ui.lanPortFrom('[::1]:9000'), 9000); assert.equal(ui.lanPortFrom(':7'), 7);
+  for (const none of ['', 'host', 'host:', 'host:0', 'host:65536', 'host:123456', 'host:12a', 'a:b:80', undefined, null]) assert.equal(ui.lanPortFrom(none), 0, String(none));
+});
+test('lanRows is capped, cleaned and says what each server called itself', () => {
+  const rows = ui.lanRows([{address: '192.0.2.7:36100', name: 'Friend box', players: 3, version: '0.9.0'}, {address: '192.0.2.8:36100', name: '', players: 1, version: ''}, {address: '192.0.2.9:36100', name: 'ev\u0000il‮', players: 'x'}, {address: ''}, null, {name: 'no address'}]);
+  assert.deepEqual(rows.map(r => r.address), ['192.0.2.7:36100', '192.0.2.8:36100', '192.0.2.9:36100']);
+  assert.equal(rows[0].label, 'Friend box · 3 players · version 0.9.0');
+  assert.equal(rows[1].label, 'unnamed server · 1 player');
+  assert.equal(rows[2].label, 'evil');
+  const many = Array.from({length: 40}, (_, i) => ({address: '192.0.2.' + i + ':1', name: 'n', players: 0, version: ''}));
+  assert.equal(ui.lanRows(many).length, 16);
+  for (const bad of [undefined, null, 'x', {}, 5]) assert.deepEqual(ui.lanRows(bad), []);
+});
+test('lanNote says nothing before a search and does not promise a server after an empty one', () => {
+  assert.equal(ui.lanNote(false, 0), ''); assert.equal(ui.lanNote(false, 3), '');
+  assert.match(ui.lanNote(true, 0), /No server answered/); assert.match(ui.lanNote(true, 0), /does not cross a router/);
+  assert.match(ui.lanNote(true, 1), /^1 server answered/); assert.match(ui.lanNote(true, 2), /^2 servers answered/);
+  assert.match(ui.lanNote(true, 2), /nothing is saved until you press Save/); assert.match(ui.lanNote(true, 2), /not verified/);
+});
+test('the LAN search is a known POST route and nothing else under that prefix is reachable', async () => {
+  const calls = [], api = ui.makeAPI(token, async (url, options) => {calls.push([url, options.method, options.body]); return json({settings: {mode: 'play'}, lan: []});});
+  await api.post('/api/lan/find', {}); await api.post('/api/lan/find', {port: 4242});
+  assert.deepEqual(calls, [['/api/lan/find', 'POST', '{}'], ['/api/lan/find', 'POST', '{"port":4242}']]);
+  for (const other of ['/api/lan', '/api/lan/', '/api/lan/find/', '/api/lan/find?x=1', '/api/lan/other']) await assert.rejects(api.post(other, {}), /Unsupported/);
+  assert.equal(calls.length, 2);
+});
+test('the LAN search is sent only after the confirm sentence, never polled and never loaded with the state', () => {
+  const js = fs.readFileSync(path.join(__dirname, '../app/internal/webui/assets/app.js'), 'utf8');
+  assert.equal([...js.matchAll(/api\.post\('\/api\/lan\/find'/g)].length, 1);
+  assert.equal([...js.matchAll(/findOnLan\b/g)].length, 2); // its definition and the Send handler
+  const find = js.slice(js.indexOf("$('lan-find').addEventListener"), js.indexOf("$('lan-cancel').addEventListener"));
+  assert.match(find, /lanConfirming = true/); assert.doesNotMatch(find, /api\.|action\(/);
+  assert.match(js, /\$\('lan-go'\)\.addEventListener\('click', \(\) => \{ if \(lanSearching\) return; if \(busy\) \{[^}]*\} action\(findOnLan/);
+  assert.match(js, /\$\('lan-confirm'\)\.addEventListener\('keydown'[^\n]*Escape/);
+  assert.doesNotMatch(js, /setInterval\([^)]*[lL]an/);
+  const read = js.slice(js.indexOf('async function readState'), js.indexOf('function friendAction'));
+  assert.doesNotMatch(read, /[lL]an(Find|Asked)|findOnLan/);
+  assert.doesNotMatch(js, /window\.confirm|[^.\w]confirm\(\s*['"]Find/);
+});
+test('the Use button only fills the server box; nothing is saved or sent', () => {
+  const js = fs.readFileSync(path.join(__dirname, '../app/internal/webui/assets/app.js'), 'utf8');
+  const use = js.slice(js.indexOf("$('lan-list').addEventListener"), js.indexOf("$('host-invite-refresh').addEventListener"));
+  assert.match(use, /\$\('play-server'\)\.value = button\.dataset\.lanUse/); assert.match(use, /playDirty = true/);
+  assert.doesNotMatch(use, /api\.|action\(|saveSettings|fetch\(/);
+  assert.match(use, /Nothing was saved or contacted/);
+});
+test('a settings save or using a saved server forgets that a search was made', () => {
+  const js = fs.readFileSync(path.join(__dirname, '../app/internal/webui/assets/app.js'), 'utf8');
+  const save = js.slice(js.indexOf('async function saveSettings'), js.indexOf('// What the last check found'));
+  assert.match(save, /api\.post\('\/api\/settings'[^\n]*lanAsked = false/);
+  const use = js.slice(js.indexOf('async function useServer'), js.indexOf('async function removeServer'));
+  assert.match(use, /lanAsked = false/);
+});
+test('the LAN panel markup has the ids the script uses, a status role, a hidden confirm and no external address', () => {
+  const root = path.join(__dirname, '../app/internal/webui/assets'), html = fs.readFileSync(path.join(root, 'index.html'), 'utf8'), js = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  for (const id of ['lan-panel', 'lan-title', 'lan-find', 'lan-confirm', 'lan-go', 'lan-cancel', 'lan-status', 'lan-list']) assert.match(html, new RegExp('id="' + id + '"'));
+  assert.match(html, /id="lan-status" role="status" aria-live="polite"/); assert.match(html, /id="lan-confirm" hidden/);
+  assert.match(html, />Find on my network \(broadcasts to this subnet\)</);
+  assert.match(html, /id="lan-find" data-mutates/); assert.match(html, /id="lan-go" data-mutates/);
+  // The panel sits on the Play page, ahead of the saved servers.
+  const play = html.indexOf('id="page-play"'), panel = html.indexOf('id="lan-panel"'), saved = html.indexOf('id="servers-panel"');
+  assert.ok(play > 0 && play < panel && panel < saved);
+  assert.doesNotMatch(js, /https?:\/\/(?!www\.w3\.org)/);
+});
+test('the LAN search handler does not fall into another route', () => {
+  const root = path.join(__dirname, '../app/internal/webui'), go = fs.readFileSync(path.join(root, 'actions.go'), 'utf8');
+  const start = go.indexOf('case "/api/lan/find":'), next = go.indexOf('case "/api/shutdown":');
+  assert.ok(start > 0 && next > start, 'the shutdown case must follow as its own case');
+  assert.doesNotMatch(go.slice(start, next), /host\.Stop|s\.cancel\(\)/);
+  assert.equal([...go.matchAll(/case "\/api\/shutdown":/g)].length, 1);
+});

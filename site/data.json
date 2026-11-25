@@ -1383,6 +1383,7 @@
    "date": "",
    "sections": {
     "Added": [
+     "App: the Play page has a Find on my network panel.",
      "App: while the app's own host runs, the Host page has a Host status panel.",
      "Release: every server and desktop app archive, and the AppImage, now holds `THIRD-PARTY-GO.txt`, which holds the licence texts of the Go standard library and of each Go module linked into the programs.",
      "App: while the app's own host runs, the Host page has a What to give friends panel with the listen address as configured and, for a host listening on every interface, this computer's addresses with the port, each ...",
@@ -1412,7 +1413,7 @@
     ]
    },
    "counts": {
-    "Added": 9,
+    "Added": 10,
     "Changed": 11,
     "Fixed": 2
    }
