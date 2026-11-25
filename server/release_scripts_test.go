@@ -801,6 +801,10 @@ func TestReleaseBuildLicenceFile(t *testing.T) {
 	if err := os.WriteFile(licence, []byte("licence texts\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	golicence := filepath.Join(t.TempDir(), "THIRD-PARTY-GO.txt")
+	if err := os.WriteFile(golicence, []byte("go licence texts\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	empty := filepath.Join(t.TempDir(), "empty.txt")
 	if err := os.WriteFile(empty, nil, 0o644); err != nil {
 		t.Fatal(err)
@@ -822,6 +826,8 @@ func TestReleaseBuildLicenceFile(t *testing.T) {
 		{"licence file without shell-dir", []string{"--licence-file", licence}, "--licence-file is only used with --shell-dir"},
 		{"empty licence file", []string{"--shell-dir", shells, "--licence-file", empty}, "is missing or empty"},
 		{"missing licence file", []string{"--shell-dir", shells, "--licence-file", filepath.Join(shells, "nope.txt")}, "is missing or empty"},
+		{"no go licence file", []string{"--shell-dir", shells, "--licence-file", licence}, "--go-licence-file (THIRD-PARTY-GO.txt) is required"},
+		{"empty go licence file", []string{"--go-licence-file", empty}, "is missing or empty"},
 	} {
 		_, errout, err := run(t, root, "bash", append([]string{"scripts/release-build.sh", "v0.3.1"}, c.args...)...)
 		if err == nil || !strings.Contains(errout, c.want) {
@@ -854,11 +860,30 @@ func TestReleaseBuildLicenceFile(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(bin, "go"), []byte(fakeGo), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command("bash", "scripts/release-build.sh", "v0.3.1", "--shell-dir", shells, "--licence-file", licence)
+	cmd := exec.Command("bash", "scripts/release-build.sh", "v0.3.1", "--shell-dir", shells, "--licence-file", licence, "--go-licence-file", golicence)
 	cmd.Dir = root
 	cmd.Env = append(append([]string{}, gitEnv...), "PATH="+bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("release-build with both options: %v\n%s", err, out)
+	}
+	for _, c := range []struct{ archive, member string }{
+		{"re-psn-v0.3.1-windows-amd64.zip", "re-psn-v0.3.1-windows-amd64/THIRD-PARTY-GO.txt"},
+		{"re-psn-v0.3.1-linux-amd64.tar.gz", "re-psn-v0.3.1-linux-amd64/THIRD-PARTY-GO.txt"},
+		{"re-psn-v0.3.1-linux-arm64.tar.gz", "re-psn-v0.3.1-linux-arm64/THIRD-PARTY-GO.txt"},
+		{"re-psn-app-v0.3.1-windows-amd64.zip", "re-psn-app-v0.3.1-windows-amd64/THIRD-PARTY-GO.txt"},
+		{"re-psn-app-v0.3.1-linux-amd64.tar.gz", "re-psn-app-v0.3.1-linux-amd64/THIRD-PARTY-GO.txt"},
+		{"re-psn-app-v0.3.1-linux-arm64.tar.gz", "re-psn-app-v0.3.1-linux-arm64/THIRD-PARTY-GO.txt"},
+	} {
+		var out string
+		var err error
+		if strings.HasSuffix(c.archive, ".zip") {
+			out, _, err = run(t, dist, "unzip", "-p", c.archive, c.member)
+		} else {
+			out, _, err = run(t, dist, "tar", "-xzOf", c.archive, c.member)
+		}
+		if err != nil || out != "go licence texts\n" {
+			t.Fatalf("%s: want THIRD-PARTY-GO.txt with the Go licence text, got %v %q", c.archive, err, out)
+		}
 	}
 	for _, c := range []struct{ archive, member string }{
 		{"re-psn-app-v0.3.1-windows-amd64.zip", "re-psn-app-v0.3.1-windows-amd64/THIRD-PARTY-WINDOW.txt"},

@@ -393,7 +393,7 @@ Each release carries `re-psn-vX.Y.Z-windows-amd64.zip`, `re-psn-vX.Y.Z-linux-amd
 install scripts `install.sh` and `install.ps1` ([docs/installing.md](docs/installing.md)), seven assets in all (v0.3.0 has
 five, without the scripts). From v0.5.0 a release adds three archives of the desktop app, `re-psn-app-vX.Y.Z-<os>-<arch>` (same
 three platforms: the `re-psn-app` binary, the matching `re-psn-host` server binary (from v0.7.0), `re-psn-window` (from v0.8.0), `LICENSE`, `NOTICE.md` and the app's README), ten assets in all; the install scripts
-install the app only when asked (`install.sh --app`, `install.ps1 -App`). App archives from v0.7.0 on also carry the
+install the app only when asked (`install.sh --app`, `install.ps1 -App`). Archives from the first release after v0.9.0 also hold `THIRD-PARTY-GO.txt`, the licence texts of the Go standard library and modules in the programs. App archives from v0.7.0 on also carry the
 matching `re-psn-host` component, and the installers refuse older archives without it. See [paired update limits](docs/client-ui.md#install-and-update). `SHA256SUMS` lists the archives and the AppImage, and from v0.4.0 the scripts. Check a download with `sha256sum -c SHA256SUMS --ignore-missing` on Linux, or compare the output of
 `Get-FileHash <archive>` with the line in `SHA256SUMS` on Windows.
 

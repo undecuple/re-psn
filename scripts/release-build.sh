@@ -10,18 +10,22 @@
 # texts of its Rust crates. Without --shell-dir the app archives are as before. With --appimage-tools DIR it also builds re-psn-vX.Y.Z-x86_64.AppImage with scripts/build-appimage.sh (DIR holds
 # the pinned files from `scripts/build-appimage.sh fetch DIR`), SHA256SUMS lists it too, and
 # `scripts/check-release.sh --assets` then checks that dist/ holds exactly the ten release assets.
+# --go-licence-file FILE is always required: FILE (THIRD-PARTY-GO.txt, written by tools/third_party_go.py in release.yml)
+# holds the licence texts of the Go standard library and of the Go modules in the programs; it is copied into every server
+# archive and every app archive, and the build fails when an archive lacks it.
 # Used by .github/workflows/release.yml and runnable locally.
-# usage: scripts/release-build.sh vX.Y.Z [--appimage-tools DIR] [--shell-dir DIR --licence-file FILE]
+# usage: scripts/release-build.sh vX.Y.Z --go-licence-file FILE [--appimage-tools DIR] [--shell-dir DIR --licence-file FILE]
 set -euo pipefail
-usage="usage: scripts/release-build.sh vX.Y.Z [--appimage-tools DIR] [--shell-dir DIR --licence-file FILE]"
+usage="usage: scripts/release-build.sh vX.Y.Z --go-licence-file FILE [--appimage-tools DIR] [--shell-dir DIR --licence-file FILE]"
 tag="${1:?$usage}"
 shift
 tools=''
 shells=''
 licence=''
+golicence=''
 while [ "$#" -gt 0 ]; do
   [ "$#" -ge 2 ] && [ -n "$2" ] || { echo "$usage" >&2; exit 2; }
-  if [ "$1" = --licence-file ]; then
+  if [ "$1" = --licence-file ] || [ "$1" = --go-licence-file ]; then
     [ -s "$2" ] || { echo "release-build: $2 is missing or empty" >&2; exit 2; }
   else
     [ -d "$2" ] || { echo "$2 is not a directory" >&2; exit 2; }
@@ -30,6 +34,7 @@ while [ "$#" -gt 0 ]; do
     --appimage-tools) tools="$(cd "$2" && pwd)" ;;
     --shell-dir) shells="$(cd "$2" && pwd)" ;;
     --licence-file) licence="$(cd "$(dirname "$2")" && pwd)/$(basename "$2")" ;;
+    --go-licence-file) golicence="$(cd "$(dirname "$2")" && pwd)/$(basename "$2")" ;;
     *) echo "$usage" >&2; exit 2 ;;
   esac
   shift 2
@@ -47,6 +52,7 @@ if [ -n "$shells" ]; then
 elif [ -n "$licence" ]; then
   echo "release-build: --licence-file is only used with --shell-dir" >&2; exit 2
 fi
+[ -n "$golicence" ] || { echo "release-build: --go-licence-file (THIRD-PARTY-GO.txt) is required" >&2; exit 2; }
 rm -rf "$dist" && mkdir -p "$dist"
 stage="$(mktemp -d)"
 trap 'rm -rf "$stage"' EXIT
@@ -62,6 +68,7 @@ for target in windows/amd64 linux/amd64 linux/arm64; do
   (cd "$root" && CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" \
     go build -trimpath -ldflags "-s -w -X main.version=$version" -o "$d/$exe" ./server)
   cp "$root/LICENSE" "$root/NOTICE.md" "$d/"
+  cp "$golicence" "$d/THIRD-PARTY-GO.txt"
   cp -r "$root/deploy" "$d/examples"
   if [ "$os" = windows ]; then
     (cd "$stage" && zip -qrX "$dist/$name.zip" "$name")
@@ -90,6 +97,7 @@ for target in windows/amd64 linux/amd64 linux/arm64; do
   # app update from replacing the user's independent standalone server.
   cp "$stage/re-psn-$tag-$os-$arch/$server_exe" "$d/$host_exe"
   cp "$root/LICENSE" "$root/NOTICE.md" "$d/"
+  cp "$golicence" "$d/THIRD-PARTY-GO.txt"
   cp "$root/app/README.md" "$d/README.md"
   if [ -n "$shells" ]; then
     if [ "$os" = windows ]; then
@@ -105,6 +113,19 @@ for target in windows/amd64 linux/amd64 linux/arm64; do
   else
     tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -C "$stage" -czf "$dist/$name.tar.gz" "$name"
   fi
+done
+
+# Every server and app archive must hold the Go licence texts.
+for target in windows/amd64 linux/amd64 linux/arm64; do
+  os="${target%/*}"; arch="${target#*/}"
+  for prefix in re-psn re-psn-app; do
+    name="$prefix-$tag-$os-$arch"
+    if [ "$os" = windows ]; then
+      unzip -Z1 "$dist/$name.zip" | grep -qx "$name/THIRD-PARTY-GO.txt" || { echo "release-build: $name.zip lacks THIRD-PARTY-GO.txt" >&2; exit 1; }
+    else
+      tar -tzf "$dist/$name.tar.gz" | grep -qx "$name/THIRD-PARTY-GO.txt" || { echo "release-build: $name.tar.gz lacks THIRD-PARTY-GO.txt" >&2; exit 1; }
+    fi
+  done
 done
 
 # With --shell-dir, every app archive must hold the window program and its licence texts next to the app.
