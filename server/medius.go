@@ -60,6 +60,38 @@ func parseMediusAddr(addr string, port int) (listen string, wide bool, err error
 	return net.JoinHostPort(ip.String(), strconv.Itoa(port)), ip.IsUnspecified(), nil
 }
 
+// setupMedius applies the -medius flags: with the switch off it returns no
+// listener, and refuses a port or address other than the defaults; with it on
+// it opens the listener and logs the two warnings. The warnings carry only the
+// listen address the operator chose.
+func setupMedius(on bool, addr string, port int, logger *slog.Logger) (*mediusListener, error) {
+	if !on {
+		if port != defaultMediusPort || addr != defaultMediusAddr {
+			return nil, errors.New("a -medius-port or -medius-addr other than the default does nothing without -medius")
+		}
+		return nil, nil
+	}
+	listen, wide, err := parseMediusAddr(addr, port)
+	if err != nil {
+		return nil, err
+	}
+	med, err := newMediusListener(listen, logger)
+	if err != nil {
+		return nil, err
+	}
+	mediusWarnings(logger, med.Addr(), wide)
+	return med, nil
+}
+
+// mediusWarnings logs the start-up warnings: always that no protocol exists,
+// and, for a listener on every interface, that its port is for a private network.
+func mediusWarnings(logger *slog.Logger, addr string, wide bool) {
+	logger.Warn("Medius compatibility is on, but no Medius protocol is implemented: every connection to the Medius port is closed", "addr", addr)
+	if wide {
+		logger.Warn("the Medius listener accepts connections on every interface; publish its port only to a private network")
+	}
+}
+
 // mediusListener accepts and immediately closes every connection.
 type mediusListener struct {
 	ln     net.Listener

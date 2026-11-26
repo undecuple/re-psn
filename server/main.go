@@ -232,22 +232,9 @@ func main() {
 	}
 	s.maxPlayerRooms, s.maxConns, s.maxPerAddr, s.maxReqRate = *playerRooms, *maxConns, *perAddr, *reqRate
 	s.maxUDPRate = udpRateN
-	var med *mediusListener
-	if *medius {
-		mediusListen, wide, err := parseMediusAddr(*mediusAddr, *mediusPort)
-		if err != nil {
-			log.Fatal(err)
-		}
-		med, err = newMediusListener(mediusListen, logger)
-		if err != nil {
-			log.Fatal(err)
-		}
-		logger.Warn("Medius compatibility is on, but no Medius protocol is implemented: every connection to the Medius port is closed", "addr", med.Addr())
-		if wide {
-			logger.Warn("the Medius listener accepts connections on every interface; publish its port only to a private network")
-		}
-	} else if *mediusPort != defaultMediusPort || *mediusAddr != defaultMediusAddr {
-		log.Fatal("a -medius-port or -medius-addr other than the default does nothing without -medius")
+	med, err := setupMedius(*medius, *mediusAddr, *mediusPort, logger)
+	if err != nil {
+		log.Fatal(err)
 	}
 	tcpA, udpA := listenAddrs(*addr, *tcpAddr, *udpAddr)
 	ln, pc, err := listenGame(logger, tcpA, udpA, *replace)
