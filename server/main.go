@@ -80,6 +80,7 @@ func main() {
 	medius := toggle("medius", false, "enable Medius compatibility (off by default). No Medius protocol is implemented yet: this opens the -medius-port listener, which closes every connection. See docs/medius-scope.md")
 	mediusPort := num("medius-port", defaultMediusPort, "TCP port of the Medius listener (a value other than the default needs -medius)")
 	mediusAddr := flag.String("medius-addr", envStr("medius-addr", defaultMediusAddr), "address of the Medius listener: a loopback, private or link-local IP address, or 0.0.0.0 or :: inside a container (a value other than the default needs -medius)")
+	mediusWide := toggle("medius-allow-wide", false, "confirm that the Medius listener may bind every interface (-medius-addr 0.0.0.0 or ::), for a container; refused when this computer has an address reachable from outside (needs -medius)")
 	replace := toggle("replace", false, "if the game port is already in use by an earlier instance of this server, ask it to stop, wait for the port, then start (Linux only)")
 	flag.Parse()
 	if bad != nil {
@@ -232,7 +233,7 @@ func main() {
 	}
 	s.maxPlayerRooms, s.maxConns, s.maxPerAddr, s.maxReqRate = *playerRooms, *maxConns, *perAddr, *reqRate
 	s.maxUDPRate = udpRateN
-	med, err := setupMedius(*medius, *mediusAddr, *mediusPort, logger)
+	med, err := setupMedius(*medius, *mediusAddr, *mediusPort, *mediusWide, logger)
 	if err != nil {
 		log.Fatal(err)
 	}

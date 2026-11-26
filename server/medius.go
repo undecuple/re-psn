@@ -64,10 +64,10 @@ func parseMediusAddr(addr string, port int) (listen string, wide bool, err error
 // listener, and refuses a port or address other than the defaults; with it on
 // it opens the listener and logs the two warnings. The warnings carry only the
 // listen address the operator chose.
-func setupMedius(on bool, addr string, port int, logger *slog.Logger) (*mediusListener, error) {
+func setupMedius(on bool, addr string, port int, allowWide bool, logger *slog.Logger) (*mediusListener, error) {
 	if !on {
-		if port != defaultMediusPort || addr != defaultMediusAddr {
-			return nil, errors.New("a -medius-port or -medius-addr other than the default does nothing without -medius")
+		if port != defaultMediusPort || addr != defaultMediusAddr || allowWide {
+			return nil, errors.New("a -medius-port, -medius-addr or -medius-allow-wide other than the default does nothing without -medius")
 		}
 		return nil, nil
 	}
@@ -75,12 +75,68 @@ func setupMedius(on bool, addr string, port int, logger *slog.Logger) (*mediusLi
 	if err != nil {
 		return nil, err
 	}
+	if wide {
+		var ifaces []netip.Addr
+		if allowWide {
+			if ifaces, err = interfaceAddrs(); err != nil {
+				return nil, fmt.Errorf("-medius-allow-wide: could not read this computer's addresses to check them: %w", err)
+			}
+		}
+		if err := checkWideBind(allowWide, ifaces); err != nil {
+			return nil, err
+		}
+	}
 	med, err := newMediusListener(listen, logger)
 	if err != nil {
 		return nil, err
 	}
 	mediusWarnings(logger, med.Addr(), wide)
 	return med, nil
+}
+
+// interfaceAddrs lists this computer's interface addresses.
+func interfaceAddrs() ([]netip.Addr, error) {
+	as, err := net.InterfaceAddrs()
+	if err != nil {
+		return nil, err
+	}
+	var out []netip.Addr
+	for _, a := range as {
+		p, err := netip.ParsePrefix(a.String())
+		if err != nil {
+			return nil, fmt.Errorf("an interface address could not be read")
+		}
+		out = append(out, p.Addr().Unmap())
+	}
+	if len(out) == 0 {
+		return nil, errors.New("no interface addresses were listed")
+	}
+	return out, nil
+}
+
+// reachableFromOutside is true for an address that is not loopback, private
+// (including IPv6 unique-local), link-local or unspecified. The shared range
+// 100.64.0.0/10 counts as outside: a carrier's customers share it.
+func reachableFromOutside(ip netip.Addr) bool {
+	ip = ip.Unmap()
+	return ip.IsValid() && !(ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
+		ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified())
+}
+
+// checkWideBind decides whether the Medius listener may bind every interface:
+// only when the operator said so (-medius-allow-wide), and never on a computer
+// that has an address reachable from outside, where a container's private
+// address is the case this is for. ifaces is only read when allowWide is set.
+func checkWideBind(allowWide bool, ifaces []netip.Addr) error {
+	if !allowWide {
+		return errors.New("-medius-addr 0.0.0.0 or :: opens the Medius port on every interface; add -medius-allow-wide to confirm that, or give one private address")
+	}
+	for _, ip := range ifaces {
+		if reachableFromOutside(ip) {
+			return errors.New("-medius-allow-wide refused: this computer has an address that may be reachable from outside; give -medius-addr one private address instead")
+		}
+	}
+	return nil
 }
 
 // mediusWarnings logs the start-up warnings: always that no protocol exists,

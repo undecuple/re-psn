@@ -371,6 +371,7 @@
 </ul>
 <h4>Changed</h4>
 <ul>
+<li>Server: a Medius listener address of <code>0.0.0.0</code> or <code>::</code> now needs the new <code>-medius-allow-wide</code> flag (<code>RE_PSN_MEDIUS_ALLOW_WIDE</code>), and the server refuses it when this computer has an address that may be reachable from ...</li>
 <li>Server: the <code>-medius</code> flag checks and start-up warnings moved out of <code>main</code> into <code>setupMedius</code>, so tests can reach them.</li>
 <li>Docs: wording corrections found in a read-through.</li>
 <li>Docs: the project text now says the server has no account of its own, instead of &quot;no accounts&quot;, because a host may optionally require a sign-in pass from a login service it runs itself; the README tagline, the known ...</li>
@@ -397,7 +398,7 @@
 </section>
 <section id="settings">
 <h2>Settings</h2>
-<p>Each of the 43 flags can also be set as a <code>RE_PSN_&lt;FLAG&gt;</code> variable. A flag on the command line wins, then the variable; a value that does not parse stops the server at start. It runs with no settings at all. <a href="https://github.com/undecuple/re-psn/blob/main/docs/running.md">docs/running.md</a> has the full text.</p>
+<p>Each of the 44 flags can also be set as a <code>RE_PSN_&lt;FLAG&gt;</code> variable. A flag on the command line wins, then the variable; a value that does not parse stops the server at start. It runs with no settings at all. <a href="https://github.com/undecuple/re-psn/blob/main/docs/running.md">docs/running.md</a> has the full text.</p>
 <table class="stack set">
 <thead><tr><th>Flag</th><th>Variable</th><th>Default</th><th>What it does</th></tr></thead>
 <tbody>
@@ -440,7 +441,8 @@
 <tr><td data-label="Flag"><code>-lan-public-addr</code></td><td data-label="Variable"><code>RE_PSN_LAN_PUBLIC_ADDR</code></td><td data-label="Default"><code>none</code></td><td data-label="What it does">IPv4 address given to players outside the LAN as the address of players who connected over a private, carrier-grade NAT or link-local address; the host must forward each such player&#x27;s P2P port</td></tr>
 <tr><td data-label="Flag"><code>-medius</code></td><td data-label="Variable"><code>RE_PSN_MEDIUS</code></td><td data-label="Default"><code>off</code></td><td data-label="What it does">Medius compatibility switch. **No Medius protocol is implemented** (<a href="https://github.com/undecuple/re-psn/blob/main/docs/medius-scope.md">scope</a>): it opens the -medius-port listener, which closes every connection; not in v0.5.0</td></tr>
 <tr><td data-label="Flag"><code>-medius-port</code></td><td data-label="Variable"><code>RE_PSN_MEDIUS_PORT</code></td><td data-label="Default"><code>10071</code></td><td data-label="What it does">TCP port of the Medius listener; a value other than the default needs -medius; not in v0.5.0</td></tr>
-<tr><td data-label="Flag"><code>-medius-addr</code></td><td data-label="Variable"><code>RE_PSN_MEDIUS_ADDR</code></td><td data-label="Default"><code>127.0.0.1</code></td><td data-label="What it does">Address of the Medius listener: a loopback, private or link-local IP address, or 0.0.0.0 / :: in a container; a value other than the default needs -medius; not in v0.5.0</td></tr>
+<tr><td data-label="Flag"><code>-medius-addr</code></td><td data-label="Variable"><code>RE_PSN_MEDIUS_ADDR</code></td><td data-label="Default"><code>127.0.0.1</code></td><td data-label="What it does">Address of the Medius listener: a loopback, private or link-local IP address, or 0.0.0.0 / :: in a container (which also needs -medius-allow-wide); a value other than the default needs -medius; not in v0.5.0</td></tr>
+<tr><td data-label="Flag"><code>-medius-allow-wide</code></td><td data-label="Variable"><code>RE_PSN_MEDIUS_ALLOW_WIDE</code></td><td data-label="Default"><code>false</code></td><td data-label="What it does">Confirms that the Medius listener may bind every interface (-medius-addr 0.0.0.0 or ::). Checked at start only; refused when this computer has an address that may be reachable from outside, including 100.64.0.0/10, and it cannot see how a container&#x27;s port is published (publish it to 127.0.0.1 or a private address only). Needs -medius</td></tr>
 <tr><td data-label="Flag"><code>-db</code></td><td data-label="Variable"><code>RE_PSN_DB</code></td><td data-label="Default"><code>off</code></td><td data-label="What it does">Score storage: off or memory</td></tr>
 <tr><td data-label="Flag"><code>-db-file</code></td><td data-label="Variable"><code>RE_PSN_DB_FILE</code></td><td data-label="Default"><code>none</code></td><td data-label="What it does">Read the -db setting from this file instead</td></tr>
 <tr><td data-label="Flag"><code>-replace</code></td><td data-label="Variable"><code>RE_PSN_REPLACE</code></td><td data-label="Default"><code>off</code></td><td data-label="What it does">If an earlier re-psn of this user holds the game port, stop it (SIGTERM) and start in its place (Linux only)</td></tr>
