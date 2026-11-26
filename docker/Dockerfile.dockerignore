@@ -14,3 +14,4 @@ scripts
 re-psn.env
 psnr.env
 *.env.local
+docker/*.env
