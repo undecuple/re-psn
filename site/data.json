@@ -1408,6 +1408,7 @@
      "Docs: the client quick start no longer says the C client is two files (it is `psnr.c` and `psnr.h`, plus `psnr_app.c` and `psnr_app.h` for the local trophy SDK), the Python section lists what that client lacks ..."
     ],
     "Fixed": [
+     "Server: the `-medius` listener no longer stops the whole server when one accept fails (for example when the process is out of file descriptors for a moment).",
      "Client: `psnr_relay_wrap` returns 0 for a payload over `PSNR_RELAY_MAX_PAYLOAD` (65490 bytes, the most a relayed datagram carries) and checks the length before adding the 17-byte header, so a length near `SIZE_MAX` can ...",
      "Server: a room's member IDs no longer repeat."
     ]
@@ -1415,7 +1416,7 @@
    "counts": {
     "Added": 10,
     "Changed": 11,
-    "Fixed": 2
+    "Fixed": 3
    }
   },
   "latest": {
