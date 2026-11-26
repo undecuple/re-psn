@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT (see LICENSE) */
 /**
  * @file psnr.h
  * @brief psnr.h - client for the psnr server (docs/api.md), in C for ps3recomp's

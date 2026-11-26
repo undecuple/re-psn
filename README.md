@@ -63,8 +63,8 @@ More ways to install (container, install script, from source) are under [Install
 | Game networking needs no signup; default room, player-name and score data stay in memory | [Security and privacy](#security-and-privacy) |
 | The server uses only Go's standard library | [go.mod](go.mod) has no `require` line, and CI enforces it ([ci.yml](.github/workflows/ci.yml)) |
 | Players behind routers get connected, with an optional relay | tested in Docker by the [NAT lab](lab/README.md) |
-| The client is one C file | [client/psnr.c](client/psnr.c), tested against the server by `client/test_psnr.c` |
-| Hardened and checked | fuzz tests, race detector, vulnerability and secret scans in [CI](.github/workflows/ci.yml) |
+| The C client is four files | [client/psnr.c](client/psnr.c) and `psnr.h`, plus the local trophy SDK `psnr_app.c` and `psnr_app.h`; tested against the server by `client/test_psnr.c` |
+| Hardened and checked | fuzz targets (CI runs their seed inputs only), race detector, vulnerability and secret scans in [CI](.github/workflows/ci.yml) |
 | A lobby you can read: games by name, verified player counts and player-reported latency | in v0.5.0: [features list](docs/features.md), [`/api/stats`](docs/api.md#http) |
 | Every feature says how far it got | [features list](docs/features.md) with status and evidence |
 
@@ -104,7 +104,7 @@ from released features.
 
 re-psn began as a fork of [psnr](https://github.com/sp00nznet/psnr) by sp00nz, who wrote the original server, the C client and the
 protocol. [LICENSE](LICENSE) keeps upstream's MIT licence and copyright line, and [NOTICE.md](NOTICE.md) credits the upstream work.
-re-psn adds hardened CI and fuzz tests, invite-only rooms, limits, logging, reverse proxy support, a UDP source check, container
+re-psn adds hardened CI and fuzz targets, invite-only rooms, limits, logging, reverse proxy support, a UDP source check, container
 files and release tooling. The [features list](docs/features.md) and [CHANGELOG.md](CHANGELOG.md) have the details. v0.5.0
 added a lobby view with game names, verified player counts and player-reported latency. It also added `-relay-force` for testing
 the relay from one network, LAN discovery (`-discover`), the server half of opt-in peer keys, and archives of the desktop app.
@@ -251,8 +251,8 @@ Available on `main` today; [docs/features.md](docs/features.md) has every featur
   round trip each player reports, labelled as reported and unverified.
 - **Peer keys (v0.5.0, server side only):** an opt-in way for the server to give each pair of players in a room a shared
   key for tagging their direct packets. No client uses it yet, and it gives no confidentiality ([docs/api.md](docs/api.md#peer-keys)).
-- **C client:** one file, no third-party libraries, no threads.
-- **Checks:** fuzz tests; CI with the race detector, vulnerability and secret scans, the NAT lab and code scanning.
+- **C client:** four files (`psnr.c`, `psnr.h`, `psnr_app.c`, `psnr_app.h`), no third-party libraries, no threads.
+- **Checks:** fuzz targets (CI runs their seed inputs only); CI with the race detector, vulnerability and secret scans, the NAT lab and code scanning.
 
 Partial, unverified and planned work (release archives and the AppImage, the nginx and HAProxy examples, storage backends, the
 desktop apps and more) is in [ROADMAP.md](ROADMAP.md) too.

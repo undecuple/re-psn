@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT (see LICENSE) */
 /*
  * psnr.c - see psnr.h. The socket is nonblocking after connect; psnr_poll
  * reads whatever has arrived, cuts complete frames into a FIFO, and hands
