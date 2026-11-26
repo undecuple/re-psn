@@ -27,6 +27,7 @@ services:
       # publish the port below on this machine only, or on a private address:
       #   RE_PSN_MEDIUS: "true"
       #   RE_PSN_MEDIUS_ADDR: "0.0.0.0"
+      #   RE_PSN_MEDIUS_ALLOW_WIDE: "true"
       #   RE_PSN_MEDIUS_PORT: "10071"
     # Players behind a container runtime that rewrites source addresses: see docker-compose.host.yml.
     ports:

@@ -413,7 +413,7 @@ re-psn runs with no settings at all. [docs/running.md](docs/running.md) has the 
 
 ### Settings
 
-Each of the 43 flags can also be set as a `RE_PSN_<FLAG>` variable. A flag on the command line wins, then the variable; a value
+Each of the 44 flags can also be set as a `RE_PSN_<FLAG>` variable. A flag on the command line wins, then the variable; a value
 that does not parse stops the server at start.
 
 <details>
@@ -462,7 +462,8 @@ Variables are upper case, with dashes as underscores. Defaults are those of `./r
 | `-lan-public-addr` | `RE_PSN_LAN_PUBLIC_ADDR` | none | IPv4 address given to players outside the LAN as the address of players who connected over a private, carrier-grade NAT or link-local address; the host must forward each such player's P2P port |
 | `-medius` | `RE_PSN_MEDIUS` | off | Medius compatibility switch. **No Medius protocol is implemented** ([scope](docs/medius-scope.md)): it opens the `-medius-port` listener, which closes every connection; not in v0.5.0 |
 | `-medius-port` | `RE_PSN_MEDIUS_PORT` | `10071` | TCP port of the Medius listener; a value other than the default needs `-medius`; not in v0.5.0 |
-| `-medius-addr` | `RE_PSN_MEDIUS_ADDR` | `127.0.0.1` | Address of the Medius listener: a loopback, private or link-local IP address, or `0.0.0.0` / `::` in a container; a value other than the default needs `-medius`; not in v0.5.0 |
+| `-medius-addr` | `RE_PSN_MEDIUS_ADDR` | `127.0.0.1` | Address of the Medius listener: a loopback, private or link-local IP address, or `0.0.0.0` / `::` in a container (which also needs `-medius-allow-wide`); a value other than the default needs `-medius`; not in v0.5.0 |
+| `-medius-allow-wide` | `RE_PSN_MEDIUS_ALLOW_WIDE` | `false` | Confirms that the Medius listener may bind every interface (`-medius-addr 0.0.0.0` or `::`). Checked at start only; refused when this computer has an address that may be reachable from outside, including `100.64.0.0/10`, and it cannot see how a container's port is published (publish it to `127.0.0.1` or a private address only). Needs `-medius` |
 | `-db` | `RE_PSN_DB` | `off` | Score storage: `off` or `memory` |
 | `-db-file` | `RE_PSN_DB_FILE` | none | Read the `-db` setting from this file instead |
 | `-replace` | `RE_PSN_REPLACE` | off | If an earlier re-psn of this user holds the game port, stop it (SIGTERM) and start in its place (Linux only) |

@@ -82,7 +82,7 @@ then translate only evidenced operations into domain operations. The domain boun
 authorization invariants rather than exposing psnr handlers as a presumed Medius protocol. This is a design direction,
 not a claim that the current server is already split into independent layers.
 
-The server has an off-by-default `-medius` switch (with `-medius-port` and `-medius-addr`). It only opens a listener that closes every connection; no Medius protocol is implemented. See [Medius scope and profile](medius-scope.md).
+The server has an off-by-default `-medius` switch (with `-medius-port`, `-medius-addr` and, for a wildcard address, `-medius-allow-wide`). It only opens a listener that closes every connection; no Medius protocol is implemented. See [Medius scope and profile](medius-scope.md).
 
 Profiles are selected explicitly for a particular title and build; the frontend is off by default. Unknown or
 unsupported profiles, versions, application IDs and messages must cause explicit failure, not a generic success or

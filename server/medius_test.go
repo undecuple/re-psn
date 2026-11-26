@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"net/netip"
 	"strings"
 	"sync"
 	"testing"
@@ -230,7 +231,7 @@ func freeLoopbackPort(t *testing.T) int {
 // port or address other than the defaults is refused.
 func TestSetupMediusSwitchOff(t *testing.T) {
 	var logs strings.Builder
-	m, err := setupMedius(false, defaultMediusAddr, defaultMediusPort, debugLog(&logs))
+	m, err := setupMedius(false, defaultMediusAddr, defaultMediusPort, false, debugLog(&logs))
 	if m != nil || err != nil || logs.Len() != 0 {
 		t.Fatalf("defaults off = %v, %v, log %q; want nil, nil, empty", m, err, logs.String())
 	}
@@ -238,7 +239,7 @@ func TestSetupMediusSwitchOff(t *testing.T) {
 		addr string
 		port int
 	}{{defaultMediusAddr, 10072}, {"192.168.1.5", defaultMediusPort}, {"0.0.0.0", 10072}} {
-		m, err := setupMedius(false, c.addr, c.port, debugLog(&logs))
+		m, err := setupMedius(false, c.addr, c.port, false, debugLog(&logs))
 		if m != nil || err == nil || !strings.Contains(err.Error(), "does nothing without -medius") {
 			t.Errorf("setupMedius(off, %q, %d) = %v, %v; want the refusal", c.addr, c.port, m, err)
 		}
@@ -252,13 +253,13 @@ func TestSetupMediusSwitchOff(t *testing.T) {
 // a good loopback one starts with the one warning and no every-interface line.
 func TestSetupMediusSwitchOn(t *testing.T) {
 	var logs strings.Builder
-	if m, err := setupMedius(true, "8.8.8.8", 10071, debugLog(&logs)); m != nil || err == nil {
+	if m, err := setupMedius(true, "8.8.8.8", 10071, false, debugLog(&logs)); m != nil || err == nil {
 		t.Fatalf("a public address gave %v, %v; want a refusal", m, err)
 	}
 	if logs.Len() != 0 {
 		t.Fatalf("a refusal logged %q", logs.String())
 	}
-	m, err := setupMedius(true, "127.0.0.1", freeLoopbackPort(t), debugLog(&logs))
+	m, err := setupMedius(true, "127.0.0.1", freeLoopbackPort(t), false, debugLog(&logs))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -287,7 +288,7 @@ func TestMediusWarnings(t *testing.T) {
 // its address and port, not its bytes.
 func TestMediusLogsNothingAboutClients(t *testing.T) {
 	var logs strings.Builder
-	m, err := setupMedius(true, "127.0.0.1", freeLoopbackPort(t), debugLog(&logs))
+	m, err := setupMedius(true, "127.0.0.1", freeLoopbackPort(t), false, debugLog(&logs))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -316,5 +317,58 @@ func TestMediusLogsNothingAboutClients(t *testing.T) {
 	}
 	if !strings.Contains(out, "medius connection closed") {
 		t.Errorf("the debug line for a closed connection is missing: %s", out)
+	}
+}
+
+func TestReachableFromOutside(t *testing.T) {
+	for _, c := range []struct {
+		ip   string
+		want bool
+	}{
+		{"127.0.0.1", false}, {"::1", false}, {"10.1.2.3", false}, {"192.168.1.5", false}, {"172.17.0.2", false},
+		{"fd00::5", false}, {"fe80::1", false}, {"169.254.1.1", false}, {"0.0.0.0", false}, {"224.0.0.1", false},
+		{"::ffff:192.168.1.5", false},
+		{"8.8.8.8", true}, {"100.64.0.1", true}, {"100.127.255.254", true}, {"2001:4860:4860::8888", true}, {"::ffff:8.8.8.8", true},
+	} {
+		if got := reachableFromOutside(netip.MustParseAddr(c.ip)); got != c.want {
+			t.Errorf("reachableFromOutside(%s) = %v, want %v", c.ip, got, c.want)
+		}
+	}
+	if reachableFromOutside(netip.Addr{}) {
+		t.Error("the zero address counted as reachable")
+	}
+}
+
+func TestCheckWideBind(t *testing.T) {
+	priv := []netip.Addr{netip.MustParseAddr("127.0.0.1"), netip.MustParseAddr("172.17.0.2"), netip.MustParseAddr("fe80::1")}
+	pub := append(append([]netip.Addr{}, priv...), netip.MustParseAddr("203.0.113.7"))
+	if err := checkWideBind(false, nil); err == nil || !strings.Contains(err.Error(), "-medius-allow-wide") {
+		t.Errorf("without the flag: %v, want a refusal naming it", err)
+	}
+	if err := checkWideBind(false, priv); err == nil {
+		t.Error("without the flag a private-only computer was accepted")
+	}
+	if err := checkWideBind(true, priv); err != nil {
+		t.Errorf("with the flag on a private-only computer: %v", err)
+	}
+	if err := checkWideBind(true, pub); err == nil || !strings.Contains(err.Error(), "reachable from outside") {
+		t.Errorf("with the flag on a computer with an outside address: %v, want a refusal", err)
+	}
+}
+
+// A wildcard address needs the flag before anything is opened; the flag
+// without -medius is refused like the other settings.
+func TestSetupMediusWideNeedsFlag(t *testing.T) {
+	var logs strings.Builder
+	for _, addr := range []string{"0.0.0.0", "::", "::ffff:0.0.0.0"} {
+		if m, err := setupMedius(true, addr, 10071, false, debugLog(&logs)); m != nil || err == nil || !strings.Contains(err.Error(), "-medius-allow-wide") {
+			t.Errorf("setupMedius(on, %q, no flag) = %v, %v; want the refusal", addr, m, err)
+		}
+	}
+	if m, err := setupMedius(false, defaultMediusAddr, defaultMediusPort, true, debugLog(&logs)); m != nil || err == nil || !strings.Contains(err.Error(), "does nothing without -medius") {
+		t.Errorf("the flag without -medius = %v, %v; want the refusal", m, err)
+	}
+	if logs.Len() != 0 {
+		t.Fatalf("a refusal logged %q", logs.String())
 	}
 }

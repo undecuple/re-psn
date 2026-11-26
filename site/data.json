@@ -1356,7 +1356,13 @@
    "flag": "-medius-addr",
    "variable": "RE_PSN_MEDIUS_ADDR",
    "default": "127.0.0.1",
-   "description": "Address of the Medius listener: a loopback, private or link-local IP address, or 0.0.0.0 / :: in a container; a value other than the default needs -medius; not in v0.5.0"
+   "description": "Address of the Medius listener: a loopback, private or link-local IP address, or 0.0.0.0 / :: in a container (which also needs -medius-allow-wide); a value other than the default needs -medius; not in v0.5.0"
+  },
+  {
+   "flag": "-medius-allow-wide",
+   "variable": "RE_PSN_MEDIUS_ALLOW_WIDE",
+   "default": "false",
+   "description": "Confirms that the Medius listener may bind every interface (-medius-addr 0.0.0.0 or ::). Checked at start only; refused when this computer has an address that may be reachable from outside, including 100.64.0.0/10, and it cannot see how a container's port is published (publish it to 127.0.0.1 or a private address only). Needs -medius"
   },
   {
    "flag": "-db",
@@ -1395,6 +1401,7 @@
      "Docs: `docs/code-map.md`, a maintainer's map of the repository with diagrams: the layers and modules of the server, the C and Python clients, the desktop app, the site and tools, and CI and deploy; the main request, ..."
     ],
     "Changed": [
+     "Server: a Medius listener address of `0.0.0.0` or `::` now needs the new `-medius-allow-wide` flag (`RE_PSN_MEDIUS_ALLOW_WIDE`), and the server refuses it when this computer has an address that may be reachable from ...",
      "Server: the `-medius` flag checks and start-up warnings moved out of `main` into `setupMedius`, so tests can reach them.",
      "Docs: wording corrections found in a read-through.",
      "Docs: the project text now says the server has no account of its own, instead of \"no accounts\", because a host may optionally require a sign-in pass from a login service it runs itself; the README tagline, the known ...",
@@ -1417,7 +1424,7 @@
    },
    "counts": {
     "Added": 10,
-    "Changed": 13,
+    "Changed": 14,
     "Fixed": 3
    }
   },
