@@ -210,3 +210,111 @@ func TestMediusShutdownEndsBackoff(t *testing.T) {
 		t.Fatal("Serve did not return after Shutdown")
 	}
 }
+
+func debugLog(b *strings.Builder) *slog.Logger {
+	return slog.New(slog.NewTextHandler(b, &slog.HandlerOptions{Level: slog.LevelDebug}))
+}
+
+// freeLoopbackPort finds a port on 127.0.0.1 that nothing holds right now.
+func freeLoopbackPort(t *testing.T) int {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	return ln.Addr().(*net.TCPAddr).Port
+}
+
+// With the switch off, the defaults mean no listener and no log line, and a
+// port or address other than the defaults is refused.
+func TestSetupMediusSwitchOff(t *testing.T) {
+	var logs strings.Builder
+	m, err := setupMedius(false, defaultMediusAddr, defaultMediusPort, debugLog(&logs))
+	if m != nil || err != nil || logs.Len() != 0 {
+		t.Fatalf("defaults off = %v, %v, log %q; want nil, nil, empty", m, err, logs.String())
+	}
+	for _, c := range []struct {
+		addr string
+		port int
+	}{{defaultMediusAddr, 10072}, {"192.168.1.5", defaultMediusPort}, {"0.0.0.0", 10072}} {
+		m, err := setupMedius(false, c.addr, c.port, debugLog(&logs))
+		if m != nil || err == nil || !strings.Contains(err.Error(), "does nothing without -medius") {
+			t.Errorf("setupMedius(off, %q, %d) = %v, %v; want the refusal", c.addr, c.port, m, err)
+		}
+	}
+	if logs.Len() != 0 {
+		t.Fatalf("a refusal logged %q", logs.String())
+	}
+}
+
+// With the switch on, a bad address is refused before anything is opened, and
+// a good loopback one starts with the one warning and no every-interface line.
+func TestSetupMediusSwitchOn(t *testing.T) {
+	var logs strings.Builder
+	if m, err := setupMedius(true, "8.8.8.8", 10071, debugLog(&logs)); m != nil || err == nil {
+		t.Fatalf("a public address gave %v, %v; want a refusal", m, err)
+	}
+	if logs.Len() != 0 {
+		t.Fatalf("a refusal logged %q", logs.String())
+	}
+	m, err := setupMedius(true, "127.0.0.1", freeLoopbackPort(t), debugLog(&logs))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m.Shutdown()
+	out := logs.String()
+	if n := strings.Count(out, "level=WARN"); n != 1 || !strings.Contains(out, "no Medius protocol is implemented") || strings.Contains(out, "every interface") {
+		t.Fatalf("start-up log = %q; want exactly the one no-protocol warning", out)
+	}
+}
+
+func TestMediusWarnings(t *testing.T) {
+	for _, wide := range []bool{false, true} {
+		var logs strings.Builder
+		mediusWarnings(debugLog(&logs), "[::]:10071", wide)
+		out := logs.String()
+		if got := strings.Count(out, "level=WARN"); got != map[bool]int{false: 1, true: 2}[wide] {
+			t.Errorf("wide=%v: %d warnings in %q", wide, got, out)
+		}
+		if strings.Contains(out, "every interface") != wide {
+			t.Errorf("wide=%v: every-interface line wrong in %q", wide, out)
+		}
+	}
+}
+
+// Whatever a client sends or connects from, none of it reaches the log: not
+// its address and port, not its bytes.
+func TestMediusLogsNothingAboutClients(t *testing.T) {
+	var logs strings.Builder
+	m, err := setupMedius(true, "127.0.0.1", freeLoopbackPort(t), debugLog(&logs))
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() { done <- m.Serve() }()
+	c, err := net.Dial("tcp", m.Addr())
+	if err != nil {
+		t.Fatal(err)
+	}
+	local := c.LocalAddr().String()
+	c.Write([]byte("TICKET-CANARY-0123456789"))
+	io.ReadAll(c)
+	c.Close()
+	deadline := time.Now().Add(5 * time.Second)
+	for m.Closed() < 1 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	m.Shutdown()
+	<-done
+	out := logs.String()
+	_, port, _ := net.SplitHostPort(local)
+	for _, bad := range []string{local, "port=" + port, "TICKET-CANARY", "remote", "peer"} {
+		if strings.Contains(out, bad) {
+			t.Errorf("the log mentions %q: %s", bad, out)
+		}
+	}
+	if !strings.Contains(out, "medius connection closed") {
+		t.Errorf("the debug line for a closed connection is missing: %s", out)
+	}
+}
