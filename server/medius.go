@@ -7,7 +7,9 @@ import (
 	"net"
 	"net/netip"
 	"strconv"
+	"sync"
 	"sync/atomic"
+	"time"
 )
 
 // The Medius compatibility switch (-medius). No Medius protocol, profile or
@@ -19,7 +21,24 @@ import (
 const (
 	defaultMediusPort = 10071
 	defaultMediusAddr = "127.0.0.1"
+
+	// A failed Accept (out of descriptors, a reset before accept) is retried
+	// after a pause that doubles from the first to the second value.
+	acceptBackoffMin = 5 * time.Millisecond
+	acceptBackoffMax = time.Second
 )
+
+// nextAcceptBackoff is the pause after a failed Accept: the minimum for the
+// first failure in a row, then double, never above the maximum.
+func nextAcceptBackoff(prev time.Duration) time.Duration {
+	if prev < acceptBackoffMin {
+		return acceptBackoffMin
+	}
+	if prev >= acceptBackoffMax/2 {
+		return acceptBackoffMax
+	}
+	return prev * 2
+}
 
 // parseMediusAddr checks -medius-addr and -medius-port and returns the
 // listen address, and whether it is unspecified (0.0.0.0 or ::, also written
@@ -46,6 +65,10 @@ type mediusListener struct {
 	ln     net.Listener
 	log    *slog.Logger
 	closed atomic.Int64
+	done   chan struct{}
+	once   sync.Once
+	// wait pauses for d, or returns false once Shutdown has been called.
+	wait func(d time.Duration) bool
 }
 
 func newMediusListener(addr string, log *slog.Logger) (*mediusListener, error) {
@@ -53,7 +76,22 @@ func newMediusListener(addr string, log *slog.Logger) (*mediusListener, error) {
 	if err != nil {
 		return nil, fmt.Errorf("medius listener: %w", err)
 	}
-	return &mediusListener{ln: ln, log: log}, nil
+	return newMediusListenerOn(ln, log), nil
+}
+
+func newMediusListenerOn(ln net.Listener, log *slog.Logger) *mediusListener {
+	m := &mediusListener{ln: ln, log: log, done: make(chan struct{})}
+	m.wait = func(d time.Duration) bool {
+		t := time.NewTimer(d)
+		defer t.Stop()
+		select {
+		case <-t.C:
+			return true
+		case <-m.done:
+			return false
+		}
+	}
+	return m
 }
 
 func (m *mediusListener) Addr() string { return m.ln.Addr().String() }
@@ -61,16 +99,25 @@ func (m *mediusListener) Addr() string { return m.ln.Addr().String() }
 // Closed is how many connections have been accepted and closed.
 func (m *mediusListener) Closed() int64 { return m.closed.Load() }
 
-// Serve runs until Shutdown. The peer's address is not logged.
+// Serve runs until Shutdown. The peer's address is not logged. A failed Accept
+// is retried after a growing pause, so one error here does not stop the server;
+// the error text is not logged, as it may carry a peer address.
 func (m *mediusListener) Serve() error {
+	var pause time.Duration
 	for {
 		c, err := m.ln.Accept()
 		if err != nil {
 			if errors.Is(err, net.ErrClosed) {
 				return nil
 			}
-			return err
+			pause = nextAcceptBackoff(pause)
+			m.log.Warn("medius accept failed; retrying", "pause", pause)
+			if !m.wait(pause) {
+				return nil
+			}
+			continue
 		}
+		pause = 0
 		c.Close()
 		n := m.closed.Add(1)
 		m.log.Debug("medius connection closed: no Medius protocol is implemented", "total", n)
@@ -78,4 +125,7 @@ func (m *mediusListener) Serve() error {
 }
 
 // Shutdown closes the listener; Serve then returns nil.
-func (m *mediusListener) Shutdown() { m.ln.Close() }
+func (m *mediusListener) Shutdown() {
+	m.once.Do(func() { close(m.done) })
+	m.ln.Close()
+}

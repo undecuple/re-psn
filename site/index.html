@@ -385,6 +385,7 @@
 </ul>
 <h4>Fixed</h4>
 <ul>
+<li>Server: the <code>-medius</code> listener no longer stops the whole server when one accept fails (for example when the process is out of file descriptors for a moment).</li>
 <li>Client: <code>psnr_relay_wrap</code> returns 0 for a payload over <code>PSNR_RELAY_MAX_PAYLOAD</code> (65490 bytes, the most a relayed datagram carries) and checks the length before adding the 17-byte header, so a length near <code>SIZE_MAX</code> can ...</li>
 <li>Server: a room&#x27;s member IDs no longer repeat.</li>
 </ul>

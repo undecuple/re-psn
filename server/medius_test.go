@@ -1,10 +1,12 @@
 package main
 
 import (
+	"errors"
 	"io"
 	"log/slog"
 	"net"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -40,6 +42,8 @@ func TestParseMediusAddr(t *testing.T) {
 		{"8.8.8.8", 10071, "private self-hosted"},
 		{"2001:4860:4860::8888", 10071, "private self-hosted"},
 		{"::ffff:8.8.8.8", 10071, "private self-hosted"},
+		{"100.64.0.1", 10071, "private self-hosted"},
+		{"100.127.255.254", 10071, "private self-hosted"},
 		{"localhost", 10071, "not an IP address"},
 		{"", 10071, "not an IP address"},
 		{"127.0.0.1", 0, "not a port number"},
@@ -99,5 +103,110 @@ func TestMediusListenerPortInUse(t *testing.T) {
 	defer m.Shutdown()
 	if _, err := newMediusListener(m.Addr(), slog.New(slog.NewTextHandler(io.Discard, nil))); err == nil {
 		t.Fatal("a second listener on the same port succeeded")
+	}
+}
+
+func TestNextAcceptBackoff(t *testing.T) {
+	want := []time.Duration{5 * time.Millisecond, 10 * time.Millisecond, 20 * time.Millisecond}
+	var d time.Duration
+	for i, w := range want {
+		if d = nextAcceptBackoff(d); d != w {
+			t.Fatalf("step %d = %v, want %v", i, d, w)
+		}
+	}
+	for i := 0; i < 20; i++ {
+		d = nextAcceptBackoff(d)
+	}
+	if d != acceptBackoffMax {
+		t.Fatalf("after many failures the pause is %v, want %v", d, acceptBackoffMax)
+	}
+	if got := nextAcceptBackoff(acceptBackoffMax); got != acceptBackoffMax {
+		t.Fatalf("at the maximum the pause is %v, want %v", got, acceptBackoffMax)
+	}
+}
+
+// scriptedListener fails Accept a set number of times, then blocks until closed.
+type scriptedListener struct {
+	mu     sync.Mutex
+	fails  int
+	closed chan struct{}
+	calls  int
+}
+
+func (l *scriptedListener) Accept() (net.Conn, error) {
+	l.mu.Lock()
+	l.calls++
+	if l.fails > 0 {
+		l.fails--
+		l.mu.Unlock()
+		return nil, errors.New("too many open files from 203.0.113.9")
+	}
+	l.mu.Unlock()
+	<-l.closed
+	return nil, net.ErrClosed
+}
+func (l *scriptedListener) Close() error   { close(l.closed); return nil }
+func (l *scriptedListener) Addr() net.Addr { return &net.TCPAddr{} }
+
+// A failed Accept is retried with growing pauses and does not stop Serve; the
+// error text, which may carry a peer address, is not logged.
+func TestMediusServeRetriesAcceptErrors(t *testing.T) {
+	var logs strings.Builder
+	log := slog.New(slog.NewTextHandler(&logs, nil))
+	l := &scriptedListener{fails: 4, closed: make(chan struct{})}
+	m := newMediusListenerOn(l, log)
+	var pauses []time.Duration
+	m.wait = func(d time.Duration) bool { pauses = append(pauses, d); return true }
+	done := make(chan error, 1)
+	go func() { done <- m.Serve() }()
+	deadline := time.After(5 * time.Second)
+	for {
+		l.mu.Lock()
+		n := l.calls
+		l.mu.Unlock()
+		if n >= 5 {
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatal("Serve did not retry after Accept errors")
+		case err := <-done:
+			t.Fatalf("Serve returned %v after an Accept error", err)
+		case <-time.After(time.Millisecond):
+		}
+	}
+	m.Shutdown()
+	if err := <-done; err != nil {
+		t.Fatalf("Serve after Shutdown returned %v, want nil", err)
+	}
+	want := []time.Duration{5 * time.Millisecond, 10 * time.Millisecond, 20 * time.Millisecond, 40 * time.Millisecond}
+	if len(pauses) != len(want) {
+		t.Fatalf("pauses = %v, want %v", pauses, want)
+	}
+	for i := range want {
+		if pauses[i] != want[i] {
+			t.Fatalf("pauses = %v, want %v", pauses, want)
+		}
+	}
+	if strings.Contains(logs.String(), "203.0.113.9") || strings.Contains(logs.String(), "open files") {
+		t.Fatalf("the Accept error text reached the log: %s", logs.String())
+	}
+}
+
+// Shutdown ends a pause in progress, so Serve returns at once.
+func TestMediusShutdownEndsBackoff(t *testing.T) {
+	l := &scriptedListener{fails: 1 << 20, closed: make(chan struct{})}
+	m := newMediusListenerOn(l, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	done := make(chan error, 1)
+	go func() { done <- m.Serve() }()
+	time.Sleep(20 * time.Millisecond)
+	m.Shutdown()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("Serve returned %v, want nil", err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("Serve did not return after Shutdown")
 	}
 }
