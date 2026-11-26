@@ -371,6 +371,7 @@
 </ul>
 <h4>Changed</h4>
 <ul>
+<li>CI: the Linux test step now also requires <code>TestCClientAuth</code>, <code>TestCClientCall</code>, <code>TestPassVectors</code>, <code>TestConnectGateRefusesEveryRequestBeforeAuth</code> and <code>TestConnectGateOpensAfterAuth</code> to run and pass, so a skip or a ...</li>
 <li>Server: a Medius listener address of <code>0.0.0.0</code> or <code>::</code> now needs the new <code>-medius-allow-wide</code> flag (<code>RE_PSN_MEDIUS_ALLOW_WIDE</code>), and the server refuses it when this computer has an address that may be reachable from ...</li>
 <li>Server: the <code>-medius</code> flag checks and start-up warnings moved out of <code>main</code> into <code>setupMedius</code>, so tests can reach them.</li>
 <li>Docs: wording corrections found in a read-through.</li>
