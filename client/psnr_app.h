@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT (see LICENSE) */
 #ifndef PSNR_APP_H
 #define PSNR_APP_H
 
