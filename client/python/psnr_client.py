@@ -84,7 +84,8 @@ def parse_room_joined(p):
 
 class Client:
     """One TCP connection. Replies are matched by request id; pushes (types 0xA0-0xAF) are
-    kept in .pushes as (type, payload) until you take them with pop_pushes()."""
+    kept in .pushes as (type, payload) until you take them with pop_pushes().
+    A socket read or write timeout raises TimeoutError and closes the connection."""
 
     def __init__(self, host, port, comm_id, online_id, p2p_port=0, timeout=5.0):
         self.sock = socket.create_connection((host, port), timeout)
@@ -107,12 +108,13 @@ class Client:
 
     def _send(self, data):
         # A dead connection is always ConnectionError, whether it shows on send or on receive.
-        # Only the socket's own read/write timeout (no errno) stays a TimeoutError: the connection may
-        # still be fine. A system ETIMEDOUT (the peer stopped answering) is a lost connection.
+        # The socket's own timeout stays a TimeoutError. A system ETIMEDOUT is a lost connection.
         try:
             self.sock.sendall(data)
         except OSError as e:
             if _own_timeout(e):
+                # sendall cannot tell us how much of the frame was sent.
+                self.close()
                 raise
             raise ConnectionError("connection lost: %s" % e) from e
 
@@ -123,6 +125,8 @@ class Client:
                 chunk = self.sock.recv(n - len(buf))
             except OSError as e:
                 if _own_timeout(e):
+                    # The next recv could start in the middle of a frame.
+                    self.close()
                     raise
                 raise ConnectionError("connection lost: %s" % e) from e
             if not chunk:
