@@ -388,6 +388,7 @@
 <li>Docs: corrections to the developer pages.</li>
 <li>Docs: the client quick start no longer says the C client is two files (it is <code>psnr.c</code> and <code>psnr.h</code>, plus <code>psnr_app.c</code> and <code>psnr_app.h</code> for the local trophy SDK), the Python section lists what that client lacks ...</li>
 <li>Docs: the server docs gain a Rooms today section in <code>docs/architecture.md</code>, a Handling abuse section in <code>docs/public-server.md</code> (the default limits and what an operator can do), a plainer list of the reasons a pass is ...</li>
+<li>Release: the tag build now tests with Go 1.26, the Go line CI uses for the desktop app, instead of whatever the latest stable Go is, and it also runs <code>go vet</code> and <code>go test -race</code> for the desktop app module and `cargo ...</li>
 </ul>
 <h4>Fixed</h4>
 <ul>

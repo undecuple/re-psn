@@ -73,7 +73,8 @@ checked on the way. Pre-releases come often and on no schedule, whenever there i
 
 6. The tag starts [`.github/workflows/release.yml`](../.github/workflows/release.yml). It first runs
    `scripts/check-release.sh --tag <tag>`, which fails unless the tag is `v` + `VERSION` at the tagged commit and the
-   version checks pass; nothing is built after a failure. Then vet and tests, the server archives for windows/amd64, linux/amd64
+   version checks pass; nothing is built after a failure. Then the `build` job vets and race-tests the server and desktop
+   app with Go 1.26, runs `cargo test --locked` for the native window, and packages the server archives for windows/amd64, linux/amd64
    and linux/arm64, the same three archives for the desktop app (`re-psn-app-vX.Y.Z-<os>-<arch>`, built from `app/`),
    (every server and app archive also holds `THIRD-PARTY-GO.txt`, the licence texts of the Go standard library and of the Go modules in the programs: a step of the `build` job runs `go mod download` and `go mod verify` in `app`, `go list -mod=readonly -deps -json` for each program and target with the toolchain that builds, and `tools/third_party_go.py`, which fails when a module has no licence file, its licence is not MIT, BSD-3-Clause, BSD-2-Clause or Apache-2.0, or its version or hash is not in `go.mod` and `go.sum`; `scripts/release-build.sh --go-licence-file` copies it into each archive and fails when one lacks it)
    (each app archive also holds `re-psn-window`, the native window program from `app/shell/`: three `window` jobs build it, one per

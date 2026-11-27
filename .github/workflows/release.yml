@@ -106,7 +106,7 @@ jobs:
   build:
     needs: [window, licences]
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       TAG: ${{ github.ref_type == 'tag' && github.ref_name || 'v0.0.0' }}
     steps:
@@ -115,7 +115,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
         with:
-          go-version: stable
+          go-version: '1.26'
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
         with:
           pattern: window-*-*
@@ -150,6 +150,20 @@ jobs:
         run: |
           go vet ./...
           go test -race -count=1 ./...
+          go -C app vet -mod=readonly ./...
+          go -C app test -mod=readonly -race ./...
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install 1.99.1 --profile minimal
+          rustup default 1.99.1
+          rustc --version
+      - name: system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev
+      - name: test the window
+        working-directory: app/shell
+        run: cargo test --locked
       - name: Fetch appimagetool and the AppImage runtime (pinned by SHA-256)
         env:
           APPIMAGETOOL_URL: https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
