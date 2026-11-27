@@ -43,6 +43,7 @@ All notable changes to this project are documented here. The format follows
 - Client: `psnr_relay_wrap` returns 0 for a payload over `PSNR_RELAY_MAX_PAYLOAD` (65490 bytes, the most a relayed datagram carries) and checks the length before adding the 17-byte header, so a length near `SIZE_MAX` can no longer wrap the size check and overrun the output buffer. Before, it accepted any length that fit the buffer. `test_relay_wrap.c` covers 0, the maximum, one more and `SIZE_MAX`.
 - Server: a room's member IDs no longer repeat. The ID counter wrapped after 65535 joins to a room and could give a new member the ID of a current member, such as the owner, whose ID decides who may change or kick. A new member now gets an ID no current member holds, and 0 stays unused.
 - Python client: a socket timeout in the middle of a request now closes the client instead of leaving it half way through a frame, where the next reply would have been read from the wrong place. The timeout is still raised as `TimeoutError`; make a new `Client` to carry on. `docs/sdk.md` and `docs/sdk-guide.md` say so.
+- Tests: the desktop window test (`scripts/test-shell-window.sh`) now closes the second shell's own window, found by that shell's process ID, instead of the last window the name search lists, which is not always the second shell's. A run on main had timed out waiting for the second shell to end.
 
 ## [0.9.0] - 2026-11-23
 

@@ -48,6 +48,13 @@ wait_for() {
 		sleep 0.2
 	done
 }
+# shell_window PID: the id of a re:psn window that process PID owns (the last one listed if it has several), empty if none yet
+shell_window() {
+	for id in $(xdotool search --pid "$1" 2>/dev/null); do
+		case "$(xdotool getwindowname "$id" 2>/dev/null)" in *re:psn*) echo "$id" ;; esac
+	done | tail -1
+}
+has_shell_window() { [ -n "$(shell_window "$1")" ]; }
 has_window() { [ "$(windows)" -ge "$1" ]; }
 two_windows() { has_window 2; }
 one_window() { has_window 1; }
@@ -74,7 +81,9 @@ wait_for "the second window" two_windows
 [ "$(apps)" -eq 1 ] || fail "second shell started another app ($(apps))"
 
 echo "3. closing the second window leaves the app and the first shell"
-w2="$(xdotool search --name 're:psn' | tail -1)"
+# The window of the second shell itself: the last window the name search lists is not always the second shell's.
+wait_for "the second shell's own window" has_shell_window "$s2"
+w2="$(shell_window "$s2")"
 wmctrl -i -c "$(printf '0x%08x' "$w2")"
 wait_for "the second shell to end" shell_gone "$s2"
 sleep 1
