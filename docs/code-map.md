@@ -300,7 +300,7 @@ Commands run from the repository root. [BUILDING.md](../BUILDING.md) and [testin
 | Secrets in history | `gitleaks git` with `.gitleaks.toml` | `ci.yml` job `secrets` |
 | NAT scenarios (cone, symmetric, symmetric-norelay, samelan) | `sh lab/run.sh` | `ci.yml` job `nat-lab` |
 | Static analysis | CodeQL for Go and workflow files | `codeql.yml` |
-| Release assembly | `scripts/check-release.sh --tag`, `go vet`, `go test -race -count=1 ./...` (root module), `scripts/release-build.sh` | `release.yml` job `build` |
+| Release assembly | `scripts/check-release.sh --tag`, `go vet`, `go test -race -count=1 ./...` (root module), vet and race tests for `app/`, `cargo test --locked` for the window, `scripts/release-build.sh` | `release.yml` job `build` |
 | Window crate licences | `tools/third_party.py` on `cargo metadata --locked`; its own tests are `python3 -m unittest` (`tools/test_third_party.py`) | `release.yml` job `licences` |
 | Go licences | `tools/third_party_go.py` on `go list -deps -json`; its own tests are `python3 -m unittest` (`tools/test_third_party_go.py`) | `release.yml` job `build` |
 | Published release | tag shape, asset list, `sha256sum -c`, installer scripts equal the tag | `release-check.yml` |

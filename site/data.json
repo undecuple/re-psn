@@ -1417,7 +1417,8 @@
      "Docs: corrections to the protocol pages.",
      "Docs: corrections to the developer pages.",
      "Docs: the client quick start no longer says the C client is two files (it is `psnr.c` and `psnr.h`, plus `psnr_app.c` and `psnr_app.h` for the local trophy SDK), the Python section lists what that client lacks ...",
-     "Docs: the server docs gain a Rooms today section in `docs/architecture.md`, a Handling abuse section in `docs/public-server.md` (the default limits and what an operator can do), a plainer list of the reasons a pass is ..."
+     "Docs: the server docs gain a Rooms today section in `docs/architecture.md`, a Handling abuse section in `docs/public-server.md` (the default limits and what an operator can do), a plainer list of the reasons a pass is ...",
+     "Release: the tag build now tests with Go 1.26, the Go line CI uses for the desktop app, instead of whatever the latest stable Go is, and it also runs `go vet` and `go test -race` for the desktop app module and `cargo ..."
     ],
     "Fixed": [
      "Server: the `-medius` listener no longer stops the whole server when one accept fails (for example when the process is out of file descriptors for a moment).",
@@ -1428,7 +1429,7 @@
    },
    "counts": {
     "Added": 10,
-    "Changed": 17,
+    "Changed": 18,
     "Fixed": 4
    }
   },
