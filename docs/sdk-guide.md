@@ -784,8 +784,8 @@ collected. The failures are:
 | `ConnectionError` | the connection was lost, reset or closed by the server |
 | `TimeoutError` (`socket.timeout`) | the socket's own timeout elapsed |
 
-The timeout is **per socket operation**, so a stream of pushes can keep `call()` going past it. After a timeout in the middle of
-a frame the partial bytes are dropped and the stream is desynchronized: close and reconnect. `call()` silently discards
+The timeout is **per socket operation**, so a stream of pushes can keep `call()` going past it. After a timeout the client closes its
+connection, because the stream may have stopped in the middle of a frame; make a new `Client` to carry on. `call()` silently discards
 replies whose request id it is not waiting for (late replies), and files pushes (types `0xA0` to `0xAF`) in `c.pushes`.
 There is **no automatic heartbeat**: call `heartbeat()` at least every 90 seconds. The client is not thread-safe.
 

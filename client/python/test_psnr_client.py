@@ -1,9 +1,10 @@
-"""Tests for psnr_client.py against a real server on loopback.
+"""Tests for psnr_client.py with fake sockets and a real server on loopback.
 
 Set PSNR_SERVER to a built server binary, or run from a checkout with Go installed and the
 test builds ./server into a temporary directory. Without either, the tests are skipped.
     python3 client/python/test_psnr_client.py
 """
+from collections import deque
 import errno
 import os
 import shutil
@@ -150,19 +151,34 @@ class ClientTest(ServerCase):
 
 
 class FakeSocket:
-    def __init__(self, send_exc=None, recv_exc=None):
+    def __init__(self, send_exc=None, recv_exc=None, recv_chunks=()):
         self.send_exc, self.recv_exc, self.sent = send_exc, recv_exc, []
+        self.recv_chunks = deque(recv_chunks)
+        self.closed = False
 
     def sendall(self, data):
+        if self.closed:
+            raise OSError(errno.EBADF, "socket closed")
         if self.send_exc:
             raise self.send_exc
         self.sent.append(data)
 
     def recv(self, n):
-        raise self.recv_exc
+        if self.closed:
+            raise OSError(errno.EBADF, "socket closed")
+        if not self.recv_chunks:
+            if self.recv_exc:
+                raise self.recv_exc
+            return b""
+        chunk = self.recv_chunks.popleft()
+        if isinstance(chunk, OSError):
+            raise chunk
+        if len(chunk) > n:
+            self.recv_chunks.appendleft(chunk[n:])
+        return chunk[:n]
 
     def close(self):
-        pass
+        self.closed = True
 
 
 def offline_client(sock):
@@ -184,9 +200,32 @@ class OfflineTest(unittest.TestCase):
         c = offline_client(FakeSocket(send_exc=socket.timeout("timed out")))
         with self.assertRaises(socket.timeout):
             c.heartbeat()
+        with self.assertRaises(ConnectionError):
+            c.heartbeat()
         c = offline_client(FakeSocket(recv_exc=socket.timeout("timed out")))
         with self.assertRaises(socket.timeout):
             c.caps()
+
+    def assert_partial_reply_timeout_closes_connection(self, split):
+        # The first reply's payload can look like a push if read as a new header.
+        reply = struct.pack(">BHI", 0x84, 7, 1) + b"\xa0\x00\x00"
+        next_reply = struct.pack(">BHI", 0x84, 6, 2) + b"ok"
+        sock = FakeSocket(recv_chunks=(reply[:split], socket.timeout("timed out"),
+                                       reply[split:] + next_reply),
+                          recv_exc=socket.timeout("timed out"))
+        c = offline_client(sock)
+        with self.assertRaises(socket.timeout):
+            c.call(pc.GET_CAPS)
+        with self.assertRaises(ConnectionError):
+            c.call(pc.GET_CAPS)
+        self.assertEqual(len(sock.sent), 1)
+        self.assertEqual(c.pop_pushes(), [])
+
+    def test_timeout_in_reply_header_closes_connection(self):
+        self.assert_partial_reply_timeout_closes_connection(2)
+
+    def test_timeout_in_reply_body_closes_connection(self):
+        self.assert_partial_reply_timeout_closes_connection(7)
 
     def test_heartbeat_frame_bytes(self):
         s = FakeSocket()

@@ -101,7 +101,7 @@ Pushes (member joined, room data, room message, kicked) arrive between replies; 
 connection, or the server drops it.
 
 The client is not thread-safe, and every call waits up to the connection timeout (5 seconds by default). A lost
-connection raises `ConnectionError` on a send or a receive; a timeout raises `socket.timeout` (`TimeoutError`); an `ERROR` reply raises
+connection raises `ConnectionError` on a send or a receive; a timeout raises `socket.timeout` (`TimeoutError`) and closes the client, so make a new one; an `ERROR` reply raises
 `ServerError`.
 
 Run its tests (they build and start their own loopback server, and skip if neither `go` nor `PSNR_SERVER` is
