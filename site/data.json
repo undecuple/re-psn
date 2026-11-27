@@ -1424,13 +1424,14 @@
      "Server: the `-medius` listener no longer stops the whole server when one accept fails (for example when the process is out of file descriptors for a moment).",
      "Client: `psnr_relay_wrap` returns 0 for a payload over `PSNR_RELAY_MAX_PAYLOAD` (65490 bytes, the most a relayed datagram carries) and checks the length before adding the 17-byte header, so a length near `SIZE_MAX` can ...",
      "Server: a room's member IDs no longer repeat.",
-     "Python client: a socket timeout in the middle of a request now closes the client instead of leaving it half way through a frame, where the next reply would have been read from the wrong place."
+     "Python client: a socket timeout in the middle of a request now closes the client instead of leaving it half way through a frame, where the next reply would have been read from the wrong place.",
+     "Tests: the desktop window test (`scripts/test-shell-window.sh`) now closes the second shell's own window, found by that shell's process ID, instead of the last window the name search lists, which is not always the ..."
     ]
    },
    "counts": {
     "Added": 10,
     "Changed": 18,
-    "Fixed": 4
+    "Fixed": 5
    }
   },
   "latest": {
