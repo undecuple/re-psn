@@ -13,6 +13,7 @@ has to.
 - [Why the server doesn't carry game traffic](#why-the-server-doesnt-carry-game-traffic)
   - [A relayed connection](#a-relayed-connection)
 - [Why rooms and leaderboards first](#why-rooms-and-leaderboards-first)
+  - [Rooms today](#rooms-today)
 
 ## Overview
 
@@ -190,3 +191,16 @@ The psnr protocol is modelled on the SDK's concepts, not its structs:
   the title expects.
 - The server never needs an SDK header, and a change in how one title packs its
   room data doesn't touch it.
+
+### Rooms today
+
+A player can create a room for their title after a successful HELLO, plus AUTH if connect passes are required. The
+creator becomes its owner. Players of that title can join a public room by ID if there is space. The owner can
+switch the room to invite-only, which removes it from search and requires an invite code for new members.
+
+Any member can leave. Disconnecting removes that connection from all its rooms. If the owner departs, the longest-standing
+remaining member takes over. The last departure deletes the room and frees its code. Rooms live in memory and end on restart.
+
+The defaults are 1000 rooms across the server and eight memberships per player. The creator sets a capacity of 1–255
+members, including the owner. Each room blob is capped at 4096 bytes, and the joined-room snapshot must fit in a
+single reply of at most 65535 payload bytes. See [Rooms in the protocol](protocol.md#7-rooms) for request details.

@@ -285,7 +285,7 @@ refuses a fresh pass as `not yet valid`. A clock ahead of the login service's cu
 stops being accepted 3540 s after it was made instead of 3660. Only a clock ahead by the pass's whole life plus 60 s (3660 s for a pass of the longest life) refuses a fresh pass, as `expired`.
 
 **Why a pass was refused.** The player gets only ERROR 10, with no reason. The reason is in the server log, at warn level, so it shows at the default
-`-log-level info`:
+`-log-level info`. Read stderr in the terminal, `journalctl -u re-psn.service` for the supplied systemd unit, or the file set by `-log-file`.
 
 ```
 level=WARN msg="pass refused" reason="not yet valid" client=17 skipped_since_last_line=0
@@ -295,12 +295,24 @@ These lines are limited: each reason is written at most once a second, and `skip
 previous line (see [Logging](#logging)). A name conflict is the exception to "pass refused": under `-require-pass connect` the connection also needs a free
 online ID, and when another player holds it AUTH is answered with ERROR 8 and the log says `hello refused` with `reason="name taken"`, not `pass refused`. The pass itself had passed its checks.
 
-The reasons are: `too long` and `format` (the text is not a pass), `payload` (the JSON is wrong), `key or version` (no such `kid`, or `v`
-is not `v1`), `signature`, `bound pass on a bearer-only server`, `issuer`, `audience`, `subject`, `lifetime`, `not yet valid`,
-`expired`, `scope`, `revoked`, `revoked or key removed` (a reload happened while the pass was checked), `other subject` (a refresh
-for a different account), `too many connections for one account` and `request` (the AUTH request itself is malformed). A line that says `connection closed`
-with `too many refused passes` follows the third refusal on one connection. A pass, a key or an account number is never in these lines; an account shows as a short tag that
-changes at each start. Check a refused pass against the matching vector in [`server/testdata/pass_vectors.jsonl`](../server/testdata/pass_vectors.jsonl) when you are unsure what a reason means.
+- `request` means an invalid AUTH body or version. `too long`, `format` and `payload` mean the pass exceeds its size limit,
+  has invalid encoding or framing, or has invalid JSON or unknown or extra fields, respectively.
+- `key or version` means an unknown `kid` or unsupported payload version. `signature` means verification failed, and
+  `bound pass on a bearer-only server` means the pass contains a key binding this server does not accept.
+- `issuer` and `audience` mean a settings mismatch. `subject` means an invalid account ID, and `lifetime` means invalid issue or expiry times.
+  `not yet valid` and `expired` refer to the server clock with the tolerance above. `scope` means empty, unknown or duplicate scopes,
+  or a missing `connect` scope when required.
+- `revoked` means the account is on the revoke list. `revoked or key removed` means a reload changed the result during verification.
+  `other subject` means a refresh named a different account. `too many connections for one account` means its connection cap was reached.
+- `connection closed` with `too many refused passes` means three consecutive AUTH refusals on that connection, including name conflicts.
+
+The refusal lines carry neither the pass, a key nor the account ID; an account shows as a short tag that changes at each start. For examples, see the [pass vectors](../server/testdata/pass_vectors.jsonl).
+
+**Relay refusals.** A TCP relay setup can return ERROR 10 when a pass check fails, or ERROR 9 when relaying is disabled
+for the server or the title. These replies have no dedicated refusal log line. UDP relay refusals are counted in
+[`udp_drops`](udp-guardrails.md#drop-counters), including `relay_no_pass` when either peer lacks a valid relay scope under
+the relay pass gate. A `relay stream closed` warning names the stream and the reason it was cut: `pass revoked` means
+an account was revoked, `pass key removed` means a signing key was removed, and `pass expired` means the pass ran out.
 
 **Reloading.** At start, a key file or revoke file that cannot be read stops the server. At SIGHUP the same files are read again, the signal gives the sender no answer, and the log
 is the only report:

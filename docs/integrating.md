@@ -317,6 +317,9 @@ service or stay offline for them.
 - **Durable rooms and scores**: in memory only; the SQLite option is planned ([features.md](features.md) `store-sqlite`).
 - **Live room handover after a server loss**: declined ([features.md](features.md) `ha-handover`).
 - **Voice audio, rollback or synchronization, and a publisher's backend**: not offered (this file, Direct C/C++ integration).
+- **Hosting for friends on your own machine**: this guide covers a local server smoke test and pointing a recompiled game
+  at the host with `PSNR_SERVER`. For deployment and making the host reachable from another machine, see [Running the server](running.md)
+  and [Connecting](connecting.md). re-psn offers no account of its own.
 
 #### Error codes for a bridge
 

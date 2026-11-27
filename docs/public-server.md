@@ -109,12 +109,24 @@ for a server you cannot afford to carry traffic for.
   from nowhere you know is scanning.
 - `GET /healthz` on the status listener, with the token, reports whether both serving loops are active; use it with a
   supervisor ([restarts.md](restarts.md)). It is a liveness check, not a test that games work.
-- **Warn lines** in the log: refused connections (too many from one address), a UDP probe from another address (once per
-  player), a connection closed for its request rate, a name taken. Lines a client can repeat before it is a player
-  (refused connections, taken names, and under `-require-pass connect` refused passes) are written at most once a second for each
-  kind, ending in `skipped_since_last_line=N`; [running.md](running.md#logging) lists which, and which counters exist.
-- **Bans:** [fail2ban.md](fail2ban.md) has a disabled example for repeated status-token failures. Game and UDP bans are not
-  covered; use your firewall.
+- **Warn lines** in the log include connection refusals, request-rate closes, taken names and UDP probes from a different
+  address. Refused passes are logged when pass settings are enabled. [Logging](running.md#logging) lists which warnings
+  are limited and which counters exist.
+
+### Handling abuse
+
+- **Game TCP** defaults to 32 open connections per IPv4 address or IPv6 /64 and 4096 in total, including relay legs.
+  A game control connection closes when it exceeds 200 requests in a one-second window. In connect-pass mode, unsigned
+  connections also have separate caps (four per source, 64 total). Pass authentication defaults to two connections per account.
+- **Game UDP** defaults to 1000 datagrams per second per IPv4 address or IPv6 /64, with a burst of 1000. Excess datagrams
+  are dropped. Players sharing a source address share its allowance. [UDP guardrails](udp-guardrails.md) has the settings and counters.
+- **Invite-code checks** close the offending connection after five wrong codes on it or 20 from its source in a minute. A room
+  owner can kick a member, who can rejoin if the normal join checks pass (in an invite-only room, with the code).
+- **Admin**, if enabled, accepts up to eight open connections per source and 32 in total. Repeated refused requests from
+  a source increase the delay before the error response, up to five seconds.
+- **Operator actions** include lowering the [connection and rate limits](#settings) or blocking a verified source at the
+  firewall or proxy that sees it (game and UDP bans are not covered by the fail2ban example). An operator can add an account to the configured `-pass-revoked-file` and
+  reload the settings. The optional [fail2ban example](fail2ban.md) starts disabled and covers repeated HTTP status-token refusals.
 
 ## Docker Compose
 
