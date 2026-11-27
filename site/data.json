@@ -1416,7 +1416,8 @@
      "Docs: corrections to the hosting pages.",
      "Docs: corrections to the protocol pages.",
      "Docs: corrections to the developer pages.",
-     "Docs: the client quick start no longer says the C client is two files (it is `psnr.c` and `psnr.h`, plus `psnr_app.c` and `psnr_app.h` for the local trophy SDK), the Python section lists what that client lacks ..."
+     "Docs: the client quick start no longer says the C client is two files (it is `psnr.c` and `psnr.h`, plus `psnr_app.c` and `psnr_app.h` for the local trophy SDK), the Python section lists what that client lacks ...",
+     "Docs: the server docs gain a Rooms today section in `docs/architecture.md`, a Handling abuse section in `docs/public-server.md` (the default limits and what an operator can do), a plainer list of the reasons a pass is ..."
     ],
     "Fixed": [
      "Server: the `-medius` listener no longer stops the whole server when one accept fails (for example when the process is out of file descriptors for a moment).",
@@ -1427,7 +1428,7 @@
    },
    "counts": {
     "Added": 10,
-    "Changed": 16,
+    "Changed": 17,
     "Fixed": 4
    }
   },
