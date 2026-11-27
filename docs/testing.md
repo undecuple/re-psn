@@ -48,6 +48,10 @@ The full Linux CI suite also requires `TestCClientStreamDeadline`, `TestCClientC
 deadline, and two native C clients exchanging binary bytes through the real TCP relay. The pair test checks blocking
 socket mode and cleanup after either leg closes; it does not run a game or exercise a router's NAT behavior.
 
+The same suite also requires `TestCClientAuth`, `TestCClientCall`, `TestPassVectors`,
+`TestConnectGateRefusesEveryRequestBeforeAuth` and `TestConnectGateOpensAfterAuth`, so a skip or a rename of the sign-in pass
+vectors, the C client's sign-in and call paths, or the connect-mode gate fails the build instead of passing quietly.
+
 ## Isolation and cleanup
 
 The existing fixtures explicitly bind loopback: the C test uses `127.0.0.1`, and the app tests select free TCP/UDP
